@@ -11,8 +11,8 @@ export const navigationItems = [
   { name: "Mon compte", href: "/dashboard/my-account", icon: User },
   { name: "Profil du domaine", href: "/dashboard/domain-profile", icon: Building2 },
   { name: "Réservations", href: "/dashboard/reservations", icon: Calendar },
-  { name: "Paramètres", href: "/", icon: Settings },
-  { name: "Contact", href: "/contact", icon: Phone }
+  { name: "Paramètres", href: "/dashboard/settings", icon: Settings },
+  { name: "Contact", href: "/dashboard/contact", icon: Phone }
 ];
 
 interface NavigationProps {
