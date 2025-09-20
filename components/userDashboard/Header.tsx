@@ -8,9 +8,11 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { navigationItems } from "./Navigation";
+import { useUser } from "@/contexts/UserContext";
 
 export const Header = () => {
   const router = useRouter();
+  const { user, logout } = useUser();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [selectedLanguage, setSelectedLanguage] = useState({
@@ -36,9 +38,8 @@ export const Header = () => {
     setIsMobileMenuOpen(false);
   };
 
-  const handleLogout = () => {
-    // TODO: Implement logout logic
-    console.log('Logout clicked');
+  const handleLogout = async () => {
+    await logout();
   };
 
   if (!mounted) {

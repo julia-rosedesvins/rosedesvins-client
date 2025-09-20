@@ -9,24 +9,47 @@ import { Separator } from "@/components/ui/separator";
 import { Eye, EyeOff, Lock, Mail } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
+import { useUser } from "@/contexts/UserContext";
 
 export default function LoginPage() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
-    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState("");
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const router = useRouter();
+    const { login, isLoading } = useUser();
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setIsLoading(true);
         
-        // Simulate login API call
-        setTimeout(() => {
-            setIsLoading(false);
-            // Redirect to dashboard after successful login
-            router.push('/dashboard');
-        }, 1500);
+        // Clear previous error
+        setError("");
+        
+        if (!email || !password) {
+            setError("Veuillez remplir tous les champs");
+            return;
+        }
+        
+        if (!email.includes('@')) {
+            setError("Veuillez entrer une adresse email valide");
+            return;
+        }
+        
+        setIsSubmitting(true);
+        
+        try {
+            const success = await login(email, password);
+            if (success) {
+                router.push('/dashboard');
+            } else {
+                setError("Email ou mot de passe incorrect");
+            }
+        } catch (error: any) {
+            setError(error.message || "Une erreur est survenue lors de la connexion");
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     return (
@@ -69,6 +92,13 @@ export default function LoginPage() {
                     </CardHeader>
                     <CardContent>
                         <form onSubmit={handleSubmit} className="space-y-4 lg:space-y-6">
+                            {/* Error Message */}
+                            {error && (
+                                <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md text-sm">
+                                    {error}
+                                </div>
+                            )}
+
                             {/* Email Field */}
                             <div className="space-y-2">
                                 <Label htmlFor="email" className="text-xs lg:text-sm font-medium">
@@ -138,11 +168,11 @@ export default function LoginPage() {
                             {/* Login Button */}
                             <Button
                                 type="submit"
-                                disabled={isLoading}
+                                disabled={isSubmitting || isLoading}
                                 className="w-full h-10 lg:h-11 text-white font-medium text-xs lg:text-sm hover:opacity-90 transition-opacity"
                                 style={{ backgroundColor: '#3A7B59' }}
                             >
-                                {isLoading ? (
+                                {(isSubmitting || isLoading) ? (
                                     <div className="flex items-center space-x-2">
                                         <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                                         <span>Connexion...</span>
