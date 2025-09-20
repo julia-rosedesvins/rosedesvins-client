@@ -18,11 +18,18 @@ export interface AdminLoginRequest {
 }
 
 export interface AdminUser {
-  id: string;
+  _id: string;
+  id?: string; // For backward compatibility
   firstName: string;
   lastName: string;
   email: string;
   role: string;
+  accountStatus: string;
+  domainName?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  lastLoginAt?: string;
+  firstLoginAt?: string;
 }
 
 export interface AdminLoginResponse {
@@ -83,7 +90,7 @@ class AdminService {
    */
   async getProfile(): Promise<{ success: boolean; data: AdminUser }> {
     try {
-      const response = await apiClient.get('/admin/profile');
+      const response = await apiClient.get('/users/admin/me');
       return response.data;
     } catch (error) {
       if (axios.isAxiosError(error) && error.response) {

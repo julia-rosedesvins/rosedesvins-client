@@ -36,7 +36,12 @@ export const AdminProvider: React.FC<AdminProviderProps> = ({ children }) => {
   const isAuthenticated = admin !== null;
 
   const login = (adminData: AdminUser) => {
-    setAdmin(adminData);
+    // Ensure id field exists for backward compatibility
+    const normalizedAdmin = {
+      ...adminData,
+      id: adminData._id || adminData.id,
+    };
+    setAdmin(normalizedAdmin);
   };
 
   const logout = async () => {
@@ -57,11 +62,17 @@ export const AdminProvider: React.FC<AdminProviderProps> = ({ children }) => {
       setIsLoading(true);
       const response = await adminService.getProfile();
       if (response.success && response.data) {
-        setAdmin(response.data);
+        // Ensure id field exists for backward compatibility
+        const adminData = {
+          ...response.data,
+          id: response.data._id || response.data.id,
+        };
+        setAdmin(adminData);
       } else {
         setAdmin(null);
       }
     } catch (error) {
+      console.error('Auth check error:', error);
       setAdmin(null);
     } finally {
       setIsLoading(false);
