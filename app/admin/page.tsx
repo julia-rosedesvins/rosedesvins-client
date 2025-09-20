@@ -6,27 +6,70 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { Eye, EyeOff, Lock, Mail, Shield } from "lucide-react";
+import { Eye, EyeOff, Lock, Mail, Shield, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
+import { adminService, ApiError } from "@/services/admin.service";
+import { useAdmin } from "@/contexts/AdminContext";
 
 export default function AdminLogin() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState<string>("");
+    const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
     const router = useRouter();
+    const { login, isAuthenticated } = useAdmin();
+
+    // If already authenticated, this will be handled by AdminContext
+    // but we can show loading state
+    if (isAuthenticated) {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-green-50 to-green-100 flex items-center justify-center p-4">
+                <div className="text-center">
+                    <div className="w-8 h-8 border-2 border-[#3A7B59] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                    <p className="text-gray-600">Redirection vers le tableau de bord...</p>
+                </div>
+            </div>
+        );
+    }
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
+        setError("");
+        setValidationErrors({});
         
-        // Simulate login API call
-        setTimeout(() => {
+        try {
+            const response = await adminService.login({
+                email,
+                password
+            });
+
+            if (response.success) {
+                // Update admin context
+                login(response.data.user);
+                // Success! Redirect to admin dashboard (handled by context)
+                router.push('/admin/dashboard');
+            }
+        } catch (err) {
+            const apiError = err as ApiError;
+            
+            if (apiError.errors && apiError.errors.length > 0) {
+                // Handle validation errors
+                const errors: Record<string, string> = {};
+                apiError.errors.forEach(error => {
+                    errors[error.field] = error.message;
+                });
+                setValidationErrors(errors);
+            } else {
+                // Handle general errors
+                setError(apiError.message || 'Une erreur est survenue lors de la connexion');
+            }
+        } finally {
             setIsLoading(false);
-            // Redirect to admin dashboard after successful login
-            router.push('/admin/dashboard');
-        }, 1500);
+        }
     };
 
     return (
@@ -69,6 +112,16 @@ export default function AdminLogin() {
                         </p>
                     </CardHeader>
                     <CardContent>
+                        {/* General Error Message */}
+                        {error && (
+                            <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+                                <div className="flex items-center space-x-2">
+                                    <AlertCircle className="h-4 w-4 text-red-600" />
+                                    <span className="text-sm text-red-800">{error}</span>
+                                </div>
+                            </div>
+                        )}
+
                         <form onSubmit={handleSubmit} className="space-y-4 lg:space-y-6">
                             {/* Email Field */}
                             <div className="space-y-2">
@@ -83,13 +136,18 @@ export default function AdminLogin() {
                                         placeholder="admin@rosedesvins.com"
                                         value={email}
                                         onChange={(e) => setEmail(e.target.value)}
-                                        className="pl-10 h-10 lg:h-11 text-xs lg:text-sm border-gray-300 focus:ring-2 focus:ring-opacity-50"
+                                        className={`pl-10 h-10 lg:h-11 text-xs lg:text-sm border-gray-300 focus:ring-2 focus:ring-opacity-50 ${
+                                            validationErrors.email ? 'border-red-300 focus:ring-red-500' : ''
+                                        }`}
                                         style={{ 
-                                            '--tw-ring-color': '#3A7B59'
+                                            '--tw-ring-color': validationErrors.email ? '#ef4444' : '#3A7B59'
                                         } as React.CSSProperties}
                                         required
                                     />
                                 </div>
+                                {validationErrors.email && (
+                                    <p className="text-xs text-red-600 mt-1">{validationErrors.email}</p>
+                                )}
                             </div>
 
                             {/* Password Field */}
@@ -105,9 +163,11 @@ export default function AdminLogin() {
                                         placeholder="Mot de passe sécurisé"
                                         value={password}
                                         onChange={(e) => setPassword(e.target.value)}
-                                        className="pl-10 pr-10 h-10 lg:h-11 text-xs lg:text-sm border-gray-300 focus:ring-2 focus:ring-opacity-50"
+                                        className={`pl-10 pr-10 h-10 lg:h-11 text-xs lg:text-sm border-gray-300 focus:ring-2 focus:ring-opacity-50 ${
+                                            validationErrors.password ? 'border-red-300 focus:ring-red-500' : ''
+                                        }`}
                                         style={{ 
-                                            '--tw-ring-color': '#3A7B59'
+                                            '--tw-ring-color': validationErrors.password ? '#ef4444' : '#3A7B59'
                                         } as React.CSSProperties}
                                         required
                                     />
@@ -123,6 +183,9 @@ export default function AdminLogin() {
                                         )}
                                     </button>
                                 </div>
+                                {validationErrors.password && (
+                                    <p className="text-xs text-red-600 mt-1">{validationErrors.password}</p>
+                                )}
                             </div>
 
                             {/* Forgot Password Link */}

@@ -4,8 +4,28 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Calendar, Users, Wine, TrendingUp } from "lucide-react"
 import DashboardLayout from "@/components/admin/DashboardLayout"
+import { useAdmin } from '@/contexts/AdminContext'
 
 export default function AdminDashboard() {
+    const { admin, isLoading } = useAdmin();
+
+    // Show loading state while checking authentication
+    if (isLoading) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                <div className="text-center">
+                    <div className="w-8 h-8 border-2 border-[#3A7B59] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                    <p className="text-gray-600">Chargement...</p>
+                </div>
+            </div>
+        );
+    }
+
+    // If not authenticated, return null (AdminContext will handle redirect)
+    if (!admin) {
+        return null;
+    }
+
     const dashboardCards = [
         {
             title: "Réservations Totales",
@@ -45,7 +65,7 @@ export default function AdminDashboard() {
         <DashboardLayout title="Tableau de bord">
             {/* Welcome Section */}
             <div className="mb-8">
-                <h1 className="text-2xl font-bold text-foreground mb-2">Bienvenue sur votre tableau de bord</h1>
+                <h1 className="text-2xl font-bold text-foreground mb-2">Bienvenue {admin.firstName} {admin.lastName}</h1>
                 <p className="text-muted-foreground">Voici un aperçu de votre activité récente</p>
             </div>
 
