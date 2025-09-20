@@ -1,6 +1,8 @@
 import { Button } from "@/components/ui/button"
 import { LogOut, Home, Calendar, Users, Wine, BarChart3, Settings } from "lucide-react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
+import { useAdmin } from "@/contexts/AdminContext"
 
 interface SidebarItem {
   icon: any
@@ -25,6 +27,22 @@ const sidebarItems: SidebarItem[] = [
 ]
 
 export default function DashboardSidebar({ isOpen, onClose, currentPath = "/admin/dashboard" }: SidebarProps) {
+  const router = useRouter();
+  const { logout } = useAdmin();
+
+  const handleNavigation = (href: string) => {
+    router.push(href);
+    onClose(); // Close mobile sidebar after navigation
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      // logout function already handles redirect to /admin
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  };
   return (
     <>
       {/* Sidebar */}
@@ -59,11 +77,7 @@ export default function DashboardSidebar({ isOpen, onClose, currentPath = "/admi
                       ? "bg-white text-gray-900 hover:bg-white/90"
                       : "text-white/80 hover:bg-white/10 hover:text-white"
                   }`}
-                  onClick={() => {
-                    // Handle navigation here
-                    console.log(`Navigate to ${item.href}`)
-                    onClose()
-                  }}
+                  onClick={() => handleNavigation(item.href!)}
                 >
                   <item.icon className="mr-3 h-5 w-5" />
                   <span className="font-medium">{item.label}</span>
@@ -77,10 +91,7 @@ export default function DashboardSidebar({ isOpen, onClose, currentPath = "/admi
           <Button
             variant="ghost"
             className="w-full justify-start px-4 py-3 text-white/80 hover:bg-red-500/20 hover:text-white transition-colors duration-200"
-            onClick={() => {
-              // Handle logout here
-              console.log("Logout")
-            }}
+            onClick={handleLogout}
           >
             <LogOut className="mr-3 h-5 w-5" />
             <span className="font-medium">Déconnexion</span>
