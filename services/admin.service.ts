@@ -32,6 +32,25 @@ export interface AdminUser {
   firstLoginAt?: string;
 }
 
+export interface PaginationQuery {
+  page?: number;
+  limit?: number;
+}
+
+export interface PaginatedUsersResponse {
+  success: boolean;
+  message: string;
+  data: AdminUser[];
+  pagination: {
+    currentPage: number;
+    totalPages: number;
+    totalUsers: number;
+    limit: number;
+    hasNextPage: boolean;
+    hasPrevPage: boolean;
+  };
+}
+
 export interface AdminLoginResponse {
   success: boolean;
   message: string;
@@ -107,6 +126,48 @@ class AdminService {
   async getDashboardData(): Promise<{ success: boolean; data: any }> {
     try {
       const response = await apiClient.get('/admin/dashboard');
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response) {
+        throw error.response.data as ApiError;
+      }
+      throw new Error('Network error occurred');
+    }
+  }
+
+  /**
+   * Get pending approval users (requires admin authentication)
+   * @param query - Pagination parameters
+   * @returns Promise with paginated pending users
+   */
+  async getPendingApprovalUsers(query: PaginationQuery = {}): Promise<PaginatedUsersResponse> {
+    try {
+      const params = new URLSearchParams();
+      if (query.page) params.append('page', query.page.toString());
+      if (query.limit) params.append('limit', query.limit.toString());
+      
+      const response = await apiClient.get(`/users/admin/pending-approval?${params.toString()}`);
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response) {
+        throw error.response.data as ApiError;
+      }
+      throw new Error('Network error occurred');
+    }
+  }
+
+  /**
+   * Get approved users (requires admin authentication)
+   * @param query - Pagination parameters
+   * @returns Promise with paginated approved users
+   */
+  async getApprovedUsers(query: PaginationQuery = {}): Promise<PaginatedUsersResponse> {
+    try {
+      const params = new URLSearchParams();
+      if (query.page) params.append('page', query.page.toString());
+      if (query.limit) params.append('limit', query.limit.toString());
+      
+      const response = await apiClient.get(`/users/admin/approved?${params.toString()}`);
       return response.data;
     } catch (error) {
       if (axios.isAxiosError(error) && error.response) {
