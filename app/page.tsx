@@ -5,9 +5,20 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
 import { Check, Calendar, Clock, Users } from "lucide-react"
 import LandingPageLayout from "@/components/LandingPageLayout"
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
+import { userService, ContactFormData } from "@/services/user.service"
+import toast, { Toaster } from 'react-hot-toast'
 
 export default function HomePage() {
+  const [formData, setFormData] = useState<ContactFormData>({
+    firstName: '',
+    lastName: '',
+    email: '',
+    domainName: '',
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
   useEffect(() => {
     // Check if URL has #contact hash and scroll to it
     if (window.location.hash === '#contact') {
@@ -16,6 +27,103 @@ export default function HomePage() {
       }, 100) // Small delay to ensure the page is rendered
     }
   }, [])
+
+  const handleInputChange = (field: keyof ContactFormData, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+    // Clear error when user starts typing
+    if (errors[field]) {
+      setErrors(prev => ({
+        ...prev,
+        [field]: ''
+      }));
+    }
+  };
+
+  const validateForm = (): boolean => {
+    const newErrors: Record<string, string> = {};
+
+    if (!formData.firstName.trim()) {
+      newErrors.firstName = 'Le prénom est requis';
+    } else if (formData.firstName.trim().length < 2) {
+      newErrors.firstName = 'Le prénom doit contenir au moins 2 caractères';
+    } else if (!/^[a-zA-ZÀ-ÿ\s'-]+$/.test(formData.firstName)) {
+      newErrors.firstName = 'Le prénom ne peut contenir que des lettres, espaces, tirets et apostrophes';
+    }
+
+    if (!formData.lastName.trim()) {
+      newErrors.lastName = 'Le Nom de famille est requis';
+    } else if (formData.lastName.trim().length < 2) {
+      newErrors.lastName = 'Le Nom de famille contenir au moins 2 caractères';
+    } else if (!/^[a-zA-ZÀ-ÿ\s'-]+$/.test(formData.lastName)) {
+      newErrors.lastName = 'Le Nom de famille peut contenir que des lettres, espaces, tirets et apostrophes';
+    }
+
+    if (!formData.email.trim()) {
+      newErrors.email = 'L\'email est requis';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      newErrors.email = 'Format d\'email invalide';
+    }
+
+    if (!formData.domainName.trim()) {
+      newErrors.domainName = 'Le nom du domaine est requis';
+    } else if (formData.domainName.trim().length < 2) {
+      newErrors.domainName = 'Le nom du domaine doit contenir au moins 2 caractères';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!validateForm()) {
+      toast.error('Veuillez corriger les erreurs dans le formulaire');
+      return;
+    }
+
+    setIsSubmitting(true);
+    
+    try {
+      const response = await userService.submitContactForm(formData);
+      
+      if (response.success) {
+        toast.success('Votre demande a été envoyée avec succès ! Nous vous contacterons bientôt.');
+        
+        // Reset form
+        setFormData({
+          firstName: '',
+          lastName: '',
+          email: '',
+          domainName: '',
+        });
+        setErrors({});
+      }
+    } catch (error: any) {
+      console.error('Contact form submission error:', error);
+      
+      if (error.errors && Array.isArray(error.errors)) {
+        // Handle validation errors from backend
+        const backendErrors: Record<string, string> = {};
+        error.errors.forEach((err: any) => {
+          if (err.field && err.message) {
+            backendErrors[err.field] = err.message;
+          }
+        });
+        setErrors(backendErrors);
+        toast.error('Veuillez corriger les erreurs dans le formulaire');
+      } else if (error.message) {
+        toast.error(error.message);
+      } else {
+        toast.error('Une erreur est survenue lors de l\'envoi. Veuillez réessayer.');
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <LandingPageLayout>
@@ -242,40 +350,108 @@ export default function HomePage() {
             </h3>
           </div>
 
-          <form className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Prénom *</label>
-                <Input className="w-full" />
+                <Input 
+                  className={`w-full ${errors.firstName ? 'border-red-500 focus:border-red-500' : ''}`}
+                  value={formData.firstName}
+                  onChange={(e) => handleInputChange('firstName', e.target.value)}
+                  placeholder="Votre prénom"
+                  disabled={isSubmitting}
+                />
+                {errors.firstName && (
+                  <p className="text-red-500 text-sm mt-1">{errors.firstName}</p>
+                )}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Nom</label>
-                <Input className="w-full" />
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Nom de famille *
+                </label>
+                <Input 
+                  className={`w-full ${errors.lastName ? 'border-red-500 focus:border-red-500' : ''}`}
+                  value={formData.lastName}
+                  onChange={(e) => handleInputChange('lastName', e.target.value)}
+                  placeholder="Votre nom de famille"
+                  disabled={isSubmitting}
+                />
+                {errors.lastName && (
+                  <p className="text-red-500 text-sm mt-1">{errors.lastName}</p>
+                )}
               </div>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">E-mail *</label>
-              <Input type="email" className="w-full" />
+              <Input 
+                type="email" 
+                className={`w-full ${errors.email ? 'border-red-500 focus:border-red-500' : ''}`}
+                value={formData.email}
+                onChange={(e) => handleInputChange('email', e.target.value)}
+                placeholder="votre.email@exemple.com"
+                disabled={isSubmitting}
+              />
+              {errors.email && (
+                <p className="text-red-500 text-sm mt-1">{errors.email}</p>
+              )}
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Nom du domaine *</label>
-              <Input className="w-full" />
+              <Input 
+                className={`w-full ${errors.domainName ? 'border-red-500 focus:border-red-500' : ''}`}
+                value={formData.domainName}
+                onChange={(e) => handleInputChange('domainName', e.target.value)}
+                placeholder="Nom de votre domaine viticole"
+                disabled={isSubmitting}
+              />
+              {errors.domainName && (
+                <p className="text-red-500 text-sm mt-1">{errors.domainName}</p>
+              )}
             </div>
 
             <div className="text-center">
               <Button
                 type="submit"
-                className="text-white px-8 py-3 hover:opacity-90"
+                className="text-white px-8 py-3 hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{ backgroundColor: "#3A7B59" }}
+                disabled={isSubmitting}
               >
-                Envoyer
+                {isSubmitting ? (
+                  <span className="flex items-center">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                    Envoi en cours...
+                  </span>
+                ) : (
+                  'Envoyer'
+                )}
               </Button>
             </div>
           </form>
         </div>
       </section>
+
+      <Toaster 
+        position="top-right"
+        toastOptions={{
+          duration: 4000,
+          style: {
+            background: '#363636',
+            color: '#fff',
+          },
+          success: {
+            style: {
+              background: '#3A7B59',
+            },
+          },
+          error: {
+            style: {
+              background: '#ef4444',
+            },
+          },
+        }}
+      />
 
     </LandingPageLayout>
   )
