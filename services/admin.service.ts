@@ -51,6 +51,17 @@ export interface PaginatedUsersResponse {
   };
 }
 
+export interface UserActionRequest {
+  userId: string;
+  action: 'approve' | 'reject';
+}
+
+export interface UserActionResponse {
+  success: boolean;
+  message: string;
+  user?: AdminUser;
+}
+
 export interface AdminLoginResponse {
   success: boolean;
   message: string;
@@ -168,6 +179,44 @@ class AdminService {
       if (query.limit) params.append('limit', query.limit.toString());
       
       const response = await apiClient.get(`/users/admin/approved?${params.toString()}`);
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response) {
+        throw error.response.data as ApiError;
+      }
+      throw new Error('Network error occurred');
+    }
+  }
+
+  /**
+   * Get rejected users (requires admin authentication)
+   * @param query - Pagination parameters
+   * @returns Promise with paginated rejected users
+   */
+  async getRejectedUsers(query: PaginationQuery = {}): Promise<PaginatedUsersResponse> {
+    try {
+      const params = new URLSearchParams();
+      if (query.page) params.append('page', query.page.toString());
+      if (query.limit) params.append('limit', query.limit.toString());
+      
+      const response = await apiClient.get(`/users/admin/rejected?${params.toString()}`);
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response) {
+        throw error.response.data as ApiError;
+      }
+      throw new Error('Network error occurred');
+    }
+  }
+
+  /**
+   * Perform user action (approve or reject) (requires admin authentication)
+   * @param request - User action request
+   * @returns Promise with action result
+   */
+  async performUserAction(request: UserActionRequest): Promise<UserActionResponse> {
+    try {
+      const response = await apiClient.put('/users/admin/user-action', request);
       return response.data;
     } catch (error) {
       if (axios.isAxiosError(error) && error.response) {

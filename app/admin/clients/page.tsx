@@ -5,23 +5,27 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { Search, ChevronLeft, ChevronRight, Users, UserCheck, Clock } from "lucide-react"
+import { Search, ChevronLeft, ChevronRight, Users, UserCheck, Clock, UserX, Loader2 } from "lucide-react"
 import DashboardLayout from "@/components/admin/DashboardLayout"
 import { useAdmin } from '@/contexts/AdminContext'
-import { adminService, AdminUser, PaginatedUsersResponse } from '@/services/admin.service'
+import { adminService, AdminUser, PaginatedUsersResponse, UserActionRequest } from '@/services/admin.service'
 import toast from 'react-hot-toast'
 
-type TabType = 'pending' | 'approved'
+type TabType = 'pending' | 'approved' | 'rejected'
 
 export default function AdminClients() {
     const { admin, isLoading } = useAdmin();
     const [activeTab, setActiveTab] = useState<TabType>('pending');
     const [pendingUsers, setPendingUsers] = useState<AdminUser[]>([]);
     const [approvedUsers, setApprovedUsers] = useState<AdminUser[]>([]);
+    const [rejectedUsers, setRejectedUsers] = useState<AdminUser[]>([]);
     const [pendingPagination, setPendingPagination] = useState<any>(null);
     const [approvedPagination, setApprovedPagination] = useState<any>(null);
+    const [rejectedPagination, setRejectedPagination] = useState<any>(null);
     const [loadingPending, setLoadingPending] = useState(false);
     const [loadingApproved, setLoadingApproved] = useState(false);
+    const [loadingRejected, setLoadingRejected] = useState(false);
+    const [actionLoading, setActionLoading] = useState<{[key: string]: 'approve' | 'reject' | null}>({});
     const [searchTerm, setSearchTerm] = useState('');
 
     const fetchPendingUsers = async (page: number = 1, limit: number = 10) => {
@@ -52,9 +56,51 @@ export default function AdminClients() {
         }
     };
 
+    const fetchRejectedUsers = async (page: number = 1, limit: number = 10) => {
+        setLoadingRejected(true);
+        try {
+            const response = await adminService.getRejectedUsers({ page, limit });
+            setRejectedUsers(response.data);
+            setRejectedPagination(response.pagination);
+        } catch (error: any) {
+            console.error('Error fetching rejected users:', error);
+            toast.error('Erreur lors du chargement des utilisateurs rejetés');
+        } finally {
+            setLoadingRejected(false);
+        }
+    };
+
+    const handleUserAction = async (userId: string, action: 'approve' | 'reject') => {
+        // Set loading state for this specific user and action
+        setActionLoading(prev => ({ ...prev, [userId]: action }));
+        
+        try {
+            const request: UserActionRequest = { userId, action };
+            const response = await adminService.performUserAction(request);
+            
+            if (response.success) {
+                toast.success(response.message);
+                
+                // Refresh all lists to reflect the changes
+                fetchPendingUsers();
+                fetchApprovedUsers();
+                fetchRejectedUsers();
+            } else {
+                toast.error(response.message || 'Erreur lors de l\'action utilisateur');
+            }
+        } catch (error: any) {
+            console.error('Error performing user action:', error);
+            toast.error(error.message || 'Erreur lors de l\'action utilisateur');
+        } finally {
+            // Clear loading state for this user
+            setActionLoading(prev => ({ ...prev, [userId]: null }));
+        }
+    };
+
     useEffect(() => {
         fetchPendingUsers();
         fetchApprovedUsers();
+        fetchRejectedUsers();
     }, []);
 
     // Show loading state while checking authentication
@@ -77,8 +123,10 @@ export default function AdminClients() {
     const handlePageChange = (type: TabType, page: number) => {
         if (type === 'pending') {
             fetchPendingUsers(page);
-        } else {
+        } else if (type === 'approved') {
             fetchApprovedUsers(page);
+        } else {
+            fetchRejectedUsers(page);
         }
     };
 
@@ -96,9 +144,19 @@ export default function AdminClients() {
         user.domainName?.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    const currentUsers = activeTab === 'pending' ? filteredPendingUsers : filteredApprovedUsers;
-    const currentPagination = activeTab === 'pending' ? pendingPagination : approvedPagination;
-    const currentLoading = activeTab === 'pending' ? loadingPending : loadingApproved;
+    const filteredRejectedUsers = rejectedUsers.filter(user =>
+        user.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.domainName?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    const currentUsers = activeTab === 'pending' ? filteredPendingUsers : 
+                        activeTab === 'approved' ? filteredApprovedUsers : filteredRejectedUsers;
+    const currentPagination = activeTab === 'pending' ? pendingPagination : 
+                             activeTab === 'approved' ? approvedPagination : rejectedPagination;
+    const currentLoading = activeTab === 'pending' ? loadingPending : 
+                          activeTab === 'approved' ? loadingApproved : loadingRejected;
 
     const renderPagination = () => {
         if (!currentPagination) return null;
@@ -169,17 +227,39 @@ export default function AdminClients() {
                                             <Button 
                                                 size="sm"
                                                 className="bg-[#3A7B59] hover:bg-[#2d5f43] text-white"
+                                                onClick={() => handleUserAction(user._id, 'approve')}
+                                                disabled={actionLoading[user._id] !== undefined && actionLoading[user._id] !== null}
                                             >
-                                                Approuver
+                                                {actionLoading[user._id] === 'approve' ? (
+                                                    <>
+                                                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                                        Traitement...
+                                                    </>
+                                                ) : (
+                                                    'Approuver'
+                                                )}
                                             </Button>
                                             <Button 
                                                 size="sm"
                                                 variant="outline"
                                                 className="text-red-600 border-red-600 hover:bg-red-600 hover:text-white"
+                                                onClick={() => handleUserAction(user._id, 'reject')}
+                                                disabled={actionLoading[user._id] !== undefined && actionLoading[user._id] !== null}
                                             >
-                                                Rejeter
+                                                {actionLoading[user._id] === 'reject' ? (
+                                                    <>
+                                                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                                        Traitement...
+                                                    </>
+                                                ) : (
+                                                    'Rejeter'
+                                                )}
                                             </Button>
                                         </>
+                                    ) : user.accountStatus === 'rejected' ? (
+                                        <Badge className="bg-red-100 text-red-800 hover:bg-red-100">
+                                            Rejeté
+                                        </Badge>
                                     ) : (
                                         <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
                                             {user.accountStatus === 'approved' ? 'Approuvé' : 'Actif'}
@@ -203,7 +283,7 @@ export default function AdminClients() {
             </div>
 
             {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Demandes en attente</CardTitle>
@@ -232,6 +312,20 @@ export default function AdminClients() {
                         </p>
                     </CardContent>
                 </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Utilisateurs rejetés</CardTitle>
+                        <UserX className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold text-red-600">
+                            {rejectedPagination?.totalUsers || 0}
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                            Demandes rejetées
+                        </p>
+                    </CardContent>
+                </Card>
             </div>
 
             {/* Search and Tabs */}
@@ -254,6 +348,14 @@ export default function AdminClients() {
                             >
                                 <UserCheck className="w-4 h-4 mr-2" />
                                 Approuvés ({approvedPagination?.totalUsers || 0})
+                            </Button>
+                            <Button
+                                variant={activeTab === 'rejected' ? 'default' : 'outline'}
+                                onClick={() => setActiveTab('rejected')}
+                                className={activeTab === 'rejected' ? 'bg-[#3A7B59] hover:bg-[#2d5f43]' : ''}
+                            >
+                                <UserX className="w-4 h-4 mr-2" />
+                                Rejetés ({rejectedPagination?.totalUsers || 0})
                             </Button>
                         </div>
                         
@@ -286,7 +388,9 @@ export default function AdminClients() {
                                     ? 'Essayez de modifier vos critères de recherche' 
                                     : activeTab === 'pending' 
                                         ? 'Aucune demande en attente pour le moment'
-                                        : 'Aucun utilisateur approuvé pour le moment'
+                                        : activeTab === 'approved'
+                                            ? 'Aucun utilisateur approuvé pour le moment'
+                                            : 'Aucun utilisateur rejeté pour le moment'
                                 }
                             </p>
                         </div>
