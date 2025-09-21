@@ -70,6 +70,17 @@ export interface UserProfileResponse {
   data: UserProfile;
 }
 
+// Types for change password
+export interface ChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
+}
+
+export interface ChangePasswordResponse {
+  success: boolean;
+  message: string;
+}
+
 export interface ApiError {
   success: boolean;
   message: string;
@@ -141,6 +152,27 @@ class UserService {
       return response.data;
     } catch (error) {
       if (axios.isAxiosError(error) && error.response) {
+        throw error.response.data as ApiError;
+      }
+      throw new Error('Network error occurred');
+    }
+  }
+
+  /**
+   * Change user password
+   * @param passwordData - Current and new password data
+   * @returns Promise with change password response
+   */
+  async changePassword(passwordData: ChangePasswordRequest): Promise<ChangePasswordResponse> {
+    try {
+      console.log('UserService: Sending change password request');
+      const response = await apiClient.post<ChangePasswordResponse>('/users/change-password', passwordData);
+      console.log('UserService: Change password response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('UserService: Change password error:', error);
+      if (axios.isAxiosError(error) && error.response) {
+        console.error('UserService: Error response data:', error.response.data);
         throw error.response.data as ApiError;
       }
       throw new Error('Network error occurred');

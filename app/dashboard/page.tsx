@@ -5,28 +5,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar, Users, Wine, CreditCard } from "lucide-react";
 import { useState } from "react";
-import { useUser } from "@/contexts/UserContext";
 
 export default function UserDashboard() {
-    const { user, isLoading } = useUser();
     const [selectedPeriod, setSelectedPeriod] = useState("ce-mois");
-
-    // Show loading state while checking authentication
-    if (isLoading) {
-        return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                <div className="text-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
-                    <p className="text-gray-600">Chargement...</p>
-                </div>
-            </div>
-        );
-    }
-
-    // If not authenticated, the UserContext will redirect to login
-    if (!user) {
-        return null;
-    }
 
     const getPeriodData = () => {
         switch (selectedPeriod) {

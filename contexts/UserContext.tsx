@@ -9,9 +9,11 @@ interface UserContextType {
   user: UserProfile | null;
   isLoading: boolean;
   isAuthenticated: boolean;
+  mustChangePassword: boolean;
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
+  updatePasswordChanged: () => Promise<void>;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -35,6 +37,7 @@ export const UserProvider = ({ children }: UserProviderProps) => {
   const pathname = usePathname();
 
   const isAuthenticated = user !== null;
+  const mustChangePassword = user?.mustChangePassword || false;
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
@@ -96,6 +99,11 @@ export const UserProvider = ({ children }: UserProviderProps) => {
     }
   };
 
+  const updatePasswordChanged = async () => {
+    // Refresh user profile to get updated mustChangePassword status
+    await checkAuth();
+  };
+
   useEffect(() => {
     checkAuth();
   }, []);
@@ -119,15 +127,17 @@ export const UserProvider = ({ children }: UserProviderProps) => {
     user,
     isLoading,
     isAuthenticated,
+    mustChangePassword,
     login,
     logout,
     checkAuth,
+    updatePasswordChanged,
   };
 
   return (
     <UserContext.Provider value={value}>
       <Toaster 
-        position="top-right"
+        position="bottom-right"
         toastOptions={{
           duration: 4000,
           style: {
