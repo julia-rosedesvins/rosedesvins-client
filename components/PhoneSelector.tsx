@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { 
@@ -53,6 +53,33 @@ interface PhoneSelectorProps {
 export const PhoneSelector = ({ value = "", onChange, className }: PhoneSelectorProps) => {
   const [selectedCountry, setSelectedCountry] = useState<Country>(countries[0]); // France par défaut
   const [phoneNumber, setPhoneNumber] = useState("");
+
+  // Parse the incoming value to set country and phone number
+  useEffect(() => {
+    if (value && value.trim() !== "") {
+      // Find the matching country by dial code
+      const country = countries.find(c => value.startsWith(c.dialCode));
+      if (country) {
+        setSelectedCountry(country);
+        // Extract the phone number part (remove dial code and any leading spaces)
+        const phoneNumberPart = value.substring(country.dialCode.length).trim();
+        setPhoneNumber(phoneNumberPart);
+      } else {
+        // If no country match found, try to parse manually
+        // Look for patterns like "+49 3170288817" or "+33 612345678"
+        const match = value.match(/^(\+\d{1,4})\s*(.*)$/);
+        if (match) {
+          const dialCode = match[1];
+          const phone = match[2];
+          const country = countries.find(c => c.dialCode === dialCode);
+          if (country) {
+            setSelectedCountry(country);
+            setPhoneNumber(phone);
+          }
+        }
+      }
+    }
+  }, [value]);
 
   const handleCountryChange = (countryCode: string) => {
     const country = countries.find(c => c.code === countryCode);

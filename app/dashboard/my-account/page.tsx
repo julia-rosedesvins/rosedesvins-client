@@ -6,46 +6,114 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PhoneSelector } from "@/components/PhoneSelector";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { contactDetailsService, ContactDetails } from "@/services/contactDetails.service";
+import { toast } from "react-hot-toast";
 
 export default function UserMyAccount() {
     const [formData, setFormData] = useState({
-        nom: "Dupont",
-        prenom: "Martin",
-        email: "martin.dupont@gmail.com",
-        telephone: "06 18 98 67 54",
-        nomDomaine: "Dupont & Fils",
-        adresse: "30, rue de Chinon",
-        codePostal: "37210",
-        ville: "Vouvray",
-        siteWeb: "domainedupontetfils.fr"
+        prenom: "",
+        nom: "",
+        email: "",
+        telephone: "",
+        nomDomaine: "",
+        adresse: "",
+        codePostal: "",
+        ville: "",
+        siteWeb: ""
     });
+
+    const [isLoading, setIsLoading] = useState(true);
+    const [isSaving, setIsSaving] = useState(false);
+
+    // Fetch contact details on component mount
+    useEffect(() => {
+        const fetchContactDetails = async () => {
+            try {
+                setIsLoading(true);
+                const response = await contactDetailsService.getContactDetails();
+                
+                if (response.success && response.data) {
+                    const data = response.data;
+                    setFormData({
+                        prenom: data.firstName || "",
+                        nom: data.lastName || "",
+                        email: data.email || "",
+                        telephone: data.phoneNumber || "",
+                        nomDomaine: data.domainName || "",
+                        adresse: data.address || "",
+                        codePostal: data.codePostal || "",
+                        ville: data.city || "",
+                        siteWeb: data.siteWeb || ""
+                    });
+                }
+            } catch (error: any) {
+                console.error('Error fetching contact details:', error);
+                toast.error('Erreur lors du chargement des données');
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchContactDetails();
+    }, []);
 
     const handleInputChange = (field: keyof typeof formData, value: string) => {
         setFormData(prev => ({ ...prev, [field]: value }));
     };
+
+    const handleSave = async () => {
+        try {
+            setIsSaving(true);
+            
+            const updateData = {
+                firstName: formData.prenom,
+                lastName: formData.nom,
+                phoneNumber: formData.telephone,
+                domainName: formData.nomDomaine,
+                address: formData.adresse,
+                codePostal: formData.codePostal,
+                city: formData.ville,
+                siteWeb: formData.siteWeb
+            };
+
+            const response = await contactDetailsService.updateContactDetails(updateData);
+            
+            if (response.success) {
+                toast.success('Données sauvegardées avec succès');
+            } else {
+                toast.error(response.message || 'Erreur lors de la sauvegarde');
+            }
+        } catch (error: any) {
+            console.error('Error saving contact details:', error);
+            if (error?.response?.data?.errors && Array.isArray(error.response.data.errors)) {
+                const errorMessages = error.response.data.errors.map((err: any) => err.message).join(', ');
+                toast.error(errorMessages);
+            } else if (error?.message) {
+                toast.error(error.message);
+            } else {
+                toast.error('Erreur lors de la sauvegarde');
+            }
+        } finally {
+            setIsSaving(false);
+        }
+    };
     return (
         <UserDashboardLayout title="Mon compte">
-            <Card className="mb-6 lg:mb-8">
-                <CardHeader>
-                    <CardTitle className="text-xl lg:text-2xl font-semibold leading-none tracking-tight">
-                        Mes coordonnées
-                    </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                    {/* Nom */}
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-                        <Label className="font-medium sm:min-w-[140px] sm:text-right text-sm">
-                            Nom
-                        </Label>
-                        <Input
-                            value={formData.nom}
-                            onChange={(e) => handleInputChange('nom', e.target.value)}
-                            className="flex-1"
-                        />
-                    </div>
-
-                    {/* Prénom */}
+            {isLoading ? (
+                <div className="flex justify-center items-center min-h-[400px]">
+                    <div className="text-lg">Chargement...</div>
+                </div>
+            ) : (
+                <>
+                    <Card className="mb-6 lg:mb-8">
+                        <CardHeader>
+                            <CardTitle className="text-xl lg:text-2xl font-semibold leading-none tracking-tight">
+                                Mes coordonnées
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-6">
+                            {/* Prénom */}
                     <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
                         <Label className="font-medium sm:min-w-[140px] sm:text-right text-sm">
                             Prénom
@@ -53,6 +121,18 @@ export default function UserMyAccount() {
                         <Input
                             value={formData.prenom}
                             onChange={(e) => handleInputChange('prenom', e.target.value)}
+                            className="flex-1"
+                        />
+                    </div>
+
+                    {/* Nom */}
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                        <Label className="font-medium sm:min-w-[140px] sm:text-right text-sm">
+                            Nom de famille *
+                        </Label>
+                        <Input
+                            value={formData.nom}
+                            onChange={(e) => handleInputChange('nom', e.target.value)}
                             className="flex-1"
                         />
                     </div>
@@ -65,8 +145,8 @@ export default function UserMyAccount() {
                         <Input
                             type="email"
                             value={formData.email}
-                            onChange={(e) => handleInputChange('email', e.target.value)}
-                            className="flex-1"
+                            disabled
+                            className="flex-1 bg-gray-50 cursor-not-allowed"
                         />
                     </div>
 
@@ -147,10 +227,12 @@ export default function UserMyAccount() {
                     {/* Bouton Enregistrer */}
                     <div className="flex justify-end pt-4">
                         <Button 
+                            onClick={handleSave}
+                            disabled={isSaving}
                             className="w-full sm:w-auto px-8 text-white hover:opacity-90"
                             style={{ backgroundColor: '#3A7B59' }}
                         >
-                            Enregistrer
+                            {isSaving ? 'Sauvegarde...' : 'Enregistrer'}
                         </Button>
                     </div>
                 </CardContent>
@@ -190,6 +272,8 @@ export default function UserMyAccount() {
                     </div>
                 </CardContent>
             </Card>
+                </>
+            )}
         </UserDashboardLayout>
     );
 }
