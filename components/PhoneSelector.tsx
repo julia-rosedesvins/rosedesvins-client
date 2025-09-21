@@ -8,7 +8,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ChevronDown } from "lucide-react";
 
 interface Country {
   code: string;
@@ -77,7 +76,6 @@ export const PhoneSelector = ({ value = "", onChange, className }: PhoneSelector
           <div className="flex items-center space-x-2">
             <span className="text-lg">{selectedCountry.flag}</span>
             <span className="text-sm">{selectedCountry.dialCode}</span>
-            <ChevronDown className="h-4 w-4" />
           </div>
         </SelectTrigger>
         <SelectContent className="bg-background border border-border">

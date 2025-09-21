@@ -107,12 +107,16 @@ export const Header = () => {
               <DropdownMenuTrigger asChild>
                 <div className="flex items-center space-x-2 cursor-pointer hover:bg-white/10 rounded-lg px-2 py-1 transition-colors" style={{ color: 'white' }}>
                   <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
-                    <span className="text-sm font-semibold">D&F</span>
+                    <span className="text-sm font-semibold">
+                      {user ? `${user.firstName[0]}${user.lastName[0]}` : 'U'}
+                    </span>
                   </div>
-                  <span className="text-sm">Domaine Dupont & Fils</span>
+                  <span className="text-sm">
+                    {user ? user.domainName : 'Utilisateur'}
+                  </span>
                 </div>
               </DropdownMenuTrigger>
-              <DropdownMenuContent 
+              {/* <DropdownMenuContent 
                 align="end" 
                 className="bg-background border border-border shadow-lg z-50"
               >
@@ -126,7 +130,7 @@ export const Header = () => {
                     <span className="font-medium">{route.name}</span>
                   </DropdownMenuItem>
                 ))}
-              </DropdownMenuContent>
+              </DropdownMenuContent> */}
             </DropdownMenu>
             <Button 
               variant="ghost" 
@@ -216,9 +220,13 @@ export const Header = () => {
             <div className="flex flex-col space-y-2 mt-4">
               <div className="flex items-center space-x-2 px-2 py-2 rounded-lg bg-white/10">
                 <div className="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center">
-                  <span className="text-xs font-semibold">D&F</span>
+                  <span className="text-xs font-semibold">
+                    {user ? `${user.firstName[0]}${user.lastName[0]}` : 'U'}
+                  </span>
                 </div>
-                <span className="text-sm">Domaine Dupont & Fils</span>
+                <span className="text-sm">
+                  {user ? user.domainName : 'Utilisateur'}
+                </span>
               </div>
               
               {navigationItems.map((route) => (

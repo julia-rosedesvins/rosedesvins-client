@@ -107,26 +107,28 @@ export default function UserMyAccount() {
                     </div>
 
                     {/* Code postal et Ville */}
-                    <div className="space-y-4 sm:space-y-0">
-                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-                            <Label className="font-medium sm:min-w-[140px] sm:text-right text-sm">
-                                Code postal
-                            </Label>
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                        <Label className="font-medium sm:min-w-[140px] sm:text-right text-sm">
+                            Code postal
+                        </Label>
+                        <div className="flex-1 flex flex-col sm:flex-row gap-2 sm:gap-4">
                             <Input
                                 value={formData.codePostal}
                                 onChange={(e) => handleInputChange('codePostal', e.target.value)}
                                 className="w-full sm:w-32"
+                                placeholder="37210"
                             />
-                        </div>
-                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 sm:ml-[156px]">
-                            <Label className="font-medium text-sm sm:ml-8">
-                                Ville
-                            </Label>
-                            <Input
-                                value={formData.ville}
-                                onChange={(e) => handleInputChange('ville', e.target.value)}
-                                className="flex-1"
-                            />
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 flex-1">
+                                <Label className="font-medium text-sm sm:min-w-[50px]">
+                                    Ville
+                                </Label>
+                                <Input
+                                    value={formData.ville}
+                                    onChange={(e) => handleInputChange('ville', e.target.value)}
+                                    className="flex-1"
+                                    placeholder="Vouvray"
+                                />
+                            </div>
                         </div>
                     </div>
 
