@@ -28,7 +28,7 @@ interface EditServiceModalProps {
   isOpen: boolean;
   onClose: () => void;
   prestation: Prestation | null;
-  onSave: (updatedPrestation: Prestation) => void;
+  onSave: (updatedServiceData: any) => void; // Change this to accept any type
 }
 
 export const EditServiceModal = ({ isOpen, onClose, prestation, onSave }: EditServiceModalProps) => {
@@ -83,18 +83,31 @@ export const EditServiceModal = ({ isOpen, onClose, prestation, onSave }: EditSe
 
   const handleSave = () => {
     if (prestation) {
-      const updatedPrestation: Prestation = {
-        ...prestation,
-        name: formData.nom,
-        description: formData.description,
-        price: formData.prix,
-        duration: `${formData.temps} min`,
-        numberOfPeople: formData.nombrePersonnes,
-        winesTasted: formData.vinsDesgustes,
-        languages: formData.langues,
-        otherLanguage: formData.autreLangue
+      // Transform form data to match the expected API format
+      const selectedLanguages = Object.entries(formData.langues)
+        .filter(([_, selected]) => selected)
+        .map(([langue, _]) => langue === 'francais' ? 'French' : 
+                             langue === 'anglais' ? 'English' :
+                             langue === 'allemand' ? 'German' :
+                             langue === 'espagnol' ? 'Spanish' : langue);
+      
+      if (formData.langues.autre && formData.autreLangue.trim()) {
+        selectedLanguages.push(formData.autreLangue.trim());
+      }
+
+      const updatedServiceData = {
+        originalIndex: (prestation as any).originalIndex, // Preserve the index for updating
+        serviceName: formData.nom,
+        serviceDescription: formData.description,
+        numberOfPeople: parseInt(formData.nombrePersonnes) || 1,
+        pricePerPerson: parseFloat(formData.prix) || 0,
+        timeOfServiceInMinutes: parseInt(formData.temps) || 60,
+        numberOfWinesTasted: parseInt(formData.vinsDesgustes) || 0,
+        languagesOffered: selectedLanguages,
+        isActive: true
       };
-      onSave(updatedPrestation);
+      
+      onSave(updatedServiceData);
     }
     onClose();
   };

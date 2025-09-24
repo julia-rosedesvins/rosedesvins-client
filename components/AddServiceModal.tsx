@@ -9,9 +9,10 @@ import { useState } from "react";
 interface AddServiceModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onSave?: (serviceData: any) => void;
 }
 
-export const AddServiceModal = ({ isOpen, onClose }: AddServiceModalProps) => {
+export const AddServiceModal = ({ isOpen, onClose, onSave }: AddServiceModalProps) => {
   const [formData, setFormData] = useState({
     nom: "",
     description: "",
@@ -40,8 +41,53 @@ export const AddServiceModal = ({ isOpen, onClose }: AddServiceModalProps) => {
   };
 
   const handleSubmit = () => {
-    // Logic to handle form submission
-    console.log("Form data:", formData);
+    // Transform form data to match the expected format
+    const selectedLanguages = Object.entries(formData.langues)
+      .filter(([_, selected]) => selected)
+      .map(([langue, _]) => langue === 'francais' ? 'French' : 
+                           langue === 'anglais' ? 'English' :
+                           langue === 'allemand' ? 'German' :
+                           langue === 'espagnol' ? 'Spanish' : langue);
+    
+    if (formData.langues.autre && formData.autreLangue.trim()) {
+      selectedLanguages.push(formData.autreLangue.trim());
+    }
+
+    const serviceData = {
+      serviceName: formData.nom,
+      serviceDescription: formData.description,
+      numberOfPeople: parseInt(formData.nombrePersonnes) || 1,
+      pricePerPerson: parseFloat(formData.prix) || 0,
+      timeOfServiceInMinutes: parseInt(formData.temps) || 60,
+      numberOfWinesTasted: parseInt(formData.vinsDesgustes) || 0,
+      languagesOffered: selectedLanguages,
+      isActive: true
+    };
+
+    console.log("Service data:", serviceData);
+    
+    if (onSave) {
+      onSave(serviceData);
+    }
+    
+    // Reset form
+    setFormData({
+      nom: "",
+      description: "",
+      nombrePersonnes: "",
+      prix: "",
+      temps: "",
+      vinsDesgustes: "",
+      langues: {
+        francais: true,
+        anglais: false,
+        allemand: false,
+        espagnol: false,
+        autre: false
+      },
+      autreLangue: ""
+    });
+    
     onClose();
   };
 

@@ -115,6 +115,61 @@ export interface ApiError {
   statusCode: number;
 }
 
+// Types for domain profile
+export interface DomainService {
+  serviceName: string;
+  serviceDescription: string;
+  numberOfPeople: number;
+  pricePerPerson: number;
+  timeOfServiceInMinutes: number;
+  numberOfWinesTasted: number;
+  languagesOffered: string[];
+  isActive: boolean;
+}
+
+export interface DomainProfile {
+  _id: string;
+  userId: {
+    _id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    domainName: string;
+  };
+  domainDescription?: string;
+  domainType?: string;
+  domainTag?: string;
+  domainColor?: string;
+  domainProfilePictureUrl?: string;
+  domainLogoUrl?: string;
+  services: DomainService[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateOrUpdateDomainProfileRequest {
+  domainName?: string;
+  domainDescription?: string;
+  domainType?: string;
+  domainTag?: string;
+  domainColor?: string;
+}
+
+export interface DomainProfileResponse {
+  success: boolean;
+  message: string;
+  data: {
+    domainProfile: DomainProfile;
+    isNew: boolean;
+  };
+}
+
+export interface GetDomainProfileResponse {
+  success: boolean;
+  message: string;
+  data: DomainProfile | null;
+}
+
 class UserService {
   /**
    * Submit contact form
@@ -197,6 +252,163 @@ class UserService {
       console.error('UserService: Change password error:', error);
       if (axios.isAxiosError(error) && error.response) {
         console.error('UserService: Error response data:', error.response.data);
+        throw error.response.data as ApiError;
+      }
+      throw new Error('Network error occurred');
+    }
+  }
+
+  /**
+   * Create or update domain profile with file uploads
+   * @param domainProfileData - Domain profile data
+   * @param files - Optional files for profile picture and logo
+   * @returns Promise with domain profile response
+   */
+  async createOrUpdateDomainProfile(
+    domainProfileData: CreateOrUpdateDomainProfileRequest,
+    files?: {
+      domainProfilePicture?: File;
+      domainLogo?: File;
+    }
+  ): Promise<DomainProfileResponse> {
+    try {
+      const formData = new FormData();
+      
+      // Add form fields
+      Object.entries(domainProfileData).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          formData.append(key, String(value));
+        }
+      });
+
+      // Add files if provided
+      if (files?.domainProfilePicture) {
+        formData.append('domainProfilePicture', files.domainProfilePicture);
+      }
+      if (files?.domainLogo) {
+        formData.append('domainLogo', files.domainLogo);
+      }
+
+      const response = await apiClient.post<DomainProfileResponse>(
+        '/domain-profile/create-or-update',
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      console.error('UserService: Create/update domain profile error:', error);
+      if (axios.isAxiosError(error) && error.response) {
+        throw error.response.data as ApiError;
+      }
+      throw new Error('Network error occurred');
+    }
+  }
+
+  /**
+   * Get current user's domain profile
+   * @returns Promise with domain profile data
+   */
+  async getDomainProfile(): Promise<GetDomainProfileResponse> {
+    try {
+      const response = await apiClient.get<GetDomainProfileResponse>('/domain-profile/me');
+      return response.data;
+    } catch (error) {
+      console.error('UserService: Get domain profile error:', error);
+      if (axios.isAxiosError(error) && error.response) {
+        throw error.response.data as ApiError;
+      }
+      throw new Error('Network error occurred');
+    }
+  }
+
+  /**
+   * Add a new service to domain profile
+   * @param serviceData - Service data to add
+   * @returns Promise with service response
+   */
+  async addService(serviceData: DomainService): Promise<{ success: boolean; message: string; data: any }> {
+    try {
+      const response = await apiClient.post('/domain-profile/services', serviceData);
+      return response.data;
+    } catch (error) {
+      console.error('UserService: Add service error:', error);
+      if (axios.isAxiosError(error) && error.response) {
+        throw error.response.data as ApiError;
+      }
+      throw new Error('Network error occurred');
+    }
+  }
+
+  /**
+   * Get all services for current user's domain profile
+   * @returns Promise with services array
+   */
+  async getServices(): Promise<{ success: boolean; message: string; data: DomainService[] }> {
+    try {
+      const response = await apiClient.get('/domain-profile/services');
+      return response.data;
+    } catch (error) {
+      console.error('UserService: Get services error:', error);
+      if (axios.isAxiosError(error) && error.response) {
+        throw error.response.data as ApiError;
+      }
+      throw new Error('Network error occurred');
+    }
+  }
+
+  /**
+   * Update a service by index
+   * @param serviceIndex - Index of the service to update
+   * @param serviceData - Updated service data
+   * @returns Promise with updated service response
+   */
+  async updateService(serviceIndex: number, serviceData: Partial<DomainService>): Promise<{ success: boolean; message: string; data: any }> {
+    try {
+      const response = await apiClient.put(`/domain-profile/services/${serviceIndex}`, serviceData);
+      return response.data;
+    } catch (error) {
+      console.error('UserService: Update service error:', error);
+      if (axios.isAxiosError(error) && error.response) {
+        throw error.response.data as ApiError;
+      }
+      throw new Error('Network error occurred');
+    }
+  }
+
+  /**
+   * Delete a service by index
+   * @param serviceIndex - Index of the service to delete
+   * @returns Promise with delete confirmation
+   */
+  async deleteService(serviceIndex: number): Promise<{ success: boolean; message: string }> {
+    try {
+      const response = await apiClient.delete(`/domain-profile/services/${serviceIndex}`);
+      return response.data;
+    } catch (error) {
+      console.error('UserService: Delete service error:', error);
+      if (axios.isAxiosError(error) && error.response) {
+        throw error.response.data as ApiError;
+      }
+      throw new Error('Network error occurred');
+    }
+  }
+
+  /**
+   * Toggle service active status
+   * @param serviceIndex - Index of the service to toggle
+   * @returns Promise with updated service response
+   */
+  async toggleServiceActive(serviceIndex: number): Promise<{ success: boolean; message: string; data: any }> {
+    try {
+      const response = await apiClient.put(`/domain-profile/services/${serviceIndex}/toggle-active`);
+      return response.data;
+    } catch (error) {
+      console.error('UserService: Toggle service active error:', error);
+      if (axios.isAxiosError(error) && error.response) {
         throw error.response.data as ApiError;
       }
       throw new Error('Network error occurred');

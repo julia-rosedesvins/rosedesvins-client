@@ -6,43 +6,259 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Upload, Image, Camera, Plus, Edit, Trash2 } from "lucide-react";
+import { Upload, Image, Camera, Plus, Edit, Trash2, Loader2 } from "lucide-react";
 import { AddServiceModal } from "@/components/AddServiceModal";
 import { EditServiceModal } from "@/components/EditServiceModal";
 import { Switch } from "@/components/ui/switch";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { userService, DomainProfile, DomainService } from "@/services/user.service";
 
 export default function UserDomainProfile() {
     const [isAddServiceModalOpen, setIsAddServiceModalOpen] = useState(false);
     const [selectedPrestation, setSelectedPrestation] = useState<string | null>(null);
     const [isEditServiceModalOpen, setIsEditServiceModalOpen] = useState(false);
     const [editingPrestation, setEditingPrestation] = useState<any>(null);
+    const [domainProfile, setDomainProfile] = useState<DomainProfile | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isSaving, setIsSaving] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    
+    // Form states
+    const [formData, setFormData] = useState({
+        domainName: '',
+        domainDescription: '',
+        domainType: '',
+        domainTag: '',
+        domainColor: '#3A7B59'
+    });
+    const [domainProfilePicture, setDomainProfilePicture] = useState<File | null>(null);
+    const [domainLogo, setDomainLogo] = useState<File | null>(null);
+    const [profilePicturePreview, setProfilePicturePreview] = useState<string | null>(null);
+    const [logoPreview, setLogoPreview] = useState<string | null>(null);
+    const [services, setServices] = useState<DomainService[]>([]);
 
-    const [prestations, setPrestations] = useState([
-        { id: 1, name: "Dégustation de vins", description: "Découvrez nos vins d'exception dans un cadre authentique", price: "25€", duration: "1h30", active: true },
-        { id: 2, name: "Visite libre de cave et dégustation de vins", description: "Explorez notre cave historique et dégustez nos meilleurs crus", price: "35€", duration: "2h", active: true },
-        { id: 3, name: "Atelier vins et fromages", description: "Association parfaite entre nos fromages locaux et nos vins", price: "45€", duration: "2h30", active: false },
-        { id: 4, name: "Pique-nique dans les vignes", description: "Profitez d'un déjeuner champêtre au cœur de nos vignobles", price: "35€", duration: "2h", active: true }
-    ]);
+    // Load domain profile data on mount
+    useEffect(() => {
+        loadDomainProfile();
+    }, []);
+
+    const loadDomainProfile = async () => {
+        try {
+            setIsLoading(true);
+            setError(null);
+            
+            // Load domain profile data
+            const profileResponse = await userService.getDomainProfile();
+            if (profileResponse.data) {
+                setDomainProfile(profileResponse.data);
+                setFormData({
+                    domainName: profileResponse.data.userId.domainName || '',
+                    domainDescription: profileResponse.data.domainDescription || '',
+                    domainType: profileResponse.data.domainType || '',
+                    domainTag: profileResponse.data.domainTag || '',
+                    domainColor: profileResponse.data.domainColor || '#3A7B59'
+                });
+
+                // Set existing image previews if available
+                if (profileResponse.data.domainProfilePictureUrl) {
+                    setProfilePicturePreview(`${process.env.NEXT_PUBLIC_API_BASE_URL}${profileResponse.data.domainProfilePictureUrl}`);
+                }
+                if (profileResponse.data.domainLogoUrl) {
+                    setLogoPreview(`${process.env.NEXT_PUBLIC_API_BASE_URL}${profileResponse.data.domainLogoUrl}`);
+                }
+            }
+
+            // Load services separately
+            const servicesResponse = await userService.getServices();
+            setServices(servicesResponse.data || []);
+            
+        } catch (error: any) {
+            console.error('Error loading domain profile:', error);
+            if (error.statusCode !== 404) {
+                setError('Failed to load domain profile');
+            }
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleInputChange = (field: string, value: string) => {
+        setFormData(prev => ({
+            ...prev,
+            [field]: value
+        }));
+    };
+
+    const handleFileChange = (field: 'domainProfilePicture' | 'domainLogo', file: File | null) => {
+        if (field === 'domainProfilePicture') {
+            setDomainProfilePicture(file);
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    setProfilePicturePreview(e.target?.result as string);
+                };
+                reader.readAsDataURL(file);
+            } else {
+                setProfilePicturePreview(null);
+            }
+        } else {
+            setDomainLogo(file);
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    setLogoPreview(e.target?.result as string);
+                };
+                reader.readAsDataURL(file);
+            } else {
+                setLogoPreview(null);
+            }
+        }
+    };
+
+    const handleSubmit = async () => {
+        try {
+            setIsSaving(true);
+            setError(null);
+
+            const files = {
+                ...(domainProfilePicture && { domainProfilePicture }),
+                ...(domainLogo && { domainLogo })
+            };
+
+            const response = await userService.createOrUpdateDomainProfile(
+                formData, // Only send form data, services are managed separately
+                Object.keys(files).length > 0 ? files : undefined
+            );
+
+            setDomainProfile(response.data.domainProfile);
+            
+            // Clear file inputs but keep previews updated with new URLs
+            setDomainProfilePicture(null);
+            setDomainLogo(null);
+            
+            // Update previews with new URLs if uploaded
+            if (response.data.domainProfile.domainProfilePictureUrl) {
+                setProfilePicturePreview(`${process.env.NEXT_PUBLIC_API_BASE_URL}${response.data.domainProfile.domainProfilePictureUrl}`);
+            }
+            if (response.data.domainProfile.domainLogoUrl) {
+                setLogoPreview(`${process.env.NEXT_PUBLIC_API_BASE_URL}${response.data.domainProfile.domainLogoUrl}`);
+            }
+            
+            // Clear HTML file inputs
+            const profileInput = document.getElementById('photo-profil') as HTMLInputElement;
+            const logoInput = document.getElementById('logo-domaine') as HTMLInputElement;
+            if (profileInput) profileInput.value = '';
+            if (logoInput) logoInput.value = '';
+            
+            // Show success message (you can replace with your preferred notification system)
+            alert(response.message);
+        } catch (error: any) {
+            console.error('Error saving domain profile:', error);
+            setError(error?.message || 'Failed to save domain profile');
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const prestations = services.map((service, index) => ({
+        id: index + 1,
+        name: service.serviceName,
+        description: service.serviceDescription,
+        price: `${service.pricePerPerson}€`,
+        duration: `${Math.floor(service.timeOfServiceInMinutes / 60)}h${service.timeOfServiceInMinutes % 60 > 0 ? (service.timeOfServiceInMinutes % 60) + 'min' : ''}`,
+        active: service.isActive
+    }));
 
     const handleEditPrestation = (prestation: any) => {
-        setEditingPrestation(prestation);
+        const serviceIndex = prestation.id - 1;
+        const service = services[serviceIndex];
+        setEditingPrestation({ ...prestation, originalIndex: serviceIndex });
         setIsEditServiceModalOpen(true);
     };
 
-    const handleSavePrestation = (updatedPrestation: any) => {
-        // Logic pour sauvegarder la prestation modifiée
-        console.log("Prestation mise à jour:", updatedPrestation);
+    const handleAddService = async (newService: any) => {
+        try {
+            // The modal already sends data in the correct format, so use it directly
+            const service: DomainService = {
+                serviceName: newService.serviceName || '',
+                serviceDescription: newService.serviceDescription || '',
+                numberOfPeople: newService.numberOfPeople || 1,
+                pricePerPerson: newService.pricePerPerson || 0,
+                timeOfServiceInMinutes: newService.timeOfServiceInMinutes || 60,
+                numberOfWinesTasted: newService.numberOfWinesTasted || 0,
+                languagesOffered: newService.languagesOffered || ['French'],
+                isActive: newService.isActive !== undefined ? newService.isActive : true
+            };
+            
+            const response = await userService.addService(service);
+            
+            // Reload services to get updated list
+            const servicesResponse = await userService.getServices();
+            setServices(servicesResponse.data || []);
+            
+            setIsAddServiceModalOpen(false);
+            alert('Service added successfully!');
+        } catch (error: any) {
+            console.error('Error adding service:', error);
+            alert(error.message || 'Failed to add service');
+        }
     };
 
-    const handleToggleActive = (prestationId: number) => {
-        setPrestations(prevPrestations =>
-            prevPrestations.map(prestation =>
-                prestation.id === prestationId
-                    ? { ...prestation, active: !prestation.active }
-                    : prestation
-            )
-        );
+    const handleSavePrestation = async (updatedService: any) => {
+        try {
+            if (updatedService.originalIndex !== undefined) {
+                const updateData = {
+                    serviceName: updatedService.serviceName || '',
+                    serviceDescription: updatedService.serviceDescription || '',
+                    numberOfPeople: updatedService.numberOfPeople || 1,
+                    pricePerPerson: updatedService.pricePerPerson || 0,
+                    timeOfServiceInMinutes: updatedService.timeOfServiceInMinutes || 60,
+                    numberOfWinesTasted: updatedService.numberOfWinesTasted || 0,
+                    languagesOffered: updatedService.languagesOffered || ['French'],
+                    isActive: updatedService.isActive !== undefined ? updatedService.isActive : true
+                };
+                
+                await userService.updateService(updatedService.originalIndex, updateData);
+                
+                // Reload services to get updated list
+                const servicesResponse = await userService.getServices();
+                setServices(servicesResponse.data || []);
+                
+                alert('Service updated successfully!');
+            }
+        } catch (error: any) {
+            console.error('Error updating service:', error);
+            alert(error.message || 'Failed to update service');
+        }
+    };
+
+    const handleToggleActive = async (prestationId: number) => {
+        try {
+            const serviceIndex = prestationId - 1;
+            await userService.toggleServiceActive(serviceIndex);
+            
+            // Reload services to get updated list
+            const servicesResponse = await userService.getServices();
+            setServices(servicesResponse.data || []);
+        } catch (error: any) {
+            console.error('Error toggling service status:', error);
+            alert(error.message || 'Failed to update service status');
+        }
+    };
+
+    const handleDeleteService = async (serviceIndex: number) => {
+        try {
+            await userService.deleteService(serviceIndex);
+            
+            // Reload services to get updated list
+            const servicesResponse = await userService.getServices();
+            setServices(servicesResponse.data || []);
+            
+            alert('Service deleted successfully!');
+        } catch (error: any) {
+            console.error('Error deleting service:', error);
+            alert(error.message || 'Failed to delete service');
+        }
     };
     return (
         <UserDashboardLayout title="Profil Domaine">
@@ -52,18 +268,33 @@ export default function UserDomainProfile() {
                     <p className="text-sm lg:text-base text-muted-foreground">Gérez les informations liées à votre profil.</p>
                 </div>
 
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="text-lg lg:text-xl">Informations générales</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
+                {isLoading ? (
+                    <div className="flex justify-center items-center py-12">
+                        <Loader2 className="h-8 w-8 animate-spin" />
+                        <span className="ml-2">Chargement du profil...</span>
+                    </div>
+                ) : (
+                    <>
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="text-lg lg:text-xl">Informations générales</CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                        {error && (
+                            <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded">
+                                {error}
+                            </div>
+                        )}
+                        
                         <div>
                             <Label htmlFor="nom-domaine" className="text-sm font-medium">Nom du domaine</Label>
                             <Input
                                 id="nom-domaine"
                                 placeholder="Ex: Château de la Rose"
-                                defaultValue="Dupont & Fils"
+                                value={formData.domainName}
+                                onChange={(e) => handleInputChange('domainName', e.target.value)}
                                 className="mt-1"
+                                disabled={isLoading}
                             />
                         </div>
 
@@ -72,9 +303,11 @@ export default function UserDomainProfile() {
                             <Textarea
                                 id="description"
                                 placeholder="Décrivez votre domaine viticole..."
-                                defaultValue="Situé près de Tours, au cœur de l'appellation Vouvray, notre domaine familial, transmis depuis quatre générations, est engagé dans l'agriculture biologique. Nous vous accueillons dans une authentique cave troglodytique creusée dans le tuffeau, pierre emblématique de la région, pour des dégustations, visites et ateliers vins et fromages. L'occasion de découvrir notre savoir-faire traditionnel et de partager avec vous notre passion du vin."
+                                value={formData.domainDescription}
+                                onChange={(e) => handleInputChange('domainDescription', e.target.value)}
                                 rows={4}
                                 className="mt-1"
+                                disabled={isLoading}
                             />
                         </div>
                     </CardContent>
@@ -90,21 +323,53 @@ export default function UserDomainProfile() {
                             <div className="space-y-4">
                                 <Label htmlFor="photo-profil" className="text-sm font-medium">Photo de profil du domaine</Label>
                                 <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 lg:p-6 text-center hover:border-gray-400 transition-colors">
-                                    <div className="flex flex-col items-center space-y-2">
-                                        <Camera className="h-10 w-10 lg:h-12 lg:w-12 text-gray-400" />
-                                        <div className="text-sm text-gray-600">
-                                            <label htmlFor="photo-profil" className="cursor-pointer hover:opacity-80" style={{ color: '#3A7B59' }}>
-                                                Cliquez pour uploader
-                                            </label>
-                                            <p className="text-xs mt-1">ou glissez-déposez votre image ici</p>
+                                    {(profilePicturePreview || (domainProfile?.domainProfilePictureUrl && !domainProfilePicture)) ? (
+                                        <div className="relative">
+                                            <img 
+                                                src={profilePicturePreview || `http://localhost:5001${domainProfile?.domainProfilePictureUrl}`} 
+                                                alt="Profile preview" 
+                                                className="w-32 h-32 object-cover rounded-lg mx-auto mb-2"
+                                            />
+                                            <Button 
+                                                variant="outline" 
+                                                size="sm"
+                                                onClick={() => {
+                                                    setDomainProfilePicture(null);
+                                                    setProfilePicturePreview(null);
+                                                    // Reset file input
+                                                    const input = document.getElementById('photo-profil') as HTMLInputElement;
+                                                    if (input) input.value = '';
+                                                }}
+                                                className="mt-2"
+                                            >
+                                                Supprimer
+                                            </Button>
+                                            <p className="text-xs text-gray-600 mt-2">
+                                                {domainProfilePicture ? `Nouveau: ${domainProfilePicture.name}` : 'Image actuelle'}
+                                            </p>
                                         </div>
-                                        <p className="text-xs text-gray-500">PNG, JPG jusqu'à 5MB</p>
-                                    </div>
+                                    ) : (
+                                        <div className="flex flex-col items-center space-y-2">
+                                            <Camera className="h-10 w-10 lg:h-12 lg:w-12 text-gray-400" />
+                                            <div className="text-sm text-gray-600">
+                                                <label htmlFor="photo-profil" className="cursor-pointer hover:opacity-80" style={{ color: '#3A7B59' }}>
+                                                    Cliquez pour uploader
+                                                </label>
+                                                <p className="text-xs mt-1">ou glissez-déposez votre image ici</p>
+                                            </div>
+                                            <p className="text-xs text-gray-500">PNG, JPG jusqu'à 5MB</p>
+                                        </div>
+                                    )}
                                     <input
                                         id="photo-profil"
                                         type="file"
                                         accept="image/*"
                                         className="hidden"
+                                        onChange={(e) => {
+                                            const file = e.target.files?.[0] || null;
+                                            handleFileChange('domainProfilePicture', file);
+                                        }}
+                                        disabled={isLoading}
                                     />
                                 </div>
                             </div>
@@ -113,21 +378,53 @@ export default function UserDomainProfile() {
                             <div className="space-y-4">
                                 <Label htmlFor="logo-domaine" className="text-sm font-medium">Logo du domaine</Label>
                                 <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 lg:p-6 text-center hover:border-gray-400 transition-colors">
-                                    <div className="flex flex-col items-center space-y-2">
-                                        <Image className="h-10 w-10 lg:h-12 lg:w-12 text-gray-400" />
-                                        <div className="text-sm text-gray-600">
-                                            <label htmlFor="logo-domaine" className="cursor-pointer hover:opacity-80" style={{ color: '#3A7B59' }}>
-                                                Cliquez pour uploader
-                                            </label>
-                                            <p className="text-xs mt-1">ou glissez-déposez votre logo ici</p>
+                                    {(logoPreview || (domainProfile?.domainLogoUrl && !domainLogo)) ? (
+                                        <div className="relative">
+                                            <img 
+                                                src={logoPreview || `http://localhost:5001${domainProfile?.domainLogoUrl}`} 
+                                                alt="Logo preview" 
+                                                className="w-32 h-32 object-cover rounded-lg mx-auto mb-2"
+                                            />
+                                            <Button 
+                                                variant="outline" 
+                                                size="sm"
+                                                onClick={() => {
+                                                    setDomainLogo(null);
+                                                    setLogoPreview(null);
+                                                    // Reset file input
+                                                    const input = document.getElementById('logo-domaine') as HTMLInputElement;
+                                                    if (input) input.value = '';
+                                                }}
+                                                className="mt-2"
+                                            >
+                                                Supprimer
+                                            </Button>
+                                            <p className="text-xs text-gray-600 mt-2">
+                                                {domainLogo ? `Nouveau: ${domainLogo.name}` : 'Logo actuel'}
+                                            </p>
                                         </div>
-                                        <p className="text-xs text-gray-500">PNG, JPG, SVG jusqu'à 5MB</p>
-                                    </div>
+                                    ) : (
+                                        <div className="flex flex-col items-center space-y-2">
+                                            <Image className="h-10 w-10 lg:h-12 lg:w-12 text-gray-400" />
+                                            <div className="text-sm text-gray-600">
+                                                <label htmlFor="logo-domaine" className="cursor-pointer hover:opacity-80" style={{ color: '#3A7B59' }}>
+                                                    Cliquez pour uploader
+                                                </label>
+                                                <p className="text-xs mt-1">ou glissez-déposez votre logo ici</p>
+                                            </div>
+                                            <p className="text-xs text-gray-500">PNG, JPG, SVG jusqu'à 5MB</p>
+                                        </div>
+                                    )}
                                     <input
                                         id="logo-domaine"
                                         type="file"
                                         accept="image/*"
                                         className="hidden"
+                                        onChange={(e) => {
+                                            const file = e.target.files?.[0] || null;
+                                            handleFileChange('domainLogo', file);
+                                        }}
+                                        disabled={isLoading}
                                     />
                                 </div>
                             </div>
@@ -151,14 +448,18 @@ export default function UserDomainProfile() {
                                             <Input
                                                 id="color-picker"
                                                 type="text"
-                                                defaultValue="#000000"
+                                                value={formData.domainColor}
+                                                onChange={(e) => handleInputChange('domainColor', e.target.value)}
                                                 className="font-mono flex-1"
                                                 placeholder="#000000"
+                                                disabled={isLoading}
                                             />
                                             <input
                                                 type="color"
-                                                defaultValue="#000000"
+                                                value={formData.domainColor}
+                                                onChange={(e) => handleInputChange('domainColor', e.target.value)}
                                                 className="w-full sm:w-12 h-10 border border-gray-300 rounded cursor-pointer"
+                                                disabled={isLoading}
                                             />
                                         </div>
                                     </div>
@@ -204,7 +505,12 @@ export default function UserDomainProfile() {
                                                     />
                                                     <span className="text-xs sm:text-sm text-gray-600">Activer</span>
                                                 </div>
-                                                <Button variant="ghost" size="sm" className="text-gray-600 hover:text-gray-800 text-xs sm:text-sm p-1 sm:p-2" onClick={(e) => e.stopPropagation()}>
+                                                <Button variant="ghost" size="sm" className="text-gray-600 hover:text-gray-800 text-xs sm:text-sm p-1 sm:p-2" onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    if (confirm('Are you sure you want to delete this service?')) {
+                                                        handleDeleteService(prestation.id - 1);
+                                                    }
+                                                }}>
                                                     <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" />
                                                     <span className="hidden sm:inline">Supprimer</span>
                                                 </Button>
@@ -259,15 +565,27 @@ export default function UserDomainProfile() {
                     <Button 
                         className="w-full sm:w-auto px-6 lg:px-8 text-white hover:opacity-90"
                         style={{ backgroundColor: '#3A7B59' }}
+                        onClick={handleSubmit}
+                        disabled={isLoading || isSaving}
                     >
-                        Enregistrer les modifications
+                        {isSaving ? (
+                            <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Enregistrement...
+                            </>
+                        ) : (
+                            'Enregistrer les modifications'
+                        )}
                     </Button>
                 </div>
+                </>
+                )}
             </div>
 
             <AddServiceModal
                 isOpen={isAddServiceModalOpen}
                 onClose={() => setIsAddServiceModalOpen(false)}
+                onSave={handleAddService}
             />
 
             <EditServiceModal
