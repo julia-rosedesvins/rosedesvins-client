@@ -132,13 +132,13 @@ export default function AdminSubscriptions() {
     };
 
     const getStatusBadge = (subscription: Subscription) => {
-        if (!subscription.isActive) {
-            return <Badge variant="destructive">Annulé</Badge>;
-        }
-        
         const now = new Date();
         const startDate = new Date(subscription.startDate);
         const endDate = new Date(subscription.endDate);
+        
+        if (!subscription.isActive) {
+            return <Badge variant="destructive">Inactif</Badge>;
+        }
         
         if (now < startDate) {
             return <Badge variant="secondary">À venir</Badge>;
@@ -146,6 +146,47 @@ export default function AdminSubscriptions() {
             return <Badge variant="destructive">Expiré</Badge>;
         } else {
             return <Badge variant="default" className="bg-green-500">Actif</Badge>;
+        }
+    };
+
+    const getValidityStatus = (subscription: Subscription) => {
+        const now = new Date();
+        const startDate = new Date(subscription.startDate);
+        const endDate = new Date(subscription.endDate);
+        
+        if (!subscription.isActive) {
+            return { status: 'inactive', text: 'Abonnement inactif', color: 'text-red-600' };
+        }
+        
+        if (now < startDate) {
+            const daysUntilStart = Math.ceil((startDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+            return { 
+                status: 'upcoming', 
+                text: `Commence dans ${daysUntilStart} jour${daysUntilStart > 1 ? 's' : ''}`, 
+                color: 'text-blue-600' 
+            };
+        } else if (now > endDate) {
+            const daysExpired = Math.ceil((now.getTime() - endDate.getTime()) / (1000 * 60 * 60 * 24));
+            return { 
+                status: 'expired', 
+                text: `Expiré depuis ${daysExpired} jour${daysExpired > 1 ? 's' : ''}`, 
+                color: 'text-red-600' 
+            };
+        } else {
+            const daysRemaining = Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+            if (daysRemaining <= 7) {
+                return { 
+                    status: 'expiring', 
+                    text: `Expire dans ${daysRemaining} jour${daysRemaining > 1 ? 's' : ''}`, 
+                    color: 'text-orange-600' 
+                };
+            } else {
+                return { 
+                    status: 'active', 
+                    text: `${daysRemaining} jour${daysRemaining > 1 ? 's' : ''} restant${daysRemaining > 1 ? 's' : ''}`, 
+                    color: 'text-green-600' 
+                };
+            }
         }
     };
 
@@ -502,7 +543,14 @@ export default function AdminSubscriptions() {
                                             </div>
                                         </div>
                                         
-                                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 text-sm">
+                                        {/* Validity Status */}
+                                        <div className="text-sm">
+                                            <span className={`font-medium ${getValidityStatus(subscription).color}`}>
+                                                {getValidityStatus(subscription).text}
+                                            </span>
+                                        </div>
+                                        
+                                        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 text-sm">
                                             <div>
                                                 <span className="font-medium">Début:</span> {formatDate(subscription.startDate)}
                                             </div>
@@ -511,6 +559,12 @@ export default function AdminSubscriptions() {
                                             </div>
                                             <div>
                                                 <span className="font-medium">Créé par:</span> {subscription.adminId.firstName} {subscription.adminId.lastName}
+                                            </div>
+                                            <div>
+                                                <span className="font-medium">Statut:</span> 
+                                                <span className={subscription.isActive ? 'text-green-600' : 'text-red-600'}>
+                                                    {subscription.isActive ? ' Actif' : ' Inactif'}
+                                                </span>
                                             </div>
                                         </div>
                                         
