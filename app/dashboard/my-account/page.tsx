@@ -5,12 +5,16 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { PhoneSelector } from "@/components/PhoneSelector";
 import { useState, useEffect } from "react";
 import { contactDetailsService, ContactDetails } from "@/services/contactDetails.service";
+import { useUser } from "@/contexts/UserContext";
 import { toast } from "react-hot-toast";
 
 export default function UserMyAccount() {
+    const { user } = useUser();
+    const [isMounted, setIsMounted] = useState(false);
     const [formData, setFormData] = useState({
         prenom: "",
         nom: "",
@@ -25,6 +29,16 @@ export default function UserMyAccount() {
 
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
+
+    // Ensure client-side rendering
+    useEffect(() => {
+        setIsMounted(true);
+    }, []);
+
+    // Helper functions for subscription
+    const formatDate = (dateString: string) => {
+        return new Date(dateString).toLocaleDateString('fr-FR');
+    };
 
     // Fetch contact details on component mount
     useEffect(() => {
@@ -257,19 +271,100 @@ export default function UserMyAccount() {
                     </CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <p className="text-muted-foreground mb-6 text-sm lg:text-base">
-                        Votre contrat annuel a démarré le 25/05/2025. N'hésitez pas à nous contacter si besoin d'en discuter.
-                    </p>
+                    {!isMounted ? (
+                        <div className="text-center py-8">
+                            <div className="text-lg">Chargement...</div>
+                        </div>
+                    ) : (
+                        <div>
+                            {user?.subscription ? (
+                                <div className="space-y-4">
+                                    {/* Subscription Status */}
+                                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                                        <Label className="font-medium text-sm">Statut:</Label>
+                                        <div>
+                                            {user.subscription.isActive ? (
+                                                new Date() < new Date(user.subscription.startDate) ? (
+                                                    <Badge className="text-white bg-blue-500">À venir</Badge>
+                                                ) : new Date() > new Date(user.subscription.endDate) ? (
+                                                    <Badge className="text-white bg-red-500">Expiré</Badge>
+                                                ) : Math.ceil((new Date(user.subscription.endDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) <= 30 ? (
+                                                    <Badge className="text-white bg-orange-500">Expire bientôt</Badge>
+                                                ) : (
+                                                    <Badge className="text-white bg-green-500">Actif</Badge>
+                                                )
+                                            ) : (
+                                                <Badge className="text-white bg-red-500">Inactif</Badge>
+                                            )}
+                                        </div>
+                                    </div>
 
-                    <div className="flex justify-end">
-                        <Button
-                            variant="link"
-                            className="p-0 h-auto font-medium text-sm lg:text-base hover:opacity-80"
-                            style={{ color: '#3A7B59' }}
-                        >
-                            Résilier mon abonnement
-                        </Button>
-                    </div>
+                                    {/* Subscription Dates */}
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div>
+                                            <Label className="font-medium text-sm">Date de début:</Label>
+                                            <p className="text-sm text-muted-foreground mt-1">
+                                                {formatDate(user.subscription.startDate)}
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <Label className="font-medium text-sm">Date de fin:</Label>
+                                            <p className="text-sm text-muted-foreground mt-1">
+                                                {formatDate(user.subscription.endDate)}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    {/* Subscription Notes */}
+                                    {user.subscription.notes && (
+                                        <div>
+                                            <Label className="font-medium text-sm">Notes:</Label>
+                                            <p className="text-sm text-muted-foreground mt-1">
+                                                {user.subscription.notes}
+                                            </p>
+                                        </div>
+                                    )}
+
+                                    {/* Cancellation Info */}
+                                    {user.subscription.cancelledById && (
+                                        <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                                            <Label className="font-medium text-sm text-red-800">Annulé par:</Label>
+                                            <p className="text-sm text-red-700 mt-1">
+                                                {user.subscription.cancelledById.firstName} {user.subscription.cancelledById.lastName}
+                                            </p>
+                                            <p className="text-xs text-red-600 mt-1">
+                                                Le {formatDate(user.subscription.cancelledAt!)}
+                                            </p>
+                                        </div>
+                                    )}
+
+                                    {user.subscription.isActive && !user.subscription.cancelledById && (
+                                        <div className="flex justify-end">
+                                            <Button
+                                                variant="link"
+                                                className="p-0 h-auto font-medium text-sm lg:text-base hover:opacity-80 text-red-600"
+                                            >
+                                                Demander la résiliation
+                                            </Button>
+                                        </div>
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="text-center py-8">
+                                    <p className="text-muted-foreground mb-4">
+                                        Vous n'avez pas d'abonnement actif.
+                                    </p>
+                                    <Button
+                                        variant="link"
+                                        className="p-0 h-auto font-medium text-sm lg:text-base hover:opacity-80"
+                                        style={{ color: '#3A7B59' }}
+                                    >
+                                        Contacter l'équipe pour un abonnement
+                                    </Button>
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </CardContent>
             </Card>
                 </>

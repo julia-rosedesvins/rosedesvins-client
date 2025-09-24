@@ -31,6 +31,29 @@ export interface UserLoginRequest {
   password: string;
 }
 
+export interface UserSubscription {
+  _id: string;
+  startDate: string;
+  endDate: string;
+  isActive: boolean;
+  notes?: string;
+  adminId: {
+    _id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+  };
+  cancelledById?: {
+    _id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+  };
+  cancelledAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface UserProfile {
   _id: string;
   id?: string;
@@ -41,6 +64,7 @@ export interface UserProfile {
   domainName: string;
   accountStatus: string;
   mustChangePassword: boolean;
+  subscription?: UserSubscription;
   createdAt?: string;
   updatedAt?: string;
   lastLoginAt?: string;
