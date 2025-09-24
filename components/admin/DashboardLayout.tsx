@@ -7,7 +7,7 @@ import DashboardHeader from "./DashboardHeader"
 
 interface DashboardLayoutProps {
   children: ReactNode
-  title: string
+  title?: string
 }
 
 export default function DashboardLayout({ children, title }: DashboardLayoutProps) {
@@ -33,7 +33,7 @@ export default function DashboardLayout({ children, title }: DashboardLayoutProp
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden lg:ml-0">
         <DashboardHeader 
-          title={title} 
+          title={title || ""} 
           onMenuClick={handleSidebarToggle}
         />
 

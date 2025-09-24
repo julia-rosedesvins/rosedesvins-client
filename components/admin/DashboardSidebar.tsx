@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button"
-import { LogOut, Home, Calendar, Users, Wine, BarChart3, Settings } from "lucide-react"
+import { LogOut, Home, Calendar, Users, Wine, BarChart3, Settings, CreditCard } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useAdmin } from "@/contexts/AdminContext"
@@ -21,6 +21,7 @@ const sidebarItems: SidebarItem[] = [
   { icon: Home, label: "Tableau de bord", href: "/admin/dashboard" },
   { icon: Calendar, label: "Réservations", href: "/admin/reservations" },
   { icon: Users, label: "Clients", href: "/admin/clients" },
+  { icon: CreditCard, label: "Abonnements", href: "/admin/subscriptions" },
   { icon: Wine, label: "Dégustations", href: "/admin/degustations" },
   { icon: BarChart3, label: "Statistiques", href: "/admin/statistiques" },
   { icon: Settings, label: "Paramètres", href: "/admin/parametres" },
