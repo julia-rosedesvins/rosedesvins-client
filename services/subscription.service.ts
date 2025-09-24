@@ -37,6 +37,7 @@ export interface CreateOrUpdateSubscriptionRequest {
   startDate: string;
   endDate: string;
   notes?: string;
+  isActive?: boolean;
 }
 
 export interface GetAllSubscriptionsQuery {

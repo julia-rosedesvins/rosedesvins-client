@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Search, ChevronLeft, ChevronRight, Calendar, Users, Plus, Loader2 } from "lucide-react"
+import { Search, ChevronLeft, ChevronRight, Calendar, Users, Plus, Loader2, Edit, Trash2 } from "lucide-react"
 import DashboardLayout from "@/components/admin/DashboardLayout"
 import { useAdmin } from '@/contexts/AdminContext'
 import { adminService, AdminUser } from '@/services/admin.service'
@@ -23,14 +23,23 @@ export default function AdminSubscriptions() {
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
     const [selectedUser, setSelectedUser] = useState<string>('');
+    const [selectedSubscription, setSelectedSubscription] = useState<Subscription | null>(null);
     const [users, setUsers] = useState<AdminUser[]>([]);
     const [loadingUsers, setLoadingUsers] = useState(false);
     const [createLoading, setCreateLoading] = useState(false);
+    const [updateLoading, setUpdateLoading] = useState(false);
     const [formData, setFormData] = useState({
         startDate: '',
         endDate: '',
         notes: ''
+    });
+    const [updateFormData, setUpdateFormData] = useState({
+        startDate: '',
+        endDate: '',
+        notes: '',
+        isActive: true
     });
 
     const fetchSubscriptions = async (page: number = 1, limit: number = 10) => {
@@ -140,6 +149,61 @@ export default function AdminSubscriptions() {
         }
     };
 
+    const openUpdateModal = (subscription: Subscription) => {
+        setSelectedSubscription(subscription);
+        setUpdateFormData({
+            startDate: new Date(subscription.startDate).toISOString().split('T')[0],
+            endDate: new Date(subscription.endDate).toISOString().split('T')[0],
+            notes: subscription.notes || '',
+            isActive: subscription.isActive
+        });
+        setIsUpdateModalOpen(true);
+    };
+
+    const handleUpdateSubscription = async () => {
+        if (!selectedSubscription || !updateFormData.startDate || !updateFormData.endDate) {
+            toast.error('Veuillez remplir tous les champs obligatoires');
+            return;
+        }
+
+        if (new Date(updateFormData.endDate) <= new Date(updateFormData.startDate)) {
+            toast.error('La date de fin doit être postérieure à la date de début');
+            return;
+        }
+
+        setUpdateLoading(true);
+        try {
+            const subscriptionData: CreateOrUpdateSubscriptionRequest = {
+                userId: selectedSubscription.userId._id,
+                startDate: new Date(updateFormData.startDate).toISOString(),
+                endDate: new Date(updateFormData.endDate).toISOString(),
+                notes: updateFormData.notes || undefined,
+                isActive: updateFormData.isActive
+            };
+
+            const response = await subscriptionService.createOrUpdateSubscription(subscriptionData);
+            
+            toast.success('Abonnement mis à jour avec succès');
+            
+            setIsUpdateModalOpen(false);
+            setSelectedSubscription(null);
+            setUpdateFormData({ startDate: '', endDate: '', notes: '', isActive: true });
+            fetchSubscriptions();
+        } catch (error: any) {
+            console.error('Error updating subscription:', error);
+            if (error?.response?.data?.errors && Array.isArray(error.response.data.errors)) {
+                const errorMessages = error.response.data.errors.map((err: any) => err.message).join(', ');
+                toast.error(errorMessages);
+            } else if (error?.response?.data?.message) {
+                toast.error(error.response.data.message);
+            } else {
+                toast.error('Erreur lors de la mise à jour de l\'abonnement');
+            }
+        } finally {
+            setUpdateLoading(false);
+        }
+    };
+
     const filteredSubscriptions = subscriptions.filter(subscription => {
         const searchMatch = subscription.userId.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            subscription.userId.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -181,14 +245,14 @@ export default function AdminSubscriptions() {
                     
                     <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
                         <DialogTrigger asChild>
-                            <Button>
+                            <Button style={{ backgroundColor: '#3A7B59' }} className="hover:opacity-90">
                                 <Plus className="h-4 w-4 mr-2" />
                                 Nouvel Abonnement
                             </Button>
                         </DialogTrigger>
                         <DialogContent className="sm:max-w-md">
                             <DialogHeader>
-                                <DialogTitle>Créer/Modifier un Abonnement</DialogTitle>
+                                <DialogTitle>Créer un Nouvel Abonnement</DialogTitle>
                             </DialogHeader>
                             <div className="space-y-4">
                                 <div>
@@ -251,15 +315,109 @@ export default function AdminSubscriptions() {
                                     >
                                         Annuler
                                     </Button>
-                                    <Button onClick={handleCreateSubscription} disabled={createLoading}>
-                                        {createLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                                        {createLoading ? 'Création...' : 'Créer'}
+                                    <Button onClick={handleCreateSubscription} disabled={createLoading} style={{ backgroundColor: '#3A7B59' }} className="hover:opacity-90">
+                                        {createLoading ? (
+                                            <>
+                                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                                Création...
+                                            </>
+                                        ) : (
+                                            'Créer'
+                                        )}
                                     </Button>
                                 </div>
                             </div>
                         </DialogContent>
                     </Dialog>
                 </div>
+
+                {/* Update Subscription Modal */}
+                <Dialog open={isUpdateModalOpen} onOpenChange={setIsUpdateModalOpen}>
+                    <DialogContent className="sm:max-w-md">
+                        <DialogHeader>
+                            <DialogTitle>Modifier l'Abonnement</DialogTitle>
+                        </DialogHeader>
+                        {selectedSubscription && (
+                            <div className="space-y-4">
+                                {/* User Info (Read-only) */}
+                                <div className="bg-gray-50 p-3 rounded-lg">
+                                    <div className="font-medium">
+                                        {selectedSubscription.userId.firstName} {selectedSubscription.userId.lastName}
+                                    </div>
+                                    <div className="text-sm text-muted-foreground">
+                                        {selectedSubscription.userId.email}
+                                    </div>
+                                    {selectedSubscription.userId.domainName && (
+                                        <div className="text-sm text-muted-foreground">
+                                            {selectedSubscription.userId.domainName}
+                                        </div>
+                                    )}
+                                </div>
+                                
+                                <div>
+                                    <Label htmlFor="update-start-date">Date de début *</Label>
+                                    <Input
+                                        id="update-start-date"
+                                        type="date"
+                                        value={updateFormData.startDate}
+                                        onChange={(e) => setUpdateFormData(prev => ({ ...prev, startDate: e.target.value }))}
+                                    />
+                                </div>
+                                
+                                <div>
+                                    <Label htmlFor="update-end-date">Date de fin *</Label>
+                                    <Input
+                                        id="update-end-date"
+                                        type="date"
+                                        value={updateFormData.endDate}
+                                        onChange={(e) => setUpdateFormData(prev => ({ ...prev, endDate: e.target.value }))}
+                                    />
+                                </div>
+                                
+                                <div>
+                                    <Label htmlFor="update-notes">Notes</Label>
+                                    <Input
+                                        id="update-notes"
+                                        placeholder="Notes optionnelles..."
+                                        value={updateFormData.notes}
+                                        onChange={(e) => setUpdateFormData(prev => ({ ...prev, notes: e.target.value }))}
+                                    />
+                                </div>
+                                
+                                <div className="flex items-center space-x-2">
+                                    <input
+                                        id="update-is-active"
+                                        type="checkbox"
+                                        checked={updateFormData.isActive}
+                                        onChange={(e) => setUpdateFormData(prev => ({ ...prev, isActive: e.target.checked }))}
+                                        className="rounded"
+                                    />
+                                    <Label htmlFor="update-is-active">Abonnement actif</Label>
+                                </div>
+                                
+                                <div className="flex justify-end gap-2">
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => setIsUpdateModalOpen(false)}
+                                        disabled={updateLoading}
+                                    >
+                                        Annuler
+                                    </Button>
+                                    <Button onClick={handleUpdateSubscription} disabled={updateLoading} style={{ backgroundColor: '#3A7B59' }} className="hover:opacity-90">
+                                        {updateLoading ? (
+                                            <>
+                                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                                Mise à jour...
+                                            </>
+                                        ) : (
+                                            'Mettre à jour'
+                                        )}
+                                    </Button>
+                                </div>
+                            </div>
+                        )}
+                    </DialogContent>
+                </Dialog>
 
                 {/* Filters */}
                 <Card>
@@ -334,6 +492,13 @@ export default function AdminSubscriptions() {
                                             </div>
                                             <div className="flex items-center gap-2">
                                                 {getStatusBadge(subscription)}
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() => openUpdateModal(subscription)}
+                                                >
+                                                    <Edit className="h-4 w-4" />
+                                                </Button>
                                             </div>
                                         </div>
                                         
