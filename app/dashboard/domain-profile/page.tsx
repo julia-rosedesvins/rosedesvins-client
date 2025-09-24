@@ -12,6 +12,7 @@ import { EditServiceModal } from "@/components/EditServiceModal";
 import { Switch } from "@/components/ui/switch";
 import { useState, useEffect } from "react";
 import { userService, DomainProfile, DomainService } from "@/services/user.service";
+import toast from "react-hot-toast";
 
 export default function UserDomainProfile() {
     const [isAddServiceModalOpen, setIsAddServiceModalOpen] = useState(false);
@@ -150,11 +151,12 @@ export default function UserDomainProfile() {
             if (profileInput) profileInput.value = '';
             if (logoInput) logoInput.value = '';
             
-            // Show success message (you can replace with your preferred notification system)
-            alert(response.message);
+            // Show success message
+            toast.success(response.message);
         } catch (error: any) {
             console.error('Error saving domain profile:', error);
             setError(error?.message || 'Failed to save domain profile');
+            toast.error(error?.message || 'Failed to save domain profile');
         } finally {
             setIsSaving(false);
         }
@@ -197,10 +199,10 @@ export default function UserDomainProfile() {
             setServices(servicesResponse.data || []);
             
             setIsAddServiceModalOpen(false);
-            alert('Service added successfully!');
+            toast.success('Service added successfully!');
         } catch (error: any) {
             console.error('Error adding service:', error);
-            alert(error.message || 'Failed to add service');
+            toast.error(error.message || 'Failed to add service');
         }
     };
 
@@ -224,11 +226,11 @@ export default function UserDomainProfile() {
                 const servicesResponse = await userService.getServices();
                 setServices(servicesResponse.data || []);
                 
-                alert('Service updated successfully!');
+                toast.success('Service updated successfully!');
             }
         } catch (error: any) {
             console.error('Error updating service:', error);
-            alert(error.message || 'Failed to update service');
+            toast.error(error.message || 'Failed to update service');
         }
     };
 
@@ -240,9 +242,10 @@ export default function UserDomainProfile() {
             // Reload services to get updated list
             const servicesResponse = await userService.getServices();
             setServices(servicesResponse.data || []);
+            toast.success('Service status updated successfully!');
         } catch (error: any) {
             console.error('Error toggling service status:', error);
-            alert(error.message || 'Failed to update service status');
+            toast.error(error.message || 'Failed to update service status');
         }
     };
 
@@ -254,10 +257,10 @@ export default function UserDomainProfile() {
             const servicesResponse = await userService.getServices();
             setServices(servicesResponse.data || []);
             
-            alert('Service deleted successfully!');
+            toast.success('Service deleted successfully!');
         } catch (error: any) {
             console.error('Error deleting service:', error);
-            alert(error.message || 'Failed to delete service');
+            toast.error(error.message || 'Failed to delete service');
         }
     };
     return (
