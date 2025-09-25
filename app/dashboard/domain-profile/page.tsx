@@ -335,37 +335,19 @@ export default function UserDomainProfile() {
                                                 alt="Profile preview" 
                                                 className="w-32 h-32 object-cover rounded-lg mx-auto mb-2"
                                             />
-                                            <div className="flex flex-col sm:flex-row gap-2 mt-2">
-                                                <Button 
-                                                    variant="outline" 
-                                                    size="sm"
-                                                    onClick={() => {
-                                                        // Trigger file input to select new image
-                                                        const input = document.getElementById('photo-profil') as HTMLInputElement;
-                                                        if (input) input.click();
-                                                    }}
-                                                    className="flex-1"
-                                                >
-                                                    <Camera className="h-4 w-4 mr-2" />
-                                                    Changer la photo
-                                                </Button>
-                                                <Button 
-                                                    variant="outline" 
-                                                    size="sm"
-                                                    onClick={() => {
-                                                        setDomainProfilePicture(null);
-                                                        setProfilePicturePreview(null);
-                                                        // Reset file input
-                                                        const input = document.getElementById('photo-profil') as HTMLInputElement;
-                                                        if (input) input.value = '';
-                                                        toast.success('Photo supprimée');
-                                                    }}
-                                                    className="text-red-600 hover:text-red-700 hover:border-red-300"
-                                                >
-                                                    <Trash2 className="h-4 w-4 mr-1" />
-                                                    Supprimer
-                                                </Button>
-                                            </div>
+                                            <Button 
+                                                variant="outline" 
+                                                size="sm"
+                                                onClick={() => {
+                                                    // Trigger file input to select new image
+                                                    const input = document.getElementById('photo-profil') as HTMLInputElement;
+                                                    if (input) input.click();
+                                                }}
+                                                className="mt-2"
+                                            >
+                                                <Camera className="h-4 w-4 mr-2" />
+                                                Changer la photo
+                                            </Button>
                                             <p className="text-xs text-gray-600 mt-2">
                                                 {domainProfilePicture ? (
                                                     <span className="text-orange-600 font-medium">
@@ -411,37 +393,19 @@ export default function UserDomainProfile() {
                                                 alt="Logo preview" 
                                                 className="w-32 h-32 object-cover rounded-lg mx-auto mb-2"
                                             />
-                                            <div className="flex flex-col sm:flex-row gap-2 mt-2">
-                                                <Button 
-                                                    variant="outline" 
-                                                    size="sm"
-                                                    onClick={() => {
-                                                        // Trigger file input to select new logo
-                                                        const input = document.getElementById('logo-domaine') as HTMLInputElement;
-                                                        if (input) input.click();
-                                                    }}
-                                                    className="flex-1"
-                                                >
-                                                    <Image className="h-4 w-4 mr-2" />
-                                                    Changer le logo
-                                                </Button>
-                                                <Button 
-                                                    variant="outline" 
-                                                    size="sm"
-                                                    onClick={() => {
-                                                        setDomainLogo(null);
-                                                        setLogoPreview(null);
-                                                        // Reset file input
-                                                        const input = document.getElementById('logo-domaine') as HTMLInputElement;
-                                                        if (input) input.value = '';
-                                                        toast.success('Logo supprimé');
-                                                    }}
-                                                    className="text-red-600 hover:text-red-700 hover:border-red-300"
-                                                >
-                                                    <Trash2 className="h-4 w-4 mr-1" />
-                                                    Supprimer
-                                                </Button>
-                                            </div>
+                                            <Button 
+                                                variant="outline" 
+                                                size="sm"
+                                                onClick={() => {
+                                                    // Trigger file input to select new logo
+                                                    const input = document.getElementById('logo-domaine') as HTMLInputElement;
+                                                    if (input) input.click();
+                                                }}
+                                                className="mt-2"
+                                            >
+                                                <Image className="h-4 w-4 mr-2" />
+                                                Changer le logo
+                                            </Button>
                                             <p className="text-xs text-gray-600 mt-2">
                                                 {domainLogo ? (
                                                     <span className="text-orange-600 font-medium">
