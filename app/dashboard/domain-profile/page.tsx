@@ -447,13 +447,14 @@ export default function UserDomainProfile() {
                                 <h3 className="text-base lg:text-lg font-semibold">Couleurs</h3>
                                 <div className="flex flex-col sm:flex-row sm:items-center space-y-4 sm:space-y-0 sm:space-x-4">
                                     <div className="flex-shrink-0 mx-auto sm:mx-0">
-                                        <div className="w-16 h-16 lg:w-20 lg:h-20 rounded-full border-4 border-gray-200 relative overflow-hidden">
-                                            <div className="w-full h-full bg-gradient-to-r from-red-500 to-purple-500 via-blue-500 relative">
-                                                <div className="absolute inset-2 bg-white rounded-full border-2 border-gray-300"></div>
-                                            </div>
+                                        <div 
+                                            className="w-16 h-16 lg:w-20 lg:h-20 rounded-full border-4 border-gray-200 relative overflow-hidden"
+                                            style={{ backgroundColor: formData.domainColor }}
+                                        >
+                                            <div className="absolute inset-2 bg-white rounded-full border-2 border-gray-300 opacity-20"></div>
                                         </div>
                                     </div>
-                                    <div className="flex-1">
+                                    <div className="flex-1 relative">
                                         <Label htmlFor="color-picker" className="text-sm font-medium">Code couleur</Label>
                                         <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-2 mt-1">
                                             <Input
@@ -462,17 +463,36 @@ export default function UserDomainProfile() {
                                                 value={formData.domainColor}
                                                 onChange={(e) => handleInputChange('domainColor', e.target.value)}
                                                 className="font-mono flex-1"
-                                                placeholder="#000000"
+                                                placeholder="#3A7B59"
                                                 disabled={isLoading}
                                             />
-                                            <input
-                                                type="color"
-                                                value={formData.domainColor}
-                                                onChange={(e) => handleInputChange('domainColor', e.target.value)}
-                                                className="w-full sm:w-12 h-10 border border-gray-300 rounded cursor-pointer"
-                                                disabled={isLoading}
-                                            />
+                                            <div className="relative flex-shrink-0 ml-auto">
+                                                <input
+                                                    type="color"
+                                                    value={formData.domainColor}
+                                                    onChange={(e) => handleInputChange('domainColor', e.target.value)}
+                                                    className="w-10 h-10 border-0 rounded cursor-pointer absolute right-0 opacity-0"
+                                                    disabled={isLoading}
+                                                    style={{
+                                                        transform: 'translateX(-100%)',
+                                                        zIndex: 10
+                                                    }}
+                                                />
+                                                <div 
+                                                    className="w-10 h-10 border border-gray-300 rounded cursor-pointer flex items-center justify-center shadow-sm hover:shadow-md transition-shadow"
+                                                    style={{ backgroundColor: formData.domainColor }}
+                                                    onClick={() => {
+                                                        const colorInput = document.querySelector('input[type="color"]') as HTMLInputElement;
+                                                        if (colorInput) {
+                                                            colorInput.click();
+                                                        }
+                                                    }}
+                                                >
+                                                    <div className="w-6 h-6 rounded border border-white/20 bg-white/10"></div>
+                                                </div>
+                                            </div>
                                         </div>
+                                        <p className="text-xs text-gray-500 mt-1">Cliquez sur le carré coloré ou tapez directement le code hexadécimal</p>
                                     </div>
                                 </div>
                             </div>
