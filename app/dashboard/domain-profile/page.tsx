@@ -176,7 +176,52 @@ export default function UserDomainProfile() {
     const handleEditPrestation = (prestation: any) => {
         const serviceIndex = prestation.id - 1;
         const service = services[serviceIndex];
-        setEditingPrestation({ ...prestation, originalIndex: serviceIndex });
+        
+        // Map languages from service data to UI format
+        const languagesState = {
+            francais: false,
+            anglais: false,
+            allemand: false,
+            espagnol: false,
+            autre: false
+        };
+        
+        let otherLanguage = "";
+        
+        if (service.languagesOffered) {
+            service.languagesOffered.forEach((lang: string) => {
+                switch(lang.toLowerCase()) {
+                    case 'french':
+                        languagesState.francais = true;
+                        break;
+                    case 'english':
+                        languagesState.anglais = true;
+                        break;
+                    case 'german':
+                        languagesState.allemand = true;
+                        break;
+                    case 'spanish':
+                        languagesState.espagnol = true;
+                        break;
+                    default:
+                        languagesState.autre = true;
+                        otherLanguage = lang;
+                        break;
+                }
+            });
+        }
+        
+        // Create enhanced prestation object with all needed data
+        const enhancedPrestation = {
+            ...prestation,
+            originalIndex: serviceIndex,
+            numberOfPeople: service.numberOfPeople.toString(),
+            winesTasted: service.numberOfWinesTasted.toString(),
+            languages: languagesState,
+            otherLanguage: otherLanguage
+        };
+        
+        setEditingPrestation(enhancedPrestation);
         setIsEditServiceModalOpen(true);
     };
 
