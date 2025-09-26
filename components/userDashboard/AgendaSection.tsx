@@ -6,15 +6,34 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Calendar, CalendarDays, CalendarCheck, CalendarClock, User, Lock } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { connectorService, ApiError } from "@/services/connector.service";
 
 export const AgendaSection = () => {
   const [isCalendarDialogOpen, setIsCalendarDialogOpen] = useState(false);
   const [isOrangeLoginOpen, setIsOrangeLoginOpen] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [orangeConnectionStatus, setOrangeConnectionStatus] = useState<any>(null);
   const [orangeCredentials, setOrangeCredentials] = useState({
     username: "",
     password: ""
   });
+
+  // Check Orange connection status on component mount
+  useEffect(() => {
+    checkOrangeConnectionStatus();
+  }, []);
+
+  const checkOrangeConnectionStatus = async () => {
+    try {
+      const result = await connectorService.getOrangeCalendarStatus();
+      setOrangeConnectionStatus(result.data);
+      console.log('🔍 Orange connection status:', result.data ? '✅ Connected' : '❌ Not connected');
+    } catch (error) {
+      console.error('Error checking Orange connection status:', error);
+      // Don't show error to user for status check - just log it
+    }
+  };
 
   const handleCalendarConnect = (calendarType: string) => {
     if (calendarType === 'Orange') {
@@ -27,11 +46,60 @@ export const AgendaSection = () => {
     }
   };
 
-  const handleOrangeLogin = () => {
-    console.log('Orange login:', orangeCredentials);
-    // Here you would implement the actual Orange calendar connection logic
-    setOrangeCredentials({ username: "", password: "" });
-    setIsOrangeLoginOpen(false);
+  const handleOrangeLogin = async () => {
+    // Validate form before submitting
+    if (!orangeCredentials.username.trim() || !orangeCredentials.password.trim()) {
+      alert('⚠️ Please enter both username and password.');
+      return;
+    }
+
+    // Validate email format (Orange uses email as username)
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(orangeCredentials.username)) {
+      alert('⚠️ Please enter a valid email address for Orange username.');
+      return;
+    }
+
+    setIsConnecting(true);
+    
+    try {
+      console.log('🔐 Attempting Orange login with:', { username: orangeCredentials.username });
+      
+      const result = await connectorService.connectOrangeCalendar(orangeCredentials);
+
+      console.log('✅ Orange calendar connected successfully:', result.data);
+      alert('🎉 Orange calendar connected successfully! Your credentials have been validated and saved.');
+      setOrangeCredentials({ username: "", password: "" });
+      setIsOrangeLoginOpen(false);
+      setIsCalendarDialogOpen(false);
+      
+      // Refresh connection status
+      await checkOrangeConnectionStatus();
+    } catch (error) {
+      console.error('❌ Failed to connect Orange calendar:', error);
+      
+      // Handle API errors from service
+      if (error && typeof error === 'object' && 'message' in error) {
+        const apiError = error as ApiError;
+        let errorMessage = apiError.message || 'Failed to connect Orange calendar.';
+        
+        if (apiError.errors && apiError.errors.length > 0) {
+          errorMessage = apiError.errors.map((err: any) => err.message).join(', ');
+        }
+        
+        alert(`❌ ${errorMessage}`);
+      } else {
+        // Handle network or other errors
+        const errorMessage = (error as Error)?.message;
+        if (errorMessage && errorMessage.includes('Network')) {
+          alert('🌐 Unable to connect to the server. Please make sure the server is running and try again.');
+        } else {
+          alert('💥 An unexpected error occurred. Please try again.');
+        }
+      }
+    } finally {
+      setIsConnecting(false);
+    }
   };
 
   return (
@@ -49,11 +117,27 @@ export const AgendaSection = () => {
           </p>
           <Button 
             className="text-white hover:opacity-90 w-full sm:w-auto text-sm lg:text-base px-4 lg:px-6 py-3 lg:py-2"
-            style={{ backgroundColor: '#3A7B59' }}
+            style={{ backgroundColor: orangeConnectionStatus ? '#16a34a' : '#3A7B59' }}
             onClick={() => setIsCalendarDialogOpen(true)}
           >
-            Connecter mon agenda
+            {orangeConnectionStatus ? (
+              <>
+                <CalendarCheck size={16} className="mr-2" />
+                Agenda connecté
+              </>
+            ) : (
+              <>
+                <Calendar size={16} className="mr-2" />
+                Connecter mon agenda
+              </>
+            )}
           </Button>
+          
+          {orangeConnectionStatus && (
+            <p className="text-sm text-green-600 mt-2">
+              ✅ Orange Calendar connecté ({orangeConnectionStatus.username})
+            </p>
+          )}
         </CardContent>
       </Card>
 
@@ -158,15 +242,19 @@ export const AgendaSection = () => {
               <div className="space-y-2">
                 <Label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
                   <User size={14} className="shrink-0" />
-                  Nom d'utilisateur *
+                  Email Orange *
                 </Label>
                 <Input
-                  type="text"
+                  type="email"
                   value={orangeCredentials.username}
                   onChange={(e) => setOrangeCredentials(prev => ({ ...prev, username: e.target.value }))}
-                  placeholder="Votre nom d'utilisateur Orange"
+                  placeholder="votre.email@orange.fr"
                   className="w-full text-sm sm:text-base border-2 focus:border-orange-500 rounded-lg h-11 sm:h-auto"
+                  disabled={isConnecting}
                 />
+                <p className="text-xs text-gray-500">
+                  Utilisez votre adresse email Orange complète
+                </p>
               </div>
 
               {/* Password Field */}
@@ -181,7 +269,11 @@ export const AgendaSection = () => {
                   onChange={(e) => setOrangeCredentials(prev => ({ ...prev, password: e.target.value }))}
                   placeholder="Votre mot de passe Orange"
                   className="w-full text-sm sm:text-base border-2 focus:border-orange-500 rounded-lg h-11 sm:h-auto"
+                  disabled={isConnecting}
                 />
+                <p className="text-xs text-gray-500">
+                  Mot de passe de votre compte Orange Mail
+                </p>
               </div>
             </div>
           </div>
@@ -197,10 +289,17 @@ export const AgendaSection = () => {
             </Button>
             <Button 
               onClick={handleOrangeLogin}
-              disabled={!orangeCredentials.username || !orangeCredentials.password}
+              disabled={!orangeCredentials.username || !orangeCredentials.password || isConnecting}
               className="w-full sm:w-auto px-4 sm:px-6 py-3 sm:py-2 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-medium shadow-lg text-sm sm:text-base disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Connecter
+              {isConnecting ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Connexion en cours...
+                </>
+              ) : (
+                'Connecter'
+              )}
             </Button>
           </div>
         </DialogContent>
