@@ -5,15 +5,21 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Calendar, CalendarDays, CalendarCheck, CalendarClock, User, Lock } from "lucide-react";
+import { Calendar, CalendarDays, CalendarCheck, CalendarClock, User, Lock, AlertCircle } from "lucide-react";
 import { useState, useEffect } from "react";
 import { connectorService, ApiError } from "@/services/connector.service";
+import toast from 'react-hot-toast';
 
 export const AgendaSection = () => {
   const [isCalendarDialogOpen, setIsCalendarDialogOpen] = useState(false);
   const [isOrangeLoginOpen, setIsOrangeLoginOpen] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [orangeConnectionStatus, setOrangeConnectionStatus] = useState<any>(null);
+  const [formErrors, setFormErrors] = useState<{
+    username?: string;
+    password?: string;
+    general?: string;
+  }>({});
   const [orangeCredentials, setOrangeCredentials] = useState({
     username: "",
     password: ""
@@ -35,10 +41,22 @@ export const AgendaSection = () => {
     }
   };
 
+  // Clear specific field error when user starts typing
+  const clearFieldError = (field: 'username' | 'password') => {
+    if (formErrors[field]) {
+      setFormErrors(prev => ({
+        ...prev,
+        [field]: undefined,
+        general: undefined // Also clear general error when user makes changes
+      }));
+    }
+  };
+
   const handleCalendarConnect = (calendarType: string) => {
     if (calendarType === 'Orange') {
-      setIsCalendarDialogOpen(false);
       setIsOrangeLoginOpen(true);
+      // Clear any previous errors when opening the modal
+      setFormErrors({});
     } else {
       console.log(`Connecting to ${calendarType} calendar`);
       // Here you would implement the actual calendar connection logic
@@ -47,29 +65,50 @@ export const AgendaSection = () => {
   };
 
   const handleOrangeLogin = async () => {
+    // Clear previous errors
+    setFormErrors({});
+
     // Validate form before submitting
-    if (!orangeCredentials.username.trim() || !orangeCredentials.password.trim()) {
-      alert('⚠️ Please enter both username and password.');
-      return;
+    const newErrors: typeof formErrors = {};
+
+    if (!orangeCredentials.username.trim()) {
+      newErrors.username = 'L\'adresse email est requise';
+    } else {
+      // Validate email format (Orange uses email as username)
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(orangeCredentials.username)) {
+        newErrors.username = 'Veuillez saisir une adresse email valide';
+      }
     }
 
-    // Validate email format (Orange uses email as username)
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(orangeCredentials.username)) {
-      alert('⚠️ Please enter a valid email address for Orange username.');
+    if (!orangeCredentials.password.trim()) {
+      newErrors.password = 'Le mot de passe est requis';
+    }
+
+    // If there are validation errors, show them and return
+    if (Object.keys(newErrors).length > 0) {
+      setFormErrors(newErrors);
+      toast.error('Veuillez corriger les erreurs du formulaire');
       return;
     }
 
     setIsConnecting(true);
     
     try {
-      console.log('🔐 Attempting Orange login with:', { username: orangeCredentials.username });
+      console.log('🔐 Attempting Orange login with:', { 
+        username: orangeCredentials.username, 
+        usernameLength: orangeCredentials.username.length,
+        passwordLength: orangeCredentials.password.length,
+        usernameBytes: new TextEncoder().encode(orangeCredentials.username),
+        passwordBytes: new TextEncoder().encode(orangeCredentials.password)
+      });
       
       const result = await connectorService.connectOrangeCalendar(orangeCredentials);
 
       console.log('✅ Orange calendar connected successfully:', result.data);
-      alert('🎉 Orange calendar connected successfully! Your credentials have been validated and saved.');
+      toast.success('🎉 Calendrier Orange connecté avec succès!');
       setOrangeCredentials({ username: "", password: "" });
+      setFormErrors({});
       setIsOrangeLoginOpen(false);
       setIsCalendarDialogOpen(false);
       
@@ -77,25 +116,44 @@ export const AgendaSection = () => {
       await checkOrangeConnectionStatus();
     } catch (error) {
       console.error('❌ Failed to connect Orange calendar:', error);
+      console.error('Error type:', typeof error);
+      console.error('Error keys:', error ? Object.keys(error) : 'null');
       
       // Handle API errors from service
-      if (error && typeof error === 'object' && 'message' in error) {
+      if (error && typeof error === 'object' && 'success' in error && error.success === false) {
         const apiError = error as ApiError;
-        let errorMessage = apiError.message || 'Failed to connect Orange calendar.';
         
+        // Handle field-specific errors
         if (apiError.errors && apiError.errors.length > 0) {
-          errorMessage = apiError.errors.map((err: any) => err.message).join(', ');
-        }
-        
-        alert(`❌ ${errorMessage}`);
-      } else {
-        // Handle network or other errors
-        const errorMessage = (error as Error)?.message;
-        if (errorMessage && errorMessage.includes('Network')) {
-          alert('🌐 Unable to connect to the server. Please make sure the server is running and try again.');
+          const fieldErrors: typeof formErrors = {};
+          apiError.errors.forEach((err: any) => {
+            if (err.field === 'username') {
+              fieldErrors.username = err.message;
+            } else if (err.field === 'password') {
+              fieldErrors.password = err.message;
+            } else {
+              fieldErrors.general = err.message;
+            }
+          });
+          setFormErrors(fieldErrors);
+          toast.error('Erreurs de validation détectées');
         } else {
-          alert('💥 An unexpected error occurred. Please try again.');
+          // General API error
+          const errorMessage = apiError.message || 'Échec de la connexion au calendrier Orange';
+          setFormErrors({ general: errorMessage });
+          toast.error(errorMessage);
         }
+      } else if (error && typeof error === 'object' && 'message' in error) {
+        // Handle Error objects
+        const errorMessage = (error as Error).message;
+        setFormErrors({ general: errorMessage });
+        toast.error(errorMessage);
+      } else {
+        // Handle unknown errors
+        const fallbackMessage = 'Une erreur inattendue s\'est produite. Veuillez réessayer.';
+        setFormErrors({ general: fallbackMessage });
+        toast.error('Erreur inattendue');
+        console.error('Unknown error structure:', error);
       }
     } finally {
       setIsConnecting(false);
@@ -133,11 +191,14 @@ export const AgendaSection = () => {
             )}
           </Button>
           
-          {orangeConnectionStatus && (
-            <p className="text-sm text-green-600 mt-2">
-              ✅ Orange Calendar connecté ({orangeConnectionStatus.username})
-            </p>
-          )}
+            {orangeConnectionStatus && (
+              <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-200 rounded-lg mt-2">
+                <CalendarCheck size={16} className="text-green-600" />
+                <p className="text-sm text-green-700">
+                  Orange Calendar connecté ({orangeConnectionStatus.username})
+                </p>
+              </div>
+            )}
         </CardContent>
       </Card>
 
@@ -238,6 +299,14 @@ export const AgendaSection = () => {
                 Connectez-vous à votre compte Orange pour synchroniser votre calendrier
               </p>
 
+              {/* General Error Message */}
+              {formErrors.general && (
+                <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg mb-4">
+                  <AlertCircle size={16} className="text-red-500 shrink-0" />
+                  <p className="text-sm text-red-700">{formErrors.general}</p>
+                </div>
+              )}
+
               {/* Username Field */}
               <div className="space-y-2">
                 <Label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
@@ -247,14 +316,27 @@ export const AgendaSection = () => {
                 <Input
                   type="email"
                   value={orangeCredentials.username}
-                  onChange={(e) => setOrangeCredentials(prev => ({ ...prev, username: e.target.value }))}
+                  onChange={(e) => {
+                    setOrangeCredentials(prev => ({ ...prev, username: e.target.value }));
+                    clearFieldError('username');
+                  }}
                   placeholder="votre.email@orange.fr"
-                  className="w-full text-sm sm:text-base border-2 focus:border-orange-500 rounded-lg h-11 sm:h-auto"
+                  className={`w-full text-sm sm:text-base border-2 focus:border-orange-500 rounded-lg h-11 sm:h-auto ${
+                    formErrors.username ? 'border-red-500 focus:border-red-500' : ''
+                  }`}
                   disabled={isConnecting}
                 />
-                <p className="text-xs text-gray-500">
-                  Utilisez votre adresse email Orange complète
-                </p>
+                {formErrors.username && (
+                  <div className="flex items-center gap-1 text-red-600">
+                    <AlertCircle size={14} />
+                    <p className="text-xs">{formErrors.username}</p>
+                  </div>
+                )}
+                {!formErrors.username && (
+                  <p className="text-xs text-gray-500">
+                    Utilisez votre adresse email Orange complète
+                  </p>
+                )}
               </div>
 
               {/* Password Field */}
@@ -266,14 +348,27 @@ export const AgendaSection = () => {
                 <Input
                   type="password"
                   value={orangeCredentials.password}
-                  onChange={(e) => setOrangeCredentials(prev => ({ ...prev, password: e.target.value }))}
+                  onChange={(e) => {
+                    setOrangeCredentials(prev => ({ ...prev, password: e.target.value }));
+                    clearFieldError('password');
+                  }}
                   placeholder="Votre mot de passe Orange"
-                  className="w-full text-sm sm:text-base border-2 focus:border-orange-500 rounded-lg h-11 sm:h-auto"
+                  className={`w-full text-sm sm:text-base border-2 focus:border-orange-500 rounded-lg h-11 sm:h-auto ${
+                    formErrors.password ? 'border-red-500 focus:border-red-500' : ''
+                  }`}
                   disabled={isConnecting}
                 />
-                <p className="text-xs text-gray-500">
-                  Mot de passe de votre compte Orange Mail
-                </p>
+                {formErrors.password && (
+                  <div className="flex items-center gap-1 text-red-600">
+                    <AlertCircle size={14} />
+                    <p className="text-xs">{formErrors.password}</p>
+                  </div>
+                )}
+                {!formErrors.password && (
+                  <p className="text-xs text-gray-500">
+                    Mot de passe de votre compte Orange Mail
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -287,6 +382,7 @@ export const AgendaSection = () => {
             >
               Annuler
             </Button>
+            
             <Button 
               onClick={handleOrangeLogin}
               disabled={!orangeCredentials.username || !orangeCredentials.password || isConnecting}

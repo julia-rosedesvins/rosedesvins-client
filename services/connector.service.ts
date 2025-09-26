@@ -43,13 +43,66 @@ class ConnectorService {
    */
   async connectOrangeCalendar(credentials: OrangeConnectorRequest): Promise<OrangeConnectorResponse> {
     try {
+      console.log('🔗 Attempting connection to:', `${apiClient.defaults.baseURL}/connectors/orange/connect`);
+      console.log('📝 Credentials:', { username: credentials.username, password: '***' });
+      
       const response = await apiClient.post<OrangeConnectorResponse>('/connectors/orange/connect', credentials);
+      console.log('✅ Connection successful:', response.data);
       return response.data;
     } catch (error) {
-      if (axios.isAxiosError(error) && error.response) {
-        throw error.response.data as ApiError;
+      console.error('Service error details:', error);
+      
+      if (axios.isAxiosError(error)) {
+        if (error.response) {
+          console.error('Response status:', error.response.status);
+          console.error('Response data:', error.response.data);
+          
+          // Server responded with error status
+          const errorData = error.response.data;
+          if (errorData && typeof errorData === 'object') {
+            // Handle nested message structure (message.message)
+            let extractedMessage = '';
+            if (errorData.message && typeof errorData.message === 'object' && errorData.message.message) {
+              extractedMessage = errorData.message.message;
+            } else if (errorData.message && typeof errorData.message === 'string') {
+              extractedMessage = errorData.message;
+            } else {
+              extractedMessage = `Server error: ${error.response.status}`;
+            }
+            
+            throw {
+              success: false,
+              message: extractedMessage,
+              errors: errorData.errors || [],
+              statusCode: error.response.status
+            } as ApiError;
+          } else {
+            throw {
+              success: false,
+              message: `Server error: ${error.response.status} ${error.response.statusText}`,
+              errors: [],
+              statusCode: error.response.status
+            } as ApiError;
+          }
+        } else if (error.request) {
+          console.error('No response received:', error.request);
+          // Request was made but no response received
+          throw {
+            success: false,
+            message: 'Impossible de se connecter au serveur. Vérifiez que le serveur est démarré sur le port correct.',
+            errors: [],
+            statusCode: 0
+          } as ApiError;
+        }
       }
-      throw new Error('Network error occurred');
+      
+      // Fallback for other errors
+      throw {
+        success: false,
+        message: error instanceof Error ? error.message : 'Une erreur inattendue s\'est produite',
+        errors: [],
+        statusCode: 0
+      } as ApiError;
     }
   }
 
@@ -62,10 +115,55 @@ class ConnectorService {
       const response = await apiClient.get<OrangeConnectorStatusResponse>('/connectors/orange/status');
       return response.data;
     } catch (error) {
-      if (axios.isAxiosError(error) && error.response) {
-        throw error.response.data as ApiError;
+      console.error('Status check error:', error);
+      
+      if (axios.isAxiosError(error)) {
+        if (error.response) {
+          // Server responded with error status
+          const errorData = error.response.data;
+          if (errorData && typeof errorData === 'object') {
+            // Handle nested message structure (message.message)
+            let extractedMessage = '';
+            if (errorData.message && typeof errorData.message === 'object' && errorData.message.message) {
+              extractedMessage = errorData.message.message;
+            } else if (errorData.message && typeof errorData.message === 'string') {
+              extractedMessage = errorData.message;
+            } else {
+              extractedMessage = `Server error: ${error.response.status}`;
+            }
+            
+            throw {
+              success: false,
+              message: extractedMessage,
+              errors: errorData.errors || [],
+              statusCode: error.response.status
+            } as ApiError;
+          } else {
+            throw {
+              success: false,
+              message: `Server error: ${error.response.status} ${error.response.statusText}`,
+              errors: [],
+              statusCode: error.response.status
+            } as ApiError;
+          }
+        } else if (error.request) {
+          // Request was made but no response received
+          throw {
+            success: false,
+            message: 'Impossible de se connecter au serveur',
+            errors: [],
+            statusCode: 0
+          } as ApiError;
+        }
       }
-      throw new Error('Network error occurred');
+      
+      // Fallback for other errors
+      throw {
+        success: false,
+        message: error instanceof Error ? error.message : 'Erreur lors de la vérification du statut',
+        errors: [],
+        statusCode: 0
+      } as ApiError;
     }
   }
 
