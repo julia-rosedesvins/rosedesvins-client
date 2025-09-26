@@ -102,16 +102,7 @@ export const AgendaSection = () => {
             </div>
           </div>
 
-          {/* Footer */}
-          <div className="shrink-0 flex justify-center pt-4 sm:pt-6 px-6 pb-6 border-t border-gray-200 -mx-6 -mb-6">
-            <Button 
-              onClick={() => setIsCalendarDialogOpen(false)}
-              variant="outline"
-              className="w-full sm:w-auto px-4 sm:px-6 py-3 sm:py-2 border-2 border-gray-300 hover:bg-gray-50 font-medium text-sm sm:text-base"
-            >
-              Annuler
-            </Button>
-          </div>
+         
         </DialogContent>
       </Dialog>
     </>
