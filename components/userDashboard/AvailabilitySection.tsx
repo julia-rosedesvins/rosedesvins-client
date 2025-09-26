@@ -244,60 +244,61 @@ export const AvailabilitySection = () => {
   };
 
   return (
-    <Card className="mb-6 lg:mb-8 relative">
-      <CardHeader>
-        <CardTitle className="text-lg lg:text-xl">Disponibilités</CardTitle>
-        <p className="text-muted-foreground text-sm lg:text-base">
-          Sélectionnez les jours et plages horaires ouverts à la réservation.
+    <Card className="mb-6 lg:mb-8 relative shadow-sm border-0 bg-white ring-1 ring-gray-200 hover:ring-gray-300 transition-all duration-200">
+      <CardHeader className="pb-4">
+        <CardTitle className="text-xl lg:text-2xl font-semibold text-gray-900">Disponibilités</CardTitle>
+        <p className="text-gray-600 text-sm lg:text-base leading-relaxed mt-1">
+          Définissez vos créneaux de disponibilité pour recevoir des réservations.
         </p>
       </CardHeader>
-      <CardContent>
-        <div className="space-y-4 lg:space-y-6">
+      <CardContent className="pt-2">
+        <div className="space-y-6 lg:space-y-8">
           {/* Desktop header - hidden on mobile */}
-          <div className="hidden lg:grid lg:grid-cols-5 gap-4 mb-4 text-center font-medium text-sm">
+          <div className="hidden lg:grid lg:grid-cols-5 gap-4 mb-6 text-center">
             <div></div>
-            <div className="col-span-2">Matin</div>
-            <div className="col-span-2">Après-midi</div>
+            <div className="col-span-2 font-semibold text-gray-700 text-sm">Matin</div>
+            <div className="col-span-2 font-semibold text-gray-700 text-sm">Après-midi</div>
           </div>
           
-          <div className="hidden lg:grid lg:grid-cols-5 gap-2 mb-4 text-center text-xs text-muted-foreground">
+          <div className="hidden lg:grid lg:grid-cols-5 gap-2 mb-6 text-center text-xs text-gray-500">
             <div></div>
-            <div>de</div>
-            <div>à</div>
-            <div>de</div>
-            <div>à</div>
+            <div className="font-medium">de</div>
+            <div className="font-medium">à</div>
+            <div className="font-medium">de</div>
+            <div className="font-medium">à</div>
           </div>
           
-          {weekDays.map((day) => (
-            <div key={day.id}>
+          {weekDays.map((day, index) => (
+            <div key={day.id} className={`${index !== weekDays.length - 1 ? 'border-b border-gray-100 pb-4' : ''}`}>
               {/* Mobile layout */}
-              <div className="lg:hidden space-y-3">
-                <div className="flex items-center space-x-3 p-2">
+              <div className="lg:hidden space-y-4">
+                <div className="flex items-center space-x-3 p-3 rounded-lg bg-gray-50/50 hover:bg-gray-50 transition-colors">
                   <Checkbox 
                     id={day.id}
                     checked={schedules[day.id]?.enabled || false}
                     onCheckedChange={() => handleDayToggle(day.id)}
+                    className="data-[state=checked]:bg-[#3A7B59] data-[state=checked]:border-[#3A7B59]"
                   />
                   <label 
                     htmlFor={day.id} 
-                    className="text-base font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    className="text-base font-semibold leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-gray-800 cursor-pointer"
                   >
                     {day.name}
                   </label>
                 </div>
                 
                 {schedules[day.id]?.enabled ? (
-                  <div className="pl-4 space-y-4">
+                  <div className="pl-6 space-y-4">
                     <div>
-                      <div className="text-sm font-medium mb-2 text-gray-700">Matin</div>
-                      <div className="grid grid-cols-2 gap-2">
+                      <div className="text-sm font-semibold mb-3 text-gray-700">Matin</div>
+                      <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <label className="text-xs text-muted-foreground mb-1 block">de</label>
+                          <label className="text-xs font-medium text-gray-600 mb-2 block">de</label>
                           <Select
                             value={schedules[day.id]?.morningFrom || ""}
                             onValueChange={(value) => handleTimeChange(day.id, 'morningFrom', value)}
                           >
-                            <SelectTrigger className="h-10 text-sm">
+                            <SelectTrigger className="h-11 text-sm border-gray-300 focus:border-[#3A7B59] focus:ring-[#3A7B59] hover:border-gray-400 transition-colors">
                               <SelectValue placeholder="08:00" />
                             </SelectTrigger>
                             <SelectContent className="bg-white z-50">
@@ -308,12 +309,12 @@ export const AvailabilitySection = () => {
                           </Select>
                         </div>
                         <div>
-                          <label className="text-xs text-muted-foreground mb-1 block">à</label>
+                          <label className="text-xs font-medium text-gray-600 mb-2 block">à</label>
                           <Select
                             value={schedules[day.id]?.morningTo || ""}
                             onValueChange={(value) => handleTimeChange(day.id, 'morningTo', value)}
                           >
-                            <SelectTrigger className="h-10 text-sm">
+                            <SelectTrigger className="h-11 text-sm border-gray-300 focus:border-[#3A7B59] focus:ring-[#3A7B59] hover:border-gray-400 transition-colors">
                               <SelectValue placeholder="13:00" />
                             </SelectTrigger>
                             <SelectContent className="bg-white z-50">
@@ -327,16 +328,16 @@ export const AvailabilitySection = () => {
                     </div>
                     
                     <div>
-                      <div className="text-sm font-medium mb-2 text-gray-700">Après-midi</div>
-                      <div className="grid grid-cols-2 gap-2">
+                      <div className="text-sm font-semibold mb-3 text-gray-700">Après-midi</div>
+                      <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <label className="text-xs text-muted-foreground mb-1 block">de</label>
+                          <label className="text-xs font-medium text-gray-600 mb-2 block">de</label>
                           <Select
                             value={schedules[day.id]?.afternoonFrom || ""}
                             onValueChange={(value) => handleTimeChange(day.id, 'afternoonFrom', value)}
                           >
-                            <SelectTrigger className="h-10 text-sm">
-                              <SelectValue placeholder="13:00" />
+                            <SelectTrigger className="h-11 text-sm border-gray-300 focus:border-[#3A7B59] focus:ring-[#3A7B59] hover:border-gray-400 transition-colors">
+                              <SelectValue placeholder="14:00" />
                             </SelectTrigger>
                             <SelectContent className="bg-white z-50">
                               {timeOptions.slice(10).map((time) => (
@@ -346,12 +347,12 @@ export const AvailabilitySection = () => {
                           </Select>
                         </div>
                         <div>
-                          <label className="text-xs text-muted-foreground mb-1 block">à</label>
+                          <label className="text-xs font-medium text-gray-600 mb-2 block">à</label>
                           <Select
                             value={schedules[day.id]?.afternoonTo || ""}
                             onValueChange={(value) => handleTimeChange(day.id, 'afternoonTo', value)}
                           >
-                            <SelectTrigger className="h-10 text-sm">
+                            <SelectTrigger className="h-11 text-sm border-gray-300 focus:border-[#3A7B59] focus:ring-[#3A7B59] hover:border-gray-400 transition-colors">
                               <SelectValue placeholder="20:00" />
                             </SelectTrigger>
                             <SelectContent className="bg-white z-50">
@@ -365,21 +366,22 @@ export const AvailabilitySection = () => {
                     </div>
                   </div>
                 ) : (
-                  <div className="pl-7 text-sm text-muted-foreground">Fermé</div>
+                  <div className="pl-9 text-sm text-gray-500 font-medium">Fermé</div>
                 )}
               </div>
 
               {/* Desktop layout */}
-              <div className="hidden lg:grid lg:grid-cols-5 gap-2 items-center">
+              <div className="hidden lg:grid lg:grid-cols-5 gap-2 items-center py-3">
                 <div className="flex items-center space-x-2">
                   <Checkbox 
                     id={`${day.id}-desktop`}
                     checked={schedules[day.id]?.enabled || false}
                     onCheckedChange={() => handleDayToggle(day.id)}
+                    className="data-[state=checked]:bg-[#3A7B59] data-[state=checked]:border-[#3A7B59]"
                   />
                   <label 
                     htmlFor={`${day.id}-desktop`} 
-                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    className="text-sm font-semibold leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-gray-800 cursor-pointer"
                   >
                     {day.name}
                   </label>
@@ -392,7 +394,7 @@ export const AvailabilitySection = () => {
                       onValueChange={(value) => handleTimeChange(day.id, 'morningFrom', value)}
                       disabled={!schedules[day.id]?.enabled}
                     >
-                      <SelectTrigger className="h-8 text-xs">
+                      <SelectTrigger className="h-9 text-xs border-gray-300 focus:border-[#3A7B59] focus:ring-[#3A7B59] hover:border-gray-400 transition-colors">
                         <SelectValue placeholder="08:00" />
                       </SelectTrigger>
                       <SelectContent className="bg-white z-50">
@@ -407,7 +409,7 @@ export const AvailabilitySection = () => {
                       onValueChange={(value) => handleTimeChange(day.id, 'morningTo', value)}
                       disabled={!schedules[day.id]?.enabled}
                     >
-                      <SelectTrigger className="h-8 text-xs">
+                      <SelectTrigger className="h-9 text-xs border-gray-300 focus:border-[#3A7B59] focus:ring-[#3A7B59] hover:border-gray-400 transition-colors">
                         <SelectValue placeholder="13:00" />
                       </SelectTrigger>
                       <SelectContent className="bg-white z-50">
@@ -422,8 +424,8 @@ export const AvailabilitySection = () => {
                       onValueChange={(value) => handleTimeChange(day.id, 'afternoonFrom', value)}
                       disabled={!schedules[day.id]?.enabled}
                     >
-                      <SelectTrigger className="h-8 text-xs">
-                        <SelectValue placeholder="13:00" />
+                      <SelectTrigger className="h-9 text-xs border-gray-300 focus:border-[#3A7B59] focus:ring-[#3A7B59] hover:border-gray-400 transition-colors">
+                        <SelectValue placeholder="14:00" />
                       </SelectTrigger>
                       <SelectContent className="bg-white z-50">
                         {timeOptions.slice(10).map((time) => (
@@ -437,7 +439,7 @@ export const AvailabilitySection = () => {
                       onValueChange={(value) => handleTimeChange(day.id, 'afternoonTo', value)}
                       disabled={!schedules[day.id]?.enabled}
                     >
-                      <SelectTrigger className="h-8 text-xs">
+                      <SelectTrigger className="h-9 text-xs border-gray-300 focus:border-[#3A7B59] focus:ring-[#3A7B59] hover:border-gray-400 transition-colors">
                         <SelectValue placeholder="20:00" />
                       </SelectTrigger>
                       <SelectContent className="bg-white z-50">
@@ -448,53 +450,55 @@ export const AvailabilitySection = () => {
                     </Select>
                   </>
                 ) : (
-                  <div className="col-span-4 text-left text-xs text-muted-foreground">Fermé</div>
+                  <div className="col-span-4 text-left text-xs text-gray-500 font-medium">Fermé</div>
                 )}
               </div>
             </div>
           ))}
           
-          <div className="mt-6 lg:mt-8">
-            <div className="text-sm lg:text-base font-medium mb-3">Jours fériés</div>
+          <div className="mt-8 lg:mt-10 p-6 bg-gray-50 rounded-lg border border-gray-200">
+            <div className="text-base lg:text-lg font-semibold mb-4 text-gray-800">Jours fériés</div>
             <Popover>
               <PopoverTrigger asChild>
                 <Button 
                   variant="outline" 
-                  className="flex items-center justify-between w-full h-12 lg:h-10 text-sm lg:text-base px-4 border-2 hover:bg-opacity-5"
+                  className="flex items-center justify-between w-full h-12 lg:h-11 text-sm lg:text-base px-4 border-2 hover:shadow-sm transition-all duration-200"
                   style={{ 
                     borderColor: '#3A7B59',
-                    color: '#3A7B59'
+                    color: '#3A7B59',
+                    backgroundColor: 'white'
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.backgroundColor = '#3A7B59';
                     e.currentTarget.style.color = 'white';
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = 'transparent';
+                    e.currentTarget.style.backgroundColor = 'white';
                     e.currentTarget.style.color = '#3A7B59';
                   }}
                 >
-                  <span>
+                  <span className="font-medium">
                     {selectedHolidays.length === 0 
-                      ? "Cliquer pour voir les dates" 
+                      ? "Sélectionnez vos jours fériés" 
                       : `${selectedHolidays.length} jour${selectedHolidays.length > 1 ? 's' : ''} sélectionné${selectedHolidays.length > 1 ? 's' : ''}`
                     }
                   </span>
                   <ChevronDown className="h-4 w-4" />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-72 lg:w-64 p-0" align="start">
+              <PopoverContent className="w-80 lg:w-72 p-0 shadow-lg border-gray-200" align="start">
                 <div className="max-h-64 overflow-y-auto">
                   {holidays.map((holiday) => (
-                    <div key={holiday.id} className="flex items-center space-x-3 p-3 lg:p-2 hover:bg-muted/50">
+                    <div key={holiday.id} className="flex items-center space-x-3 p-3 lg:p-3 hover:bg-gray-50 border-b border-gray-100 last:border-b-0 transition-colors">
                       <Checkbox 
                         id={`holiday-${holiday.id}`}
                         checked={selectedHolidays.includes(holiday.id)}
                         onCheckedChange={() => handleHolidayToggle(holiday.id)}
+                        className="data-[state=checked]:bg-[#3A7B59] data-[state=checked]:border-[#3A7B59]"
                       />
                       <label 
                         htmlFor={`holiday-${holiday.id}`} 
-                        className="text-sm lg:text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                        className="text-sm lg:text-sm font-medium leading-relaxed peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer text-gray-700 flex-1"
                       >
                         {holiday.name}
                       </label>
@@ -510,16 +514,16 @@ export const AvailabilitySection = () => {
             <Button
               onClick={saveAvailabilityData}
               disabled={!hasChanges || isSaving || isLoading}
-              className="bg-[#3A7B59] hover:bg-[#2d5a43] text-white px-6 py-2 flex items-center gap-2"
+              className="bg-[#3A7B59] hover:bg-[#2d5a43] text-white px-8 py-3 flex items-center gap-2 font-semibold text-base shadow-md hover:shadow-lg transition-all duration-200 disabled:opacity-60"
             >
               {isSaving ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <Loader2 className="h-5 w-5 animate-spin" />
                   Sauvegarde...
                 </>
               ) : (
                 <>
-                  <Save className="h-4 w-4" />
+                  <Save className="h-5 w-5" />
                   Sauvegarder les disponibilités
                 </>
               )}
@@ -528,10 +532,10 @@ export const AvailabilitySection = () => {
         </div>
         
         {isLoading && (
-          <div className="absolute inset-0 bg-white/50 flex items-center justify-center">
-            <div className="flex items-center gap-2 text-[#3A7B59]">
-              <Loader2 className="h-5 w-5 animate-spin" />
-              <span>Chargement des disponibilités...</span>
+          <div className="absolute inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center rounded-lg">
+            <div className="flex items-center gap-3 text-[#3A7B59] bg-white px-6 py-3 rounded-lg shadow-lg">
+              <Loader2 className="h-6 w-6 animate-spin" />
+              <span className="font-medium">Chargement des disponibilités...</span>
             </div>
           </div>
         )}
