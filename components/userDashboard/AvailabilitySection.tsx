@@ -4,17 +4,19 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { ChevronDown } from "lucide-react";
-import { useState } from "react";
+import { ChevronDown, Save, Loader2, AlertCircle } from "lucide-react";
+import { useState, useEffect } from "react";
+import { availabilityService, AvailabilityData, TimeSlot, ApiError } from "@/services/availability.service";
+import toast from 'react-hot-toast';
 
 const weekDays = [
-  { id: "lundi", name: "Lundi" },
-  { id: "mardi", name: "Mardi" },
-  { id: "mercredi", name: "Mercredi" },
-  { id: "jeudi", name: "Jeudi" },
-  { id: "vendredi", name: "Vendredi" },
-  { id: "samedi", name: "Samedi" },
-  { id: "dimanche", name: "Dimanche" },
+  { id: "monday", name: "Lundi" },
+  { id: "tuesday", name: "Mardi" },
+  { id: "wednesday", name: "Mercredi" },
+  { id: "thursday", name: "Jeudi" },
+  { id: "friday", name: "Vendredi" },
+  { id: "saturday", name: "Samedi" },
+  { id: "sunday", name: "Dimanche" },
 ];
 
 const timeOptions = [
@@ -24,17 +26,17 @@ const timeOptions = [
 ];
 
 const holidays = [
-  { id: "1er-janvier", name: "1er janvier" },
-  { id: "lundi-paques", name: "Lundi de Pâques" },
-  { id: "1er-mai", name: "1er mai" },
-  { id: "8-mai", name: "8 mai" },
-  { id: "ascension", name: "Ascension" },
-  { id: "lundi-pentecote", name: "Lundi de Pentecôte" },
-  { id: "14-juillet", name: "14 juillet" },
-  { id: "15-aout", name: "15 août" },
-  { id: "1er-novembre", name: "1er novembre" },
-  { id: "11-novembre", name: "11 novembre" },
-  { id: "25-decembre", name: "25 décembre" },
+  { id: "new-year", name: "1er janvier", date: "2025-01-01" },
+  { id: "easter-monday", name: "Lundi de Pâques", date: "2025-04-21" },
+  { id: "labor-day", name: "1er mai", date: "2025-05-01" },
+  { id: "victory-day", name: "8 mai", date: "2025-05-08" },
+  { id: "ascension", name: "Ascension", date: "2025-05-29" },
+  { id: "whit-monday", name: "Lundi de Pentecôte", date: "2025-06-09" },
+  { id: "bastille-day", name: "14 juillet", date: "2025-07-14" },
+  { id: "assumption", name: "15 août", date: "2025-08-15" },
+  { id: "all-saints", name: "1er novembre", date: "2025-11-01" },
+  { id: "armistice", name: "11 novembre", date: "2025-11-11" },
+  { id: "christmas", name: "25 décembre", date: "2025-12-25" },
 ];
 
 export const AvailabilitySection = () => {
@@ -47,6 +49,167 @@ export const AvailabilitySection = () => {
   }}>({});
   
   const [selectedHolidays, setSelectedHolidays] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [hasChanges, setHasChanges] = useState(false);
+
+  // Load availability data on component mount
+  useEffect(() => {
+    loadAvailabilityData();
+  }, []);
+
+  // Track changes
+  useEffect(() => {
+    setHasChanges(true);
+  }, [schedules, selectedHolidays]);
+
+  const loadAvailabilityData = async () => {
+    setIsLoading(true);
+    try {
+      const response = await availabilityService.getAvailability();
+      
+      if (response.data) {
+        // Convert API data to component state format
+        const apiData = response.data;
+        const convertedSchedules: typeof schedules = {};
+        
+        weekDays.forEach(day => {
+          const dayData = apiData.weeklyAvailability[day.id as keyof typeof apiData.weeklyAvailability];
+          if (dayData) {
+            // Convert time slots to morning/afternoon format
+            const timeSlots = dayData.timeSlots || [];
+            let morningFrom = "";
+            let morningTo = "";
+            let afternoonFrom = "";
+            let afternoonTo = "";
+
+            // Simple logic: first slot is morning, second slot is afternoon
+            if (timeSlots[0]) {
+              morningFrom = timeSlots[0].startTime;
+              morningTo = timeSlots[0].endTime;
+            }
+            if (timeSlots[1]) {
+              afternoonFrom = timeSlots[1].startTime;
+              afternoonTo = timeSlots[1].endTime;
+            }
+
+            convertedSchedules[day.id] = {
+              enabled: dayData.isAvailable,
+              morningFrom,
+              morningTo,
+              afternoonFrom,
+              afternoonTo,
+            };
+          }
+        });
+
+        setSchedules(convertedSchedules);
+        
+        // Convert public holidays to selected holidays
+        const holidayIds = apiData.publicHolidays
+          .filter(holiday => holiday.isBlocked !== false)
+          .map(holiday => {
+            // Map holiday dates to IDs
+            const foundHoliday = holidays.find(h => h.date === holiday.date.split('T')[0]);
+            return foundHoliday?.id;
+          })
+          .filter(Boolean) as string[];
+          
+        setSelectedHolidays(holidayIds);
+        setHasChanges(false);
+        
+        console.log('✅ Availability data loaded successfully');
+      } else {
+        console.log('ℹ️ No availability data found, using defaults');
+        setHasChanges(false);
+      }
+    } catch (error) {
+      console.error('❌ Failed to load availability data:', error);
+      toast.error('Erreur lors du chargement des disponibilités');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const saveAvailabilityData = async () => {
+    setIsSaving(true);
+    try {
+      // Convert component state to API format
+      const weeklyAvailability: any = {};
+      
+      weekDays.forEach(day => {
+        const schedule = schedules[day.id];
+        const timeSlots: TimeSlot[] = [];
+        
+        // Add morning slot if both times are set
+        if (schedule?.enabled && schedule.morningFrom && schedule.morningTo) {
+          timeSlots.push({
+            startTime: schedule.morningFrom,
+            endTime: schedule.morningTo
+          });
+        }
+        
+        // Add afternoon slot if both times are set
+        if (schedule?.enabled && schedule.afternoonFrom && schedule.afternoonTo) {
+          timeSlots.push({
+            startTime: schedule.afternoonFrom,
+            endTime: schedule.afternoonTo
+          });
+        }
+        
+        weeklyAvailability[day.id] = {
+          isAvailable: schedule?.enabled || false,
+          timeSlots
+        };
+      });
+
+      // Convert selected holidays to public holidays format
+      const publicHolidays = selectedHolidays.map(holidayId => {
+        const holiday = holidays.find(h => h.id === holidayId);
+        return {
+          name: holiday!.name,
+          date: `${holiday!.date}T00:00:00.000Z`,
+          isBlocked: true,
+          isRecurring: true
+        };
+      });
+
+      const availabilityData: AvailabilityData = {
+        weeklyAvailability,
+        publicHolidays,
+        specialDateOverrides: [],
+        timezone: "Europe/Paris",
+        defaultSlotDuration: 30,
+        bufferTime: 0,
+        isActive: true
+      };
+
+      await availabilityService.saveAvailability(availabilityData);
+      
+      toast.success('✅ Disponibilités sauvegardées avec succès!');
+      setHasChanges(false);
+      
+    } catch (error) {
+      console.error('❌ Failed to save availability:', error);
+      
+      if (error && typeof error === 'object' && 'success' in error && error.success === false) {
+        const apiError = error as ApiError;
+        
+        if (apiError.errors && apiError.errors.length > 0) {
+          // Show field-specific errors
+          apiError.errors.forEach(err => {
+            toast.error(`Erreur ${err.field}: ${err.message}`);
+          });
+        } else {
+          toast.error(apiError.message || 'Erreur lors de la sauvegarde');
+        }
+      } else {
+        toast.error('Une erreur inattendue s\'est produite');
+      }
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const handleDayToggle = (dayId: string) => {
     setSchedules(prev => ({
@@ -81,7 +244,7 @@ export const AvailabilitySection = () => {
   };
 
   return (
-    <Card className="mb-6 lg:mb-8">
+    <Card className="mb-6 lg:mb-8 relative">
       <CardHeader>
         <CardTitle className="text-lg lg:text-xl">Disponibilités</CardTitle>
         <p className="text-muted-foreground text-sm lg:text-base">
@@ -341,7 +504,37 @@ export const AvailabilitySection = () => {
               </PopoverContent>
             </Popover>
           </div>
+          
+          {/* Save Button */}
+          <div className="mt-8 flex justify-end">
+            <Button
+              onClick={saveAvailabilityData}
+              disabled={!hasChanges || isSaving || isLoading}
+              className="bg-[#3A7B59] hover:bg-[#2d5a43] text-white px-6 py-2 flex items-center gap-2"
+            >
+              {isSaving ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Sauvegarde...
+                </>
+              ) : (
+                <>
+                  <Save className="h-4 w-4" />
+                  Sauvegarder les disponibilités
+                </>
+              )}
+            </Button>
+          </div>
         </div>
+        
+        {isLoading && (
+          <div className="absolute inset-0 bg-white/50 flex items-center justify-center">
+            <div className="flex items-center gap-2 text-[#3A7B59]">
+              <Loader2 className="h-5 w-5 animate-spin" />
+              <span>Chargement des disponibilités...</span>
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
