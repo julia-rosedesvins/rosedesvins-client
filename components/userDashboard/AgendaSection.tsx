@@ -3,16 +3,35 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Calendar, CalendarDays, CalendarCheck, CalendarClock } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Calendar, CalendarDays, CalendarCheck, CalendarClock, User, Lock } from "lucide-react";
 import { useState } from "react";
 
 export const AgendaSection = () => {
   const [isCalendarDialogOpen, setIsCalendarDialogOpen] = useState(false);
+  const [isOrangeLoginOpen, setIsOrangeLoginOpen] = useState(false);
+  const [orangeCredentials, setOrangeCredentials] = useState({
+    username: "",
+    password: ""
+  });
 
   const handleCalendarConnect = (calendarType: string) => {
-    console.log(`Connecting to ${calendarType} calendar`);
-    // Here you would implement the actual calendar connection logic
-    setIsCalendarDialogOpen(false);
+    if (calendarType === 'Orange') {
+      setIsCalendarDialogOpen(false);
+      setIsOrangeLoginOpen(true);
+    } else {
+      console.log(`Connecting to ${calendarType} calendar`);
+      // Here you would implement the actual calendar connection logic
+      setIsCalendarDialogOpen(false);
+    }
+  };
+
+  const handleOrangeLogin = () => {
+    console.log('Orange login:', orangeCredentials);
+    // Here you would implement the actual Orange calendar connection logic
+    setOrangeCredentials({ username: "", password: "" });
+    setIsOrangeLoginOpen(false);
   };
 
   return (
@@ -102,7 +121,88 @@ export const AgendaSection = () => {
             </div>
           </div>
 
-         
+          {/* Footer */}
+          <div className="shrink-0 flex justify-center pt-4 sm:pt-6 px-6 pb-6 border-t border-gray-200 -mx-6 -mb-6">
+            <Button 
+              onClick={() => setIsCalendarDialogOpen(false)}
+              variant="outline"
+              className="w-full sm:w-auto px-4 sm:px-6 py-3 sm:py-2 border-2 border-gray-300 hover:bg-gray-50 font-medium text-sm sm:text-base"
+            >
+              Annuler
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Orange Login Modal */}
+      <Dialog open={isOrangeLoginOpen} onOpenChange={setIsOrangeLoginOpen}>
+        <DialogContent className="w-[95vw] max-w-md h-auto overflow-hidden flex flex-col rounded-xl shadow-2xl left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 fixed">
+          {/* Enhanced Header */}
+          <DialogHeader className="relative text-white p-4 sm:p-6 -mx-6 -mt-6 mb-4 sm:mb-6 rounded-t-xl bg-gradient-to-r from-orange-500 to-orange-600 shrink-0">
+            <div className="flex items-center justify-center gap-2 sm:gap-3">
+              <CalendarDays className="h-5 w-5 sm:h-6 sm:w-6 shrink-0" />
+              <DialogTitle className="text-lg sm:text-xl font-semibold text-center">
+                Connexion Orange Calendar
+              </DialogTitle>
+            </div>
+          </DialogHeader>
+
+          {/* Login Form */}
+          <div className="flex-1 px-6 py-2">
+            <div className="space-y-6 w-full">
+              <p className="text-sm text-gray-600 text-center mb-6">
+                Connectez-vous à votre compte Orange pour synchroniser votre calendrier
+              </p>
+
+              {/* Username Field */}
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                  <User size={14} className="shrink-0" />
+                  Nom d'utilisateur *
+                </Label>
+                <Input
+                  type="text"
+                  value={orangeCredentials.username}
+                  onChange={(e) => setOrangeCredentials(prev => ({ ...prev, username: e.target.value }))}
+                  placeholder="Votre nom d'utilisateur Orange"
+                  className="w-full text-sm sm:text-base border-2 focus:border-orange-500 rounded-lg h-11 sm:h-auto"
+                />
+              </div>
+
+              {/* Password Field */}
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                  <Lock size={14} className="shrink-0" />
+                  Mot de passe *
+                </Label>
+                <Input
+                  type="password"
+                  value={orangeCredentials.password}
+                  onChange={(e) => setOrangeCredentials(prev => ({ ...prev, password: e.target.value }))}
+                  placeholder="Votre mot de passe Orange"
+                  className="w-full text-sm sm:text-base border-2 focus:border-orange-500 rounded-lg h-11 sm:h-auto"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="shrink-0 flex flex-col-reverse sm:flex-row justify-end gap-3 sm:gap-4 pt-4 sm:pt-6 px-6 pb-6 border-t border-gray-200 -mx-6 -mb-6">
+            <Button 
+              onClick={() => setIsOrangeLoginOpen(false)}
+              variant="outline"
+              className="w-full sm:w-auto px-4 sm:px-6 py-3 sm:py-2 border-2 border-gray-300 hover:bg-gray-50 font-medium text-sm sm:text-base"
+            >
+              Annuler
+            </Button>
+            <Button 
+              onClick={handleOrangeLogin}
+              disabled={!orangeCredentials.username || !orangeCredentials.password}
+              className="w-full sm:w-auto px-4 sm:px-6 py-3 sm:py-2 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-medium shadow-lg text-sm sm:text-base disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Connecter
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </>
