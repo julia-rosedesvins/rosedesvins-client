@@ -18,10 +18,28 @@ export interface OrangeConnectorStatusResponse {
   success: boolean;
   message: string;
   data?: {
-    username: string;
-    isActive: boolean;
-    isValid: boolean;
+    _id: string;
+    userId: {
+      _id: string;
+      firstName: string;
+      lastName: string;
+      email: string;
+      domainName: string;
+    };
     connector_name: string;
+    connector_creds: {
+      orange: {
+        username: string;
+        password: string;
+        isActive: boolean;
+        isValid: boolean;
+      } | null;
+      ovh: any | null;
+      microsoft: any | null;
+    };
+    createdAt: string;
+    updatedAt: string;
+    __v: number;
   } | null;
 }
 

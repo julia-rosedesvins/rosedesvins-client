@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Calendar, CalendarDays, CalendarCheck, CalendarClock, User, Lock, AlertCircle } from "lucide-react";
+import { Calendar, CalendarDays, CalendarCheck, CalendarClock, User, Lock, AlertCircle, Unplug } from "lucide-react";
 import { useState, useEffect } from "react";
 import { connectorService, ApiError } from "@/services/connector.service";
 import toast from 'react-hot-toast';
@@ -33,11 +33,26 @@ export const AgendaSection = () => {
   const checkOrangeConnectionStatus = async () => {
     try {
       const result = await connectorService.getOrangeCalendarStatus();
-      setOrangeConnectionStatus(result.data);
-      console.log('🔍 Orange connection status:', result.data ? '✅ Connected' : '❌ Not connected');
+      
+      // Check if orange credentials exist and are not null
+      const isConnected = result.data && 
+                         result.data.connector_creds && 
+                         result.data.connector_creds.orange !== null;
+      
+      if (isConnected && result.data && result.data.connector_creds.orange) {
+        // Set the orange credentials data for display
+        setOrangeConnectionStatus(result.data.connector_creds.orange);
+      } else {
+        // No connection
+        setOrangeConnectionStatus(null);
+      }
+      
+      console.log('🔍 Orange connection status:', isConnected ? '✅ Connected' : '❌ Not connected');
+      console.log('📋 Full connector data:', result.data);
     } catch (error) {
       console.error('Error checking Orange connection status:', error);
       // Don't show error to user for status check - just log it
+      setOrangeConnectionStatus(null);
     }
   };
 
@@ -54,13 +69,45 @@ export const AgendaSection = () => {
 
   const handleCalendarConnect = (calendarType: string) => {
     if (calendarType === 'Orange') {
-      setIsOrangeLoginOpen(true);
-      // Clear any previous errors when opening the modal
-      setFormErrors({});
+      // If already connected, disconnect instead of connecting
+      if (orangeConnectionStatus) {
+        handleOrangeDisconnect();
+        setIsCalendarDialogOpen(false); // Close the modal after disconnect action
+      } else {
+        setIsCalendarDialogOpen(false); // Close the calendar connection modal
+        setIsOrangeLoginOpen(true);
+        // Clear any previous errors when opening the modal
+        setFormErrors({});
+      }
     } else {
       console.log(`Connecting to ${calendarType} calendar`);
       // Here you would implement the actual calendar connection logic
       setIsCalendarDialogOpen(false);
+    }
+  };
+
+  const handleOrangeDisconnect = async () => {
+    setIsConnecting(true);
+    try {
+      await connectorService.disconnectOrangeCalendar();
+      
+      // Update local state
+      setOrangeConnectionStatus(null);
+      toast.success('🔌 Calendrier Orange déconnecté avec succès!');
+      
+    } catch (error) {
+      console.error('❌ Failed to disconnect Orange calendar:', error);
+      
+      // Handle API errors from service
+      if (error && typeof error === 'object' && 'success' in error && error.success === false) {
+        const apiError = error as ApiError;
+        const errorMessage = apiError.message || 'Erreur lors de la déconnexion du calendrier Orange';
+        toast.error(errorMessage);
+      } else {
+        toast.error('Erreur lors de la déconnexion du calendrier Orange');
+      }
+    } finally {
+      setIsConnecting(false);
     }
   };
 
@@ -192,11 +239,32 @@ export const AgendaSection = () => {
           </Button>
           
             {orangeConnectionStatus && (
-              <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-200 rounded-lg mt-2">
-                <CalendarCheck size={16} className="text-green-600" />
-                <p className="text-sm text-green-700">
-                  Orange Calendar connecté ({orangeConnectionStatus.username})
-                </p>
+              <div className="flex items-center justify-between gap-2 p-3 bg-green-50 border border-green-200 rounded-lg mt-2">
+                <div className="flex items-center gap-2">
+                  <CalendarCheck size={16} className="text-green-600" />
+                  <p className="text-sm text-green-700">
+                    Orange Calendar connecté ({orangeConnectionStatus.username})
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleOrangeDisconnect}
+                  disabled={isConnecting}
+                  className="text-red-600 border-red-300 hover:bg-red-50 hover:border-red-400 text-xs px-3 py-1"
+                >
+                  {isConnecting ? (
+                    <>
+                      <div className="animate-spin rounded-full h-3 w-3 border-b border-red-600 mr-1"></div>
+                      Déconnexion...
+                    </>
+                  ) : (
+                    <>
+                      <Unplug size={12} className="mr-1" />
+                      Déconnecter
+                    </>
+                  )}
+                </Button>
               </div>
             )}
         </CardContent>
@@ -226,13 +294,40 @@ export const AgendaSection = () => {
               <Button
                 onClick={() => handleCalendarConnect('Orange')}
                 variant="outline"
-                className="w-full flex items-center justify-start p-4 h-auto border-2 border-gray-200 hover:border-[#3A7B59] hover:bg-gray-50 transition-all duration-200"
+                disabled={isConnecting}
+                className={`w-full flex items-center justify-start p-4 h-auto border-2 transition-all duration-200 ${
+                  orangeConnectionStatus 
+                    ? 'border-red-300 hover:border-red-500 hover:bg-red-50' 
+                    : 'border-gray-200 hover:border-[#3A7B59] hover:bg-gray-50'
+                }`}
               >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-orange-50 border border-orange-200 flex items-center justify-center">
-                    <CalendarDays className="w-5 h-5 text-orange-600" />
+                <div className="flex items-center justify-between w-full">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-lg border flex items-center justify-center ${
+                      orangeConnectionStatus 
+                        ? 'bg-red-50 border-red-200' 
+                        : 'bg-orange-50 border-orange-200'
+                    }`}>
+                      {orangeConnectionStatus ? (
+                        <Unplug className="w-5 h-5 text-red-600" />
+                      ) : (
+                        <CalendarDays className="w-5 h-5 text-orange-600" />
+                      )}
+                    </div>
+                    <div className="flex flex-col items-start">
+                      <span className={`font-medium ${orangeConnectionStatus ? 'text-red-700' : 'text-gray-700'}`}>
+                        Calendrier Orange
+                      </span>
+                      {orangeConnectionStatus && (
+                        <span className="text-xs text-green-600">
+                          Connecté ({orangeConnectionStatus.username})
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <span className="font-medium text-gray-700">Calendrier Orange</span>
+                  {isConnecting && (
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>
+                  )}
                 </div>
               </Button>
 
