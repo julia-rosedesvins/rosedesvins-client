@@ -6,6 +6,7 @@ import { Clock, Grape, Users, Globe, Euro, CreditCard, Home } from "lucide-react
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import { WidgetProvider, useWidget } from "@/contexts/WidgetContext";
 
 interface BookingData {
   date: string;
@@ -15,17 +16,9 @@ interface BookingData {
   language: string;
 }
 
-const ConfirmationSuccess = ({ params }: { params: Promise<{ id: string, service_id: string }> }) => {
+function ConfirmationSuccessContent({ id, serviceId }: { id: string, serviceId: string }) {
+  const { widgetData, loading, error, colorCode } = useWidget();
   const searchParams = useSearchParams();
-  const [id, setId] = useState<string>('');
-  const [serviceId, setServiceId] = useState<string>('');
-
-  useEffect(() => {
-    params.then(({ id, service_id }) => {
-      setId(id);
-      setServiceId(service_id);
-    });
-  }, [params]);
   
   // Extract booking data from URL parameters
   const bookingData: BookingData = {
@@ -59,7 +52,7 @@ const ConfirmationSuccess = ({ params }: { params: Promise<{ id: string, service
     <div className="min-h-screen bg-white">
       <div className="container mx-auto px-4 py-8 max-w-2xl">
         <div className="rounded-lg p-8">
-          <h1 className="text-3xl font-bold text-center mb-8" style={{ color: '#3A7E53' }}>
+          <h1 className="text-3xl font-bold text-center mb-8" style={{ color: colorCode }}>
             Confirmation de réservation
           </h1>
 
@@ -77,34 +70,34 @@ const ConfirmationSuccess = ({ params }: { params: Promise<{ id: string, service
             
             <div className="space-y-4">
               <div className="flex items-center gap-3">
-                <Clock className="w-5 h-5" style={{ color: '#3A7E53' }} />
+                <Clock className="w-5 h-5" style={{ color: colorCode }} />
                 <span>
                   {formatDate(bookingData?.date || new Date().toISOString())} - {bookingData?.selectedTime || "Aucun horaire"}
                 </span>
               </div>
 
               <div className="flex items-center gap-3">
-                <Grape className="w-5 h-5" style={{ color: '#3A7E53' }} />
+                <Grape className="w-5 h-5" style={{ color: colorCode }} />
                 <span>Visite libre et dégustation des cuvées Tradition</span>
               </div>
 
               <div className="flex items-center gap-3">
-                <Users className="w-5 h-5" style={{ color: '#3A7E53' }} />
+                <Users className="w-5 h-5" style={{ color: colorCode }} />
                 <span>{formatParticipants()}</span>
               </div>
 
               <div className="flex items-center gap-3">
-                <Globe className="w-5 h-5" style={{ color: '#3A7E53' }} />
+                <Globe className="w-5 h-5" style={{ color: colorCode }} />
                 <span>{bookingData?.language || "Français"}</span>
               </div>
 
               <div className="flex items-center gap-3">
-                <Euro className="w-5 h-5" style={{ color: '#3A7E53' }} />
+                <Euro className="w-5 h-5" style={{ color: colorCode }} />
                 <span>{totalPrice} €</span>
               </div>
 
               <div className="flex items-center gap-3">
-                <CreditCard className="w-5 h-5" style={{ color: '#3A7E53' }} />
+                <CreditCard className="w-5 h-5" style={{ color: colorCode }} />
                 <span>Paiement sur place (cartes, chèques, espèces)</span>
               </div>
             </div>
@@ -115,7 +108,7 @@ const ConfirmationSuccess = ({ params }: { params: Promise<{ id: string, service
             <Link href={`/if/booking-widget/${id}/${serviceId}`}>
               <Button 
                 className="hover:opacity-90 text-white px-8 py-3 flex items-center gap-2"
-                style={{ backgroundColor: '#3A7E53' }}
+                style={{ backgroundColor: colorCode }}
                 size="lg"
               >
                 <Home className="w-5 h-5" />
@@ -126,6 +119,33 @@ const ConfirmationSuccess = ({ params }: { params: Promise<{ id: string, service
         </div>
       </div>
     </div>
+  );
+}
+
+const ConfirmationSuccess = ({ params }: { params: Promise<{ id: string, service_id: string }> }) => {
+  const [resolvedParams, setResolvedParams] = useState<{ id: string, service_id: string } | null>(null);
+
+  useEffect(() => {
+    params.then(setResolvedParams);
+  }, [params]);
+
+  if (!resolvedParams) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#3A7E53] mx-auto mb-4"></div>
+          <p className="text-lg">Chargement...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const { id, service_id } = resolvedParams;
+
+  return (
+    <WidgetProvider userId={id} serviceId={service_id}>
+      <ConfirmationSuccessContent id={id} serviceId={service_id} />
+    </WidgetProvider>
   );
 };
 

@@ -9,6 +9,7 @@ import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { useSearchParams, useRouter } from "next/navigation";
 import toast from "react-hot-toast";
+import { WidgetProvider, useWidget } from "@/contexts/WidgetContext";
 
 interface BookingData {
   date: string;
@@ -18,18 +19,10 @@ interface BookingData {
   language: string;
 }
 
-const Checkout = ({ params }: { params: Promise<{ id: string, service_id: string }> }) => {
+function CheckoutContent({ id, serviceId }: { id: string, serviceId: string }) {
+  const { widgetData, loading, error, colorCode } = useWidget();
   const searchParams = useSearchParams();
   const router = useRouter();
-  const [id, setId] = useState<string>('');
-  const [serviceId, setServiceId] = useState<string>('');
-
-  useEffect(() => {
-    params.then(({ id, service_id }) => {
-      setId(id);
-      setServiceId(service_id);
-    });
-  }, [params]);
   
   // Extract booking data from URL parameters
   const bookingData: BookingData = {
@@ -46,6 +39,28 @@ const Checkout = ({ params }: { params: Promise<{ id: string, service_id: string
   const [cardholderName, setCardholderName] = useState("Juliette Dupont");
   const [isProcessing, setIsProcessing] = useState(false);
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 mx-auto mb-4" style={{ borderColor: colorCode }}></div>
+          <p className="text-lg">Chargement...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="mb-4 text-2xl font-bold text-red-600">Erreur</h1>
+          <p className="text-lg text-gray-600 mb-8">{error}</p>
+        </div>
+      </div>
+    );
+  }
+
   // Format date and time
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -54,7 +69,8 @@ const Checkout = ({ params }: { params: Promise<{ id: string, service_id: string
 
   const displayTime = bookingData?.selectedTime || "Aucun horaire sélectionné";
   const totalParticipants = (bookingData?.adults || 2) + (bookingData?.children || 0);
-  const totalPrice = totalParticipants * 5; // 5€ per person
+  const pricePerPerson = widgetData?.service?.pricePerPerson || 5;
+  const totalPrice = totalParticipants * pricePerPerson;
 
   const formatParticipants = () => {
     const adults = bookingData?.adults || 2;
@@ -143,7 +159,7 @@ const Checkout = ({ params }: { params: Promise<{ id: string, service_id: string
     <div className="min-h-screen bg-white">
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         <div className="rounded-lg p-6">
-          <h1 className="text-2xl font-bold text-center mb-8" style={{ color: '#3A7E53' }}>
+          <h1 className="text-2xl font-bold text-center mb-8" style={{ color: colorCode }}>
             Paiement sécurisé
           </h1>
 
@@ -151,7 +167,7 @@ const Checkout = ({ params }: { params: Promise<{ id: string, service_id: string
             {/* Formulaire de paiement */}
             <div>
               <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
-                <Lock className="w-5 h-5" style={{ color: '#3A7E53' }} />
+                <Lock className="w-5 h-5" style={{ color: colorCode }} />
                 Informations bancaires
               </h2>
               
@@ -216,22 +232,22 @@ const Checkout = ({ params }: { params: Promise<{ id: string, service_id: string
               
               <Card className="p-4 space-y-4">
                 <div className="flex items-center gap-3">
-                  <Clock className="w-5 h-5" style={{ color: '#3A7E53' }} />
+                  <Clock className="w-5 h-5" style={{ color: colorCode }} />
                   <span className="text-sm">{formatDate(bookingData?.date || new Date().toISOString())} - {displayTime}</span>
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <Grape className="w-5 h-5" style={{ color: '#3A7E53' }} />
-                  <span className="text-sm">Visite libre & dégustation des cuvées Tradition</span>
+                  <Grape className="w-5 h-5" style={{ color: colorCode }} />
+                  <span className="text-sm">{widgetData?.service?.name || 'Visite libre & dégustation des cuvées Tradition'}</span>
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <Users className="w-5 h-5" style={{ color: '#3A7E53' }} />
+                  <Users className="w-5 h-5" style={{ color: colorCode }} />
                   <span className="text-sm">{formatParticipants()}</span>
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <Globe className="w-5 h-5" style={{ color: '#3A7E53' }} />
+                  <Globe className="w-5 h-5" style={{ color: colorCode }} />
                   <span className="text-sm">{bookingData?.language || "Français"}</span>
                 </div>
 
@@ -239,7 +255,7 @@ const Checkout = ({ params }: { params: Promise<{ id: string, service_id: string
                 
                 <div className="flex items-center justify-between font-semibold">
                   <div className="flex items-center gap-3">
-                    <Euro className="w-5 h-5" style={{ color: '#3A7E53' }} />
+                    <Euro className="w-5 h-5" style={{ color: colorCode }} />
                     <span>Total à payer</span>
                   </div>
                   <span className="text-lg">{totalPrice} €</span>
@@ -261,7 +277,7 @@ const Checkout = ({ params }: { params: Promise<{ id: string, service_id: string
             <Button 
               onClick={handleSubmit}
               className="hover:opacity-90 text-white px-8 py-2"
-              style={{ backgroundColor: '#3A7E53' }}
+              style={{ backgroundColor: colorCode }}
               size="lg"
               disabled={isProcessing}
             >
@@ -281,6 +297,33 @@ const Checkout = ({ params }: { params: Promise<{ id: string, service_id: string
         </div>
       </div>
     </div>
+  );
+}
+
+const Checkout = ({ params }: { params: Promise<{ id: string, service_id: string }> }) => {
+  const [resolvedParams, setResolvedParams] = useState<{ id: string, service_id: string } | null>(null);
+
+  useEffect(() => {
+    params.then(setResolvedParams);
+  }, [params]);
+
+  if (!resolvedParams) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#3A7E53] mx-auto mb-4"></div>
+          <p className="text-lg">Chargement...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const { id, service_id } = resolvedParams;
+
+  return (
+    <WidgetProvider userId={id} serviceId={service_id}>
+      <CheckoutContent id={id} serviceId={service_id} />
+    </WidgetProvider>
   );
 };
 

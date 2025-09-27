@@ -11,6 +11,7 @@ import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { WidgetProvider, useWidget } from "@/contexts/WidgetContext";
 
 interface BookingData {
   date: string;
@@ -20,17 +21,9 @@ interface BookingData {
   language: string;
 }
 
-const BookingConfirmation = ({ params }: { params: Promise<{ id: string, service_id: string }> }) => {
+function BookingConfirmationContent({ id, serviceId }: { id: string, serviceId: string }) {
+  const { widgetData, loading, error, colorCode } = useWidget();
   const searchParams = useSearchParams();
-  const [id, setId] = useState<string>('');
-  const [serviceId, setServiceId] = useState<string>('');
-
-  useEffect(() => {
-    params.then(({ id, service_id }) => {
-      setId(id);
-      setServiceId(service_id);
-    });
-  }, [params]);
   
   // Extract booking data from URL parameters
   const bookingData: BookingData = {
@@ -53,6 +46,28 @@ const BookingConfirmation = ({ params }: { params: Promise<{ id: string, service
     dialCode: "+33"
   });
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 mx-auto mb-4" style={{ borderColor: colorCode }}></div>
+          <p className="text-lg">Chargement...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="mb-4 text-2xl font-bold text-red-600">Erreur</h1>
+          <p className="text-lg text-gray-600 mb-8">{error}</p>
+        </div>
+      </div>
+    );
+  }
+
   // Format date and time
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -61,7 +76,8 @@ const BookingConfirmation = ({ params }: { params: Promise<{ id: string, service
 
   const displayTime = bookingData?.selectedTime || "Aucun horaire sélectionné";
   const totalParticipants = (bookingData?.adults || 2) + (bookingData?.children || 0);
-  const totalPrice = totalParticipants * 5; // 5€ per person
+  const pricePerPerson = widgetData?.service?.pricePerPerson || 5;
+  const totalPrice = totalParticipants * pricePerPerson;
 
   const formatParticipants = () => {
     const adults = bookingData?.adults || 2;
@@ -77,7 +93,7 @@ const BookingConfirmation = ({ params }: { params: Promise<{ id: string, service
     <div className="min-h-screen bg-white">
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         <div className="rounded-lg p-6">
-          <h1 className="text-2xl font-bold text-center mb-8" style={{ color: '#3A7E53' }}>
+          <h1 className="text-2xl font-bold text-center mb-8" style={{ color: colorCode }}>
             Demande de réservation
           </h1>
 
@@ -129,32 +145,32 @@ const BookingConfirmation = ({ params }: { params: Promise<{ id: string, service
               
               <div className="space-y-4">
                 <div className="flex items-center gap-3">
-                  <Clock className="w-5 h-5" style={{ color: '#3A7E53' }} />
+                  <Clock className="w-5 h-5" style={{ color: colorCode }} />
                   <span>{formatDate(bookingData?.date || new Date().toISOString())} - {displayTime}</span>
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <Grape className="w-5 h-5" style={{ color: '#3A7E53' }} />
-                  <span>Visite libre & dégustation des cuvées Tradition</span>
+                  <Grape className="w-5 h-5" style={{ color: colorCode }} />
+                  <span>{widgetData?.service?.name || 'Visite libre & dégustation des cuvées Tradition'}</span>
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <Users className="w-5 h-5" style={{ color: '#3A7E53' }} />
+                  <Users className="w-5 h-5" style={{ color: colorCode }} />
                   <span>{formatParticipants()}</span>
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <Globe className="w-5 h-5" style={{ color: '#3A7E53' }} />
+                  <Globe className="w-5 h-5" style={{ color: colorCode }} />
                   <span>{bookingData?.language || "Français"}</span>
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <Euro className="w-5 h-5" style={{ color: '#3A7E53' }} />
+                  <Euro className="w-5 h-5" style={{ color: colorCode }} />
                   <span>{totalPrice} €</span>
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <CreditCard className="w-5 h-5" style={{ color: '#3A7E53' }} />
+                  <CreditCard className="w-5 h-5" style={{ color: colorCode }} />
                   <span className="text-sm">Paiement en ligne</span>
                 </div>
 
@@ -168,7 +184,7 @@ const BookingConfirmation = ({ params }: { params: Promise<{ id: string, service
                       language: bookingData.language,
                     }).toString()}`}
                     className="hover:opacity-75 underline text-sm"
-                    style={{ color: '#3A7E53' }}
+                    style={{ color: colorCode }}
                   >
                     Modifier ma réservation
                   </Link>
@@ -209,7 +225,7 @@ const BookingConfirmation = ({ params }: { params: Promise<{ id: string, service
             >
               <Button 
                 className="hover:opacity-90 text-white px-8 py-2"
-                style={{ backgroundColor: '#3A7E53' }}
+                style={{ backgroundColor: colorCode }}
                 size="lg"
               >
                 Confirmer
@@ -219,6 +235,33 @@ const BookingConfirmation = ({ params }: { params: Promise<{ id: string, service
         </div>
       </div>
     </div>
+  );
+}
+
+const BookingConfirmation = ({ params }: { params: Promise<{ id: string, service_id: string }> }) => {
+  const [resolvedParams, setResolvedParams] = useState<{ id: string, service_id: string } | null>(null);
+
+  useEffect(() => {
+    params.then(setResolvedParams);
+  }, [params]);
+
+  if (!resolvedParams) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#3A7E53] mx-auto mb-4"></div>
+          <p className="text-lg">Chargement...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const { id, service_id } = resolvedParams;
+
+  return (
+    <WidgetProvider userId={id} serviceId={service_id}>
+      <BookingConfirmationContent id={id} serviceId={service_id} />
+    </WidgetProvider>
   );
 };
 
