@@ -1,66 +1,180 @@
 'use client'
 
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import { CreditCard, Banknote, Coins } from "lucide-react";
+// import { Separator } from "@/components/ui/separator";
+import { CreditCard, Banknote, Coins, Loader2, Save } from "lucide-react";
+import { toast } from 'react-hot-toast';
+import { 
+  paymentMethodsService, 
+  PAYMENT_METHOD_OPTIONS,
+  CreateOrUpdatePaymentMethodsRequest
+} from "@/services/payment-methods.service";
 
 export const PaymentSection = () => {
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [hasChanges, setHasChanges] = useState(false);
+
+  // State for selected payment methods
+  const [selectedMethods, setSelectedMethods] = useState<string[]>([]);
+
+  // Load payment methods on component mount
+  useEffect(() => {
+    loadPaymentMethods();
+  }, []);
+
+  const loadPaymentMethods = async () => {
+    setIsLoading(true);
+    try {
+      const response = await paymentMethodsService.getPaymentMethods();
+      
+      if (response.data && response.data.methods) {
+        setSelectedMethods(response.data.methods);
+        setHasChanges(false);
+      } else {
+        console.log('ℹ️ No payment methods found, using empty array');
+        setSelectedMethods([]);
+        setHasChanges(false);
+      }
+    } catch (error) {
+      console.error('❌ Failed to load payment methods:', error);
+      toast.error('Erreur lors du chargement des moyens de paiement');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const savePaymentMethods = async () => {
+    setIsSaving(true);
+    try {
+      const methodsData: CreateOrUpdatePaymentMethodsRequest = {
+        methods: selectedMethods
+      };
+      
+      const response = await paymentMethodsService.createOrUpdatePaymentMethods(methodsData);
+      
+      toast.success('Moyens de paiement sauvegardés avec succès');
+      setHasChanges(false);
+    } catch (error: any) {
+      console.error('❌ Failed to save payment methods:', error);
+      toast.error(error?.message || 'Erreur lors de la sauvegarde');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleMethodToggle = (method: string) => {
+    setSelectedMethods(prev => {
+      const newMethods = prev.includes(method)
+        ? prev.filter(m => m !== method)
+        : [...prev, method];
+      
+      setHasChanges(true);
+      return newMethods;
+    });
+  };
   return (
-    <Card className="mt-5">
-      <CardHeader>
-        <CardTitle className="text-lg lg:text-xl">Moyens de paiement acceptés</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4 lg:space-y-6">
-        <p className="text-muted-foreground text-sm lg:text-base">
+    <Card className="mt-5 relative shadow-sm border-0 bg-white ring-1 ring-gray-200 hover:ring-gray-300 transition-all duration-200">
+      <CardHeader className="pb-4">
+        <CardTitle className="text-xl lg:text-2xl font-semibold text-gray-900">Moyens de paiement acceptés</CardTitle>
+        <p className="text-gray-600 text-sm lg:text-base leading-relaxed mt-1">
           Sélectionnez les moyens de paiement que vous acceptez sur place.
         </p>
-        
-        <div className="space-y-3 lg:space-y-4">
-          <div className="flex items-center space-x-3 p-2 lg:p-0">
-            <Checkbox id="card" defaultChecked />
-            <CreditCard className="h-4 w-4 lg:h-5 lg:w-5 text-muted-foreground" />
-            <Label htmlFor="card" className="text-sm lg:text-base">
+      </CardHeader>
+      <CardContent className="pt-2 space-y-6 lg:space-y-8">        
+        <div className="space-y-4">
+          <div className="flex items-center space-x-4 p-3 rounded-lg bg-gray-50/50 hover:bg-gray-50 transition-colors">
+            <Checkbox 
+              id="card" 
+              checked={selectedMethods.includes(PAYMENT_METHOD_OPTIONS.BANK_CARD)}
+              onCheckedChange={() => handleMethodToggle(PAYMENT_METHOD_OPTIONS.BANK_CARD)}
+              className="data-[state=checked]:bg-[#3A7B59] data-[state=checked]:border-[#3A7B59]"
+            />
+            <CreditCard className="h-5 w-5 lg:h-6 lg:w-6 text-gray-600" />
+            <Label htmlFor="card" className="text-sm lg:text-base font-medium cursor-pointer">
               Carte bancaire
             </Label>
           </div>
           
-          <div className="flex items-center space-x-3 p-2 lg:p-0">
-            <Checkbox id="check" />
-            <Banknote className="h-4 w-4 lg:h-5 lg:w-5 text-muted-foreground" />
-            <Label htmlFor="check" className="text-sm lg:text-base">
+          <div className="flex items-center space-x-4 p-3 rounded-lg bg-gray-50/50 hover:bg-gray-50 transition-colors">
+            <Checkbox 
+              id="check" 
+              checked={selectedMethods.includes(PAYMENT_METHOD_OPTIONS.CHECKS)}
+              onCheckedChange={() => handleMethodToggle(PAYMENT_METHOD_OPTIONS.CHECKS)}
+              className="data-[state=checked]:bg-[#3A7B59] data-[state=checked]:border-[#3A7B59]"
+            />
+            <Banknote className="h-5 w-5 lg:h-6 lg:w-6 text-gray-600" />
+            <Label htmlFor="check" className="text-sm lg:text-base font-medium cursor-pointer">
               Chèques
             </Label>
           </div>
           
-          <div className="flex items-center space-x-3 p-2 lg:p-0">
-            <Checkbox id="cash" />
-            <Coins className="h-4 w-4 lg:h-5 lg:w-5 text-muted-foreground" />
-            <Label htmlFor="cash" className="text-sm lg:text-base">
+          <div className="flex items-center space-x-4 p-3 rounded-lg bg-gray-50/50 hover:bg-gray-50 transition-colors">
+            <Checkbox 
+              id="cash" 
+              checked={selectedMethods.includes(PAYMENT_METHOD_OPTIONS.CASH)}
+              onCheckedChange={() => handleMethodToggle(PAYMENT_METHOD_OPTIONS.CASH)}
+              className="data-[state=checked]:bg-[#3A7B59] data-[state=checked]:border-[#3A7B59]"
+            />
+            <Coins className="h-5 w-5 lg:h-6 lg:w-6 text-gray-600" />
+            <Label htmlFor="cash" className="text-sm lg:text-base font-medium cursor-pointer">
               Espèces (paiement sur place)
             </Label>
           </div>
         </div>
 
-        <Separator className="my-4 lg:my-6" />
+        {/* Save Button */}
+        <div className="flex justify-end">
+          <Button
+            onClick={savePaymentMethods}
+            disabled={!hasChanges || isSaving || isLoading}
+            className="bg-[#3A7B59] hover:bg-[#2d5a43] text-white px-8 py-3 flex items-center gap-2 font-semibold text-base shadow-md hover:shadow-lg transition-all duration-200 disabled:opacity-60"
+          >
+            {isSaving ? (
+              <>
+                <Loader2 className="h-5 w-5 animate-spin" />
+                Sauvegarde...
+              </>
+            ) : (
+              <>
+                <Save className="h-5 w-5" />
+                Sauvegarder les moyens de paiement
+              </>
+            )}
+          </Button>
+        </div>
 
-        <div className="space-y-3 lg:space-y-4">
-          <h3 className="text-lg lg:text-2xl font-semibold leading-none tracking-tight">Prépaiements</h3>
-          <p className="text-muted-foreground text-sm lg:text-base">
+        {/* <Separator className="my-6 lg:my-8" />
+
+        <div className="space-y-4 lg:space-y-6">
+          <h3 className="text-lg lg:text-2xl font-semibold leading-none tracking-tight text-gray-900">Prépaiements</h3>
+          <p className="text-gray-600 text-sm lg:text-base leading-relaxed">
             Le prépaiement permet de demander aux clients immédiatement au moment de la 
             réservation en ligne le paiement de la prestation afin de valider la réservation du 
             rendez-vous.
           </p>
           
           <Button 
-            className="text-white hover:opacity-90 w-full sm:w-auto text-sm lg:text-base px-4 lg:px-6 py-2 lg:py-3"
+            className="text-white hover:opacity-90 w-full sm:w-auto text-sm lg:text-base px-6 lg:px-8 py-3 lg:py-4 font-semibold shadow-md hover:shadow-lg transition-all duration-200"
             style={{ backgroundColor: '#3A7B59' }}
           >
             Connecter à Stripe
           </Button>
-        </div>
+        </div> */}
+
+        {/* Loading Overlay */}
+        {isLoading && (
+          <div className="absolute inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center rounded-lg">
+            <div className="flex items-center gap-3 text-[#3A7B59] bg-white px-6 py-3 rounded-lg shadow-lg">
+              <Loader2 className="h-6 w-6 animate-spin" />
+              <span className="font-medium">Chargement des moyens de paiement...</span>
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
