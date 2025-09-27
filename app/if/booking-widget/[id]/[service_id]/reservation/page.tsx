@@ -6,12 +6,16 @@ import Link from "next/link";
 import Image from "next/image";
 import { useState, useEffect } from "react";
 
-export default function ReservationPage({ params }: { params: Promise<{ id: string }> }) {
+export default function ReservationPage({ params }: { params: Promise<{ id: string, service_id: string }> }) {
     const [id, setId] = useState<string>('');
+    const [serviceId, setServiceId] = useState<string>('');
     const [showFullText, setShowFullText] = useState(false);
     
     useEffect(() => {
-        params.then(({ id }) => setId(id));
+        params.then(({ id, service_id }) => {
+            setId(id);
+            setServiceId(service_id);
+        });
     }, [params]);
     
     const fullText = "Une expérience unique avec la visite libre de notre cave troglodytique sculptée, suivie d'une dégustation commentée de 5 vins dans notre caveau à l'ambiance feutré, éclairé à la bougie.";
@@ -99,7 +103,7 @@ export default function ReservationPage({ params }: { params: Promise<{ id: stri
 
                         {/* Reserve Button */}
                         <div className="text-center">
-                            <Link href={`/if/booking-widget/${id}/booking`}>
+                            <Link href={`/if/booking-widget/${id}/${serviceId}/booking`}>
                                 <Button
                                     size="lg"
                                     className="hover:opacity-90 text-white px-12 py-3 text-lg font-semibold rounded-md transition-colors"

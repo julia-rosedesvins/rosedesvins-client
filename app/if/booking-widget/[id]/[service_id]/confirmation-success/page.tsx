@@ -15,12 +15,16 @@ interface BookingData {
   language: string;
 }
 
-const ConfirmationSuccess = ({ params }: { params: Promise<{ id: string }> }) => {
+const ConfirmationSuccess = ({ params }: { params: Promise<{ id: string, service_id: string }> }) => {
   const searchParams = useSearchParams();
   const [id, setId] = useState<string>('');
-  
+  const [serviceId, setServiceId] = useState<string>('');
+
   useEffect(() => {
-    params.then(({ id }) => setId(id));
+    params.then(({ id, service_id }) => {
+      setId(id);
+      setServiceId(service_id);
+    });
   }, [params]);
   
   // Extract booking data from URL parameters
@@ -108,7 +112,7 @@ const ConfirmationSuccess = ({ params }: { params: Promise<{ id: string }> }) =>
 
           {/* Bouton retour à l'accueil */}
           <div className="flex justify-center mt-8">
-            <Link href={`/if/booking-widget/${id}`}>
+            <Link href={`/if/booking-widget/${id}/${serviceId}`}>
               <Button 
                 className="hover:opacity-90 text-white px-8 py-3 flex items-center gap-2"
                 style={{ backgroundColor: '#3A7E53' }}

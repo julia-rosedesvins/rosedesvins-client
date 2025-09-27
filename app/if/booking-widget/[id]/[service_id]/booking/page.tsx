@@ -7,11 +7,15 @@ import { ChevronLeft, ChevronRight, Plus, Minus, Clock, Euro, Wine, Users } from
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 
-export default function BookingPage({ params }: { params: Promise<{ id: string }> }) {
+export default function BookingPage({ params }: { params: Promise<{ id: string, service_id: string }> }) {
     const [id, setId] = useState<string>('');
-    
+    const [serviceId, setServiceId] = useState<string>('');
+
     useEffect(() => {
-        params.then(({ id }) => setId(id));
+        params.then(({ id, service_id }) => {
+            setId(id);
+            setServiceId(service_id);
+        });
     }, [params]);
      // Updated time selection logic - single time slot selection
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -91,7 +95,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
       <div className="container mx-auto px-4 py-8 max-w-2xl">
         {/* Header */}
         <div className="flex items-center mb-6 lg:mb-8">
-          <Link href={`/if/booking-widget/${id}/reservation`} className="flex items-center text-muted-foreground hover:opacity-75" style={{ color: '#3A7E53' }}>
+          <Link href={`/if/booking-widget/${id}/${serviceId}/reservation`} className="flex items-center text-muted-foreground hover:opacity-75" style={{ color: '#3A7E53' }}>
             <ChevronLeft className="w-5 h-5 mr-1" />
             Retour
           </Link>
@@ -330,7 +334,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
         <div className="flex justify-center">
           <Link
             href={{
-              pathname: `/if/booking-widget/${id}/booking-confirmation`,
+              pathname: `/if/booking-widget/${id}/${serviceId}/booking-confirmation`,
               query: {
                 date: selectedDate?.toISOString(),
                 selectedTime: selectedTime,

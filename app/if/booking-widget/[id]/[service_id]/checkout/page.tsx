@@ -18,13 +18,17 @@ interface BookingData {
   language: string;
 }
 
-const Checkout = ({ params }: { params: Promise<{ id: string }> }) => {
+const Checkout = ({ params }: { params: Promise<{ id: string, service_id: string }> }) => {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [id, setId] = useState<string>('');
-  
+  const [serviceId, setServiceId] = useState<string>('');
+
   useEffect(() => {
-    params.then(({ id }) => setId(id));
+    params.then(({ id, service_id }) => {
+      setId(id);
+      setServiceId(service_id);
+    });
   }, [params]);
   
   // Extract booking data from URL parameters
@@ -131,7 +135,7 @@ const Checkout = ({ params }: { params: Promise<{ id: string }> }) => {
     setTimeout(() => {
       setIsProcessing(false);
       toast.success("Paiement réussi ! Votre réservation a été confirmée.");
-      router.push(`/if/booking-widget/${id}/confirmation-success?${searchParams.toString()}`);
+      router.push(`/if/booking-widget/${id}/${serviceId}/confirmation-success?${searchParams.toString()}`);
     }, 2000);
   };
 

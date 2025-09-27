@@ -20,12 +20,16 @@ interface BookingData {
   language: string;
 }
 
-const BookingConfirmation = ({ params }: { params: Promise<{ id: string }> }) => {
+const BookingConfirmation = ({ params }: { params: Promise<{ id: string, service_id: string }> }) => {
   const searchParams = useSearchParams();
   const [id, setId] = useState<string>('');
-  
+  const [serviceId, setServiceId] = useState<string>('');
+
   useEffect(() => {
-    params.then(({ id }) => setId(id));
+    params.then(({ id, service_id }) => {
+      setId(id);
+      setServiceId(service_id);
+    });
   }, [params]);
   
   // Extract booking data from URL parameters
@@ -190,7 +194,7 @@ const BookingConfirmation = ({ params }: { params: Promise<{ id: string }> }) =>
           {/* Bouton Confirmer */}
           <div className="flex justify-end mt-6">
             <Link
-              href={`/if/booking-widget/${id}/checkout?${new URLSearchParams({
+              href={`/if/booking-widget/${id}/${serviceId}/checkout?${new URLSearchParams({
                 date: bookingData.date,
                 selectedTime: bookingData.selectedTime || '',
                 adults: bookingData.adults.toString(),
