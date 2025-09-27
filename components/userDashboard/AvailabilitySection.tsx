@@ -52,16 +52,31 @@ export const AvailabilitySection = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
+  const [initialDataLoaded, setInitialDataLoaded] = useState(false);
+  const [originalData, setOriginalData] = useState<{
+    schedules: typeof schedules;
+    holidays: string[];
+  }>({ schedules: {}, holidays: [] });
 
   // Load availability data on component mount
   useEffect(() => {
     loadAvailabilityData();
   }, []);
 
-  // Track changes
+  // Track changes by comparing current state with original data
   useEffect(() => {
-    setHasChanges(true);
-  }, [schedules, selectedHolidays]);
+    if (!initialDataLoaded) return;
+
+    // Deep compare schedules
+    const schedulesChanged = JSON.stringify(schedules) !== JSON.stringify(originalData.schedules);
+    
+    // Compare holidays
+    const holidaysChanged = JSON.stringify(selectedHolidays.sort()) !== JSON.stringify(originalData.holidays.sort());
+    
+    const hasDataChanges = schedulesChanged || holidaysChanged;
+
+    setHasChanges(hasDataChanges);
+  }, [schedules, selectedHolidays, initialDataLoaded, originalData]);
 
   const loadAvailabilityData = async () => {
     setIsLoading(true);
@@ -116,12 +131,28 @@ export const AvailabilitySection = () => {
           .filter(Boolean) as string[];
           
         setSelectedHolidays(holidayIds);
+        
+        // Store original data for change detection
+        setOriginalData({
+          schedules: convertedSchedules,
+          holidays: holidayIds
+        });
+        
         setHasChanges(false);
+        setInitialDataLoaded(true);
         
         console.log('✅ Availability data loaded successfully');
       } else {
         console.log('ℹ️ No availability data found, using defaults');
+        
+        // Store empty original data
+        setOriginalData({
+          schedules: {},
+          holidays: []
+        });
+        
         setHasChanges(false);
+        setInitialDataLoaded(true);
       }
     } catch (error) {
       console.error('❌ Failed to load availability data:', error);
@@ -187,6 +218,13 @@ export const AvailabilitySection = () => {
       await availabilityService.saveAvailability(availabilityData);
       
       toast.success('✅ Disponibilités sauvegardées avec succès!');
+      
+      // Update original data to reflect the saved state
+      setOriginalData({
+        schedules: { ...schedules },
+        holidays: [...selectedHolidays]
+      });
+      
       setHasChanges(false);
       
     } catch (error) {
@@ -225,14 +263,22 @@ export const AvailabilitySection = () => {
   };
 
   const handleTimeChange = (dayId: string, field: string, value: string) => {
-    setSchedules(prev => ({
-      ...prev,
-      [dayId]: {
-        ...prev[dayId],
-        enabled: prev[dayId]?.enabled || false,
-        [field]: value
-      }
-    }));
+    console.log('⏰ Time change:', { dayId, field, value });
+    console.log('📊 Before update:', schedules[dayId]);
+    
+    setSchedules(prev => {
+      const updated = {
+        ...prev,
+        [dayId]: {
+          ...prev[dayId],
+          enabled: prev[dayId]?.enabled || false,
+          [field]: value
+        }
+      };
+      
+      console.log('📊 After update:', updated[dayId]);
+      return updated;
+    });
   };
 
   const handleHolidayToggle = (holidayId: string) => {
