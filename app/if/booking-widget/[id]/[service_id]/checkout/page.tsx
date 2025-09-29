@@ -69,12 +69,13 @@ function CheckoutContent({ id, serviceId }: { id: string, serviceId: string }) {
   // Set default payment method when widget data loads
   useEffect(() => {
     if (!selectedPaymentMethod) {
+      console.log('Setting default payment method', widgetData);
       if (widgetData?.paymentMethods?.methods && widgetData.paymentMethods.methods.length > 0) {
-        setSelectedPaymentMethod(widgetData.paymentMethods.methods[0]);
-      } else {
-        // Set default to bank_card if no API data is available
-        setSelectedPaymentMethod('bank_card');
+        const normalizedMethod = normalizePaymentMethod(widgetData.paymentMethods.methods[0]);
+        console.log('Normalized method:', normalizedMethod);
+        setSelectedPaymentMethod(normalizedMethod);
       }
+      // Don't set a default payment method if none are available from API
     }
   }, [widgetData, selectedPaymentMethod]);
 
@@ -187,6 +188,7 @@ function CheckoutContent({ id, serviceId }: { id: string, serviceId: string }) {
         return;
       }
     }
+    // Cash payment doesn't need validation as it's handled on-site
 
     setIsProcessing(true);
     
@@ -250,11 +252,15 @@ function CheckoutContent({ id, serviceId }: { id: string, serviceId: string }) {
   };
 
   const renderPaymentMethodIcon = (method: string) => {
-    switch (method) {
+    switch (method.toLowerCase()) {
+      case 'bank card':
       case 'bank_card':
         return <Building2 className="w-5 h-5" />;
+      case 'checks':
       case 'cheque':
         return <Receipt className="w-5 h-5" />;
+      case 'cash':
+        return <Euro className="w-5 h-5" />;
       case 'stripe':
         return <CreditCard className="w-5 h-5" />;
       default:
@@ -263,15 +269,35 @@ function CheckoutContent({ id, serviceId }: { id: string, serviceId: string }) {
   };
 
   const getPaymentMethodLabel = (method: string) => {
-    switch (method) {
+    switch (method.toLowerCase()) {
+      case 'bank card':
       case 'bank_card':
         return 'Virement bancaire';
+      case 'checks':
       case 'cheque':
         return 'Paiement par chèque';
+      case 'cash':
+        return 'Paiement en espèces';
       case 'stripe':
         return 'Carte bancaire (Stripe)';
       default:
         return method;
+    }
+  };
+
+  // Normalize payment method name for form display
+  const normalizePaymentMethod = (method: string) => {
+    switch (method.toLowerCase()) {
+      case 'bank card':
+        return 'bank_card';
+      case 'checks':
+        return 'cheque';
+      case 'cash':
+        return 'cash';
+      case 'stripe':
+        return 'stripe';
+      default:
+        return method.toLowerCase().replace(/\s+/g, '_');
     }
   };
 
@@ -282,7 +308,7 @@ function CheckoutContent({ id, serviceId }: { id: string, serviceId: string }) {
           <h1 className="text-2xl font-bold text-center mb-8" style={{ color: colorCode }}>
             Paiement sécurisé
           </h1>
-
+          
           <div className="grid md:grid-cols-2 gap-8">
             {/* Formulaire de paiement */}
             <div>
@@ -293,37 +319,46 @@ function CheckoutContent({ id, serviceId }: { id: string, serviceId: string }) {
               
               <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Payment Method Selection */}
-                <div>
-                  <label className="block text-sm font-medium mb-4">
-                    Mode de paiement
-                  </label>
-                  {widgetData?.paymentMethods?.methods && widgetData.paymentMethods.methods.length > 0 ? (
-                    <RadioGroup value={selectedPaymentMethod} onValueChange={setSelectedPaymentMethod}>
-                      {widgetData.paymentMethods.methods.map((method) => (
-                        <div key={method} className="flex items-center space-x-2 p-3 border rounded-lg">
-                          <RadioGroupItem value={method} id={method} />
-                          <Label htmlFor={method} className="flex items-center gap-2 cursor-pointer flex-1">
-                            {renderPaymentMethodIcon(method)}
-                            <span>{getPaymentMethodLabel(method)}</span>
-                          </Label>
-                        </div>
-                      ))}
+                {widgetData?.paymentMethods?.methods && widgetData.paymentMethods.methods.length > 0 ? (
+                  <div>
+                    <label className="block text-sm font-medium mb-4">
+                      Mode de paiement
+                    </label>
+                    <RadioGroup value={selectedPaymentMethod} onValueChange={(value) => {
+                      console.log('Payment method selected:', value);
+                      setSelectedPaymentMethod(value);
+                    }}>
+                      {widgetData.paymentMethods.methods.map((method) => {
+                        const normalizedMethod = normalizePaymentMethod(method);
+                        return (
+                          <div key={method} className="flex items-center space-x-2 p-3 border rounded-lg">
+                            <RadioGroupItem value={normalizedMethod} id={normalizedMethod} />
+                            <Label htmlFor={normalizedMethod} className="flex items-center gap-2 cursor-pointer flex-1">
+                              {renderPaymentMethodIcon(method)}
+                              <span>{getPaymentMethodLabel(method)}</span>
+                            </Label>
+                          </div>
+                        );
+                      })}
                     </RadioGroup>
-                  ) : (
-                    // Fallback payment methods if none are loaded from API
-                    <RadioGroup value={selectedPaymentMethod} onValueChange={setSelectedPaymentMethod}>
-                      {['bank_card', 'cheque', 'stripe'].map((method) => (
-                        <div key={method} className="flex items-center space-x-2 p-3 border rounded-lg">
-                          <RadioGroupItem value={method} id={method} />
-                          <Label htmlFor={method} className="flex items-center gap-2 cursor-pointer flex-1">
-                            {renderPaymentMethodIcon(method)}
-                            <span>{getPaymentMethodLabel(method)}</span>
-                          </Label>
-                        </div>
-                      ))}
-                    </RadioGroup>
-                  )}
-                </div>
+                  </div>
+                ) : (
+                  // Show message when no payment methods are configured
+                  <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <Lock className="w-5 h-5 text-yellow-600" />
+                      <div>
+                        <h3 className="text-sm font-medium text-yellow-800">
+                          Aucun mode de paiement configuré
+                        </h3>
+                        <p className="text-sm text-yellow-700 mt-1">
+                          Les modes de paiement n'ont pas encore été configurés pour ce service. 
+                          Veuillez contacter l'administrateur.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Bank Card Details */}
                 {selectedPaymentMethod === 'bank_card' && (
@@ -367,6 +402,19 @@ function CheckoutContent({ id, serviceId }: { id: string, serviceId: string }) {
                         className="w-full"
                         required
                       />
+                    </div>
+                  </div>
+                )}
+
+                {/* Cash Payment */}
+                {selectedPaymentMethod === 'cash' && (
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-medium">Paiement en espèces</h3>
+                    <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                      <p className="text-sm text-blue-800">
+                        Le paiement en espèces sera effectué sur place au moment de votre visite.
+                        Veuillez prévoir le montant exact : <strong>{totalPrice} €</strong>
+                      </p>
                     </div>
                   </div>
                 )}
@@ -491,9 +539,15 @@ function CheckoutContent({ id, serviceId }: { id: string, serviceId: string }) {
                 </div>
 
                 <div className="flex items-center gap-3">
-                  {renderPaymentMethodIcon(selectedPaymentMethod)}
+                  {selectedPaymentMethod ? renderPaymentMethodIcon(selectedPaymentMethod) : <Lock className="w-5 h-5" style={{ color: colorCode }} />}
                   <span className="text-sm" style={{ color: colorCode }}>
-                    {selectedPaymentMethod ? getPaymentMethodLabel(selectedPaymentMethod) : 'Mode de paiement non sélectionné'}
+                    {selectedPaymentMethod ? 
+                      getPaymentMethodLabel(selectedPaymentMethod) : 
+                      (widgetData?.paymentMethods?.methods && widgetData.paymentMethods.methods.length === 0 ? 
+                        'Aucun mode de paiement configuré' : 
+                        'Mode de paiement non sélectionné'
+                      )
+                    }
                   </span>
                 </div>
 
@@ -525,12 +579,17 @@ function CheckoutContent({ id, serviceId }: { id: string, serviceId: string }) {
               className="hover:opacity-90 text-white px-8 py-2"
               style={{ backgroundColor: colorCode }}
               size="lg"
-              disabled={isProcessing}
+              disabled={isProcessing || !selectedPaymentMethod || (widgetData?.paymentMethods?.methods && widgetData.paymentMethods.methods.length === 0)}
             >
               {isProcessing ? (
                 <div className="flex items-center gap-2">
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                   Traitement en cours...
+                </div>
+              ) : !selectedPaymentMethod || (widgetData?.paymentMethods?.methods && widgetData.paymentMethods.methods.length === 0) ? (
+                <div className="flex items-center gap-2">
+                  <Lock className="w-4 h-4" />
+                  <span>Modes de paiement non configurés</span>
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
@@ -538,6 +597,7 @@ function CheckoutContent({ id, serviceId }: { id: string, serviceId: string }) {
                   <span>
                     {selectedPaymentMethod === 'bank_card' ? 'Confirmer le virement' :
                      selectedPaymentMethod === 'cheque' ? 'Confirmer le chèque' :
+                     selectedPaymentMethod === 'cash' ? 'Confirmer la réservation' :
                      selectedPaymentMethod === 'stripe' ? `Payer ${totalPrice} €` :
                      `Confirmer ${totalPrice} €`}
                   </span>
