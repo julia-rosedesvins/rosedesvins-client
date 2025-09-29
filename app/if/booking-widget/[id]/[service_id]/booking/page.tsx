@@ -446,7 +446,7 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
             href={{
               pathname: `/if/booking-widget/${id}/${serviceId}/booking-confirmation`,
               query: {
-                date: selectedDate?.toISOString(),
+                date: selectedDate ? `${selectedDate.getFullYear()}-${(selectedDate.getMonth() + 1).toString().padStart(2, '0')}-${selectedDate.getDate().toString().padStart(2, '0')}` : '',
                 selectedTime: selectedTime,
                 adults: adults.toString(),
                 children: children.toString(),
