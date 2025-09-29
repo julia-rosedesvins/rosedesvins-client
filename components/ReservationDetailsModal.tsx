@@ -5,7 +5,7 @@ import { Clock, Users, Grape, Globe, Phone, Mail } from "lucide-react";
 interface Reservation {
   id: number;
   time: string;
-  people: number;
+  people: number | string;
   activity: string;
   language: string;
   comments: string;
@@ -13,6 +13,9 @@ interface Reservation {
   customerName?: string;
   customerPhone?: string;
   customerEmail?: string;
+  eventType?: string;
+  eventStatus?: string;
+  backgroundColor?: string;
 }
 
 interface ReservationDetailsModalProps {
@@ -27,8 +30,14 @@ export const ReservationDetailsModal = ({ reservation, isOpen, onClose }: Reserv
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-xs sm:max-w-lg lg:max-w-2xl p-0 overflow-hidden mx-4">
-        <DialogHeader className="text-white p-4 lg:p-6 text-center" style={{ backgroundColor: '#3A7B59' }}>
-          <h2 className="text-lg lg:text-2xl font-semibold">Votre réservation</h2>
+        <DialogHeader className="text-white p-4 lg:p-6 text-center" style={{ backgroundColor: reservation.backgroundColor || '#3A7B59' }}>
+          <h2 className="text-lg lg:text-2xl font-semibold">
+            {reservation.eventType === 'booking' ? 'Votre réservation' : 
+             reservation.eventType === 'personal' ? 'Événement personnel' :
+             reservation.eventType === 'external' ? 'Événement externe' :
+             reservation.eventType === 'blocked' ? 'Temps bloqué' :
+             'Votre réservation'}
+          </h2>
         </DialogHeader>
         
         <div className="p-4 lg:p-6 space-y-6 lg:space-y-8">
@@ -42,7 +51,7 @@ export const ReservationDetailsModal = ({ reservation, isOpen, onClose }: Reserv
               </div>
               <div className="flex items-center space-x-3">
                 <Users className="h-4 w-4 lg:h-5 lg:w-5 text-muted-foreground" />
-                <span className="text-sm lg:text-base">{reservation.people} personne{reservation.people > 1 ? 's' : ''} (adultes)</span>
+                <span className="text-sm lg:text-base">{reservation.people} personne{(typeof reservation.people === 'number' ? reservation.people > 1 : parseInt(reservation.people.toString()) > 1) ? 's' : ''} (adultes)</span>
               </div>
               <div className="flex items-center space-x-3">
                 <Grape className="h-4 w-4 lg:h-5 lg:w-5 text-muted-foreground" />
@@ -52,6 +61,21 @@ export const ReservationDetailsModal = ({ reservation, isOpen, onClose }: Reserv
                 <Globe className="h-4 w-4 lg:h-5 lg:w-5 text-muted-foreground" />
                 <span className="text-sm lg:text-base">{reservation.language === 'FR' ? 'Français' : reservation.language === 'EN' ? 'English' : reservation.language}</span>
               </div>
+              {reservation.eventType && (
+                <div className="flex items-center space-x-3">
+                  <div 
+                    className="w-3 h-3 rounded" 
+                    style={{ backgroundColor: reservation.backgroundColor || '#3A7B59' }}
+                  ></div>
+                  <span className="text-sm lg:text-base">
+                    {reservation.eventType === 'booking' ? 'Réservation' : 
+                     reservation.eventType === 'personal' ? 'Événement personnel' :
+                     reservation.eventType === 'external' ? 'Événement externe' :
+                     reservation.eventType === 'blocked' ? 'Temps bloqué' :
+                     reservation.eventType}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 

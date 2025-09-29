@@ -6,12 +6,13 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ChevronLeft, ChevronRight, Menu, Plus, CalendarIcon } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { fr } from "date-fns/locale";
-import { startOfMonth, endOfMonth, eachDayOfInterval, format, getDay, startOfWeek, endOfWeek } from "date-fns";
+import { startOfMonth, endOfMonth, eachDayOfInterval, format, getDay, startOfWeek, endOfWeek, parseISO } from "date-fns";
 import { ReservationDetailsModal } from "./ReservationDetailsModal";
 import { AddServiceModal } from "./AddServiceModal";
 import { cn } from "@/lib/utils";
+import { eventsService, EventData } from "@/services/events.service";
 
 export const CalendarSection = () => {
   const [date, setDate] = useState<Date | undefined>(new Date());
@@ -19,13 +20,104 @@ export const CalendarSection = () => {
   const [selectedReservation, setSelectedReservation] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAddServiceModalOpen, setIsAddServiceModalOpen] = useState(false);
+  const [events, setEvents] = useState<EventData[]>([]);
+  const [eventsLoading, setEventsLoading] = useState(true);
+  const [eventsError, setEventsError] = useState<string | null>(null);
 
-  // Événements par jour 
-  // 1er mardi (1er juillet): 0 réservations
-  // 1er jeudi (3 juillet): 1 réservation  
-  // 1er samedi (5 juillet): 3 réservations
-  // Tous les dimanches (6, 13, 20, 27): 0 réservations
-  const allEvents = {
+  // Fetch events on component mount
+  useEffect(() => {
+    const fetchEvents = async () => {
+      try {
+        setEventsLoading(true);
+        setEventsError(null);
+        const response = await eventsService.getUserEvents();
+        setEvents(response.data);
+      } catch (error: any) {
+        console.error('Failed to fetch events:', error);
+        setEventsError(error.message || 'Failed to load events');
+      } finally {
+        setEventsLoading(false);
+      }
+    };
+
+    fetchEvents();
+  }, []);
+
+  // Get color for event type
+  const getEventColor = (eventType: string) => {
+    switch (eventType) {
+      case 'booking':
+        return '#3A7B59'; // Green for bookings
+      case 'personal':
+        return '#2563eb'; // Blue for personal events
+      case 'external':
+        return '#7c3aed'; // Purple for external calendar events
+      case 'blocked':
+        return '#dc2626'; // Red for blocked time
+      default:
+        return '#6b7280'; // Gray for unknown
+    }
+  };
+
+  // Convert API events to calendar format
+  const convertEventsToCalendarFormat = (apiEvents: EventData[]) => {
+    const eventsByDay: { [key: number]: any[] } = {};
+    
+    apiEvents.forEach(event => {
+      const eventDate = parseISO(event.eventDate);
+      const dayNumber = eventDate.getDate();
+      
+      // Convert event to the format expected by the calendar
+      const calendarEvent = {
+        id: event._id,
+        time: event.eventTime,
+        people: event.bookingId?.userContactFirstname ? 
+          `${event.bookingId.userContactFirstname} ${event.bookingId.userContactLastname}` : 
+          'N/A', // For non-booking events
+        activity: event.eventName,
+        language: 'FR', // Default, could be extracted from booking details if needed
+        comments: event.eventDescription || 'Aucun',
+        customerName: event.bookingId ? 
+          `${event.bookingId.userContactFirstname} ${event.bookingId.userContactLastname}` : 
+          'Event',
+        customerPhone: 'N/A', // Not available in event data
+        customerEmail: 'N/A', // Not available in event data
+        eventType: event.eventType,
+        eventStatus: event.eventStatus,
+        isAllDay: event.isAllDay,
+        originalEvent: event, // Keep reference to original event data
+        backgroundColor: getEventColor(event.eventType) // Add color based on type
+      };
+
+      if (!eventsByDay[dayNumber]) {
+        eventsByDay[dayNumber] = [];
+      }
+      eventsByDay[dayNumber].push(calendarEvent);
+    });
+
+    return eventsByDay;
+  };
+
+  // Function to refresh events
+  const refreshEvents = async () => {
+    try {
+      setEventsLoading(true);
+      setEventsError(null);
+      const response = await eventsService.getUserEvents();
+      setEvents(response.data);
+    } catch (error: any) {
+      console.error('Failed to refresh events:', error);
+      setEventsError(error.message || 'Failed to refresh events');
+    } finally {
+      setEventsLoading(false);
+    }
+  };
+
+  // Get events formatted for calendar display
+  const allEvents = convertEventsToCalendarFormat(events);
+
+  // Legacy static events (keeping as fallback or for demo purposes)  
+  const legacyEvents = {
     // 1 juillet = 1er mardi du mois - VIDE
     2: [ // Mercredi - 2 réservations
       {
@@ -587,9 +679,61 @@ export const CalendarSection = () => {
   return (
     <Card className="mb-6 lg:mb-8">
       <CardHeader>
-        <CardTitle className="text-lg lg:text-xl">Calendrier</CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-lg lg:text-xl">Calendrier</CardTitle>
+          {!eventsLoading && !eventsError && (
+            <div className="text-sm text-gray-500">
+              {events.length} événement{events.length !== 1 ? 's' : ''}
+            </div>
+          )}
+        </div>
+        {/* Event Type Legend */}
+        <div className="flex flex-wrap gap-3 mt-3 text-xs">
+          <div className="flex items-center gap-1">
+            <div className="w-3 h-3 rounded" style={{ backgroundColor: '#3A7B59' }}></div>
+            <span>Réservations</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <div className="w-3 h-3 rounded" style={{ backgroundColor: '#2563eb' }}></div>
+            <span>Personnel</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <div className="w-3 h-3 rounded" style={{ backgroundColor: '#7c3aed' }}></div>
+            <span>Externe</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <div className="w-3 h-3 rounded" style={{ backgroundColor: '#dc2626' }}></div>
+            <span>Bloqué</span>
+          </div>
+        </div>
       </CardHeader>
       <CardContent>
+        {/* Loading State */}
+        {eventsLoading && (
+          <div className="flex items-center justify-center py-8">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto mb-4"></div>
+              <p className="text-sm text-gray-600">Chargement des événements...</p>
+            </div>
+          </div>
+        )}
+
+        {/* Error State */}
+        {eventsError && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+            <p className="text-red-700 text-sm">
+              Erreur lors du chargement des événements: {eventsError}
+            </p>
+            <button 
+              onClick={refreshEvents} 
+              className="text-red-600 underline text-sm mt-1 hover:text-red-800"
+              disabled={eventsLoading}
+            >
+              {eventsLoading ? 'Chargement...' : 'Réessayer'}
+            </button>
+          </div>
+        )}
+
         <div className="p-3 lg:p-4 rounded-lg mb-4 lg:mb-6" style={{ backgroundColor: '#3A7B59' }}>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-3 sm:gap-0">
             <div className="flex items-center justify-center sm:justify-start gap-2">
@@ -1021,8 +1165,9 @@ export const CalendarSection = () => {
                     <div
                       key={eventIndex}
                       className="text-[7px] lg:text-[8px] leading-tight p-0.5 rounded text-white cursor-pointer hover:opacity-80 transition-opacity truncate"
-                      style={{ backgroundColor: '#3A7B59' }}
+                      style={{ backgroundColor: reservation.backgroundColor || '#3A7B59' }}
                       onClick={() => handleEventClick(reservation, day)}
+                      title={`${reservation.eventType || 'booking'} - ${reservation.activity}`}
                     >
                       <div className="truncate font-medium">{reservation.activity}</div>
                       <div className="text-[6px] lg:text-[7px] opacity-75 truncate">{reservation.time}</div>
