@@ -4,12 +4,15 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { Clock, Users, Globe, Euro, CreditCard, Grape, Lock } from "lucide-react";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+import { Clock, Users, Globe, Euro, CreditCard, Grape, Lock, Building2, Receipt } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { useSearchParams, useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { WidgetProvider, useWidget } from "@/contexts/WidgetContext";
+import { bookingService } from "@/services/booking.service";
 
 interface BookingData {
   date: string;
@@ -17,6 +20,11 @@ interface BookingData {
   adults: number;
   children: number;
   language: string;
+  email?: string;
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  additionalInfo?: string;
 }
 
 function CheckoutContent({ id, serviceId }: { id: string, serviceId: string }) {
@@ -31,13 +39,44 @@ function CheckoutContent({ id, serviceId }: { id: string, serviceId: string }) {
     adults: parseInt(searchParams.get('adults') || '2'),
     children: parseInt(searchParams.get('children') || '0'),
     language: searchParams.get('language') || 'Français',
+    email: searchParams.get('email') || '',
+    firstName: searchParams.get('firstName') || '',
+    lastName: searchParams.get('lastName') || '',
+    phone: searchParams.get('phone') || '',
+    additionalInfo: searchParams.get('additionalInfo') || '',
   };
   
-  const [cardNumber, setCardNumber] = useState("2537 4836 5262 6363");
-  const [expiryDate, setExpiryDate] = useState("09/28");
-  const [cvv, setCvv] = useState("252");
-  const [cardholderName, setCardholderName] = useState("Juliette Dupont");
+  // Payment method selection
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('');
+  
+  // Bank card details
+  const [cardNumber, setCardNumber] = useState("");
+  const [expiryDate, setExpiryDate] = useState("");
+  const [cvv, setCvv] = useState("");
+  const [cardholderName, setCardholderName] = useState(bookingData.firstName && bookingData.lastName ? `${bookingData.firstName} ${bookingData.lastName}` : "");
+  
+  // Bank details for bank card
+  const [bankName, setBankName] = useState("");
+  const [accountName, setAccountName] = useState(cardholderName);
+  const [accountNumber, setAccountNumber] = useState("");
+  
+  // Cheque details
+  const [chequeNumber, setChequeNumber] = useState("");
+  const [chequeBankName, setChequeBankName] = useState("");
+  
   const [isProcessing, setIsProcessing] = useState(false);
+
+  // Set default payment method when widget data loads
+  useEffect(() => {
+    if (!selectedPaymentMethod) {
+      if (widgetData?.paymentMethods?.methods && widgetData.paymentMethods.methods.length > 0) {
+        setSelectedPaymentMethod(widgetData.paymentMethods.methods[0]);
+      } else {
+        // Set default to bank_card if no API data is available
+        setSelectedPaymentMethod('bank_card');
+      }
+    }
+  }, [widgetData, selectedPaymentMethod]);
 
   if (loading) {
     return (
@@ -131,28 +170,109 @@ function CheckoutContent({ id, serviceId }: { id: string, serviceId: string }) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    console.log("=== CHECKOUT DEBUG ===");
-    console.log("cardNumber:", cardNumber);
-    console.log("expiryDate:", expiryDate);
-    console.log("cvv:", cvv);
-    console.log("cardholderName:", cardholderName);
-    console.log("cardNumber length:", cardNumber.length);
-    console.log("====================");
-    
-    if (!cardNumber || !expiryDate || !cvv || !cardholderName) {
-      console.log("Validation failed - missing fields");
-      toast.error("Veuillez remplir tous les champs de la carte bancaire.");
+    if (!selectedPaymentMethod) {
+      toast.error("Veuillez sélectionner un mode de paiement.");
       return;
+    }
+
+    // Validate payment method specific fields
+    if (selectedPaymentMethod === 'bank_card') {
+      if (!bankName || !accountName || !accountNumber) {
+        toast.error("Veuillez remplir tous les champs bancaires.");
+        return;
+      }
+    } else if (selectedPaymentMethod === 'cheque') {
+      if (!chequeNumber || !chequeBankName) {
+        toast.error("Veuillez remplir tous les champs du chèque.");
+        return;
+      }
     }
 
     setIsProcessing(true);
     
-    // Simulate payment processing
-    setTimeout(() => {
+    try {
+      // Prepare booking data
+      const bookingPayload = {
+        userId: id,
+        serviceId: serviceId,
+        bookingDate: bookingData.date.split('T')[0], // Extract date part
+        bookingTime: bookingData.selectedTime || '10:00',
+        participantsAdults: bookingData.adults,
+        participantsEnfants: bookingData.children,
+        selectedLanguage: bookingData.language,
+        userContactFirstname: bookingData.firstName || '',
+        userContactLastname: bookingData.lastName || '',
+        phoneNo: bookingData.phone || '',
+        additionalNotes: bookingData.additionalInfo || '',
+        paymentMethod: {
+          method: selectedPaymentMethod as 'bank_card' | 'cheque' | 'stripe',
+          ...(selectedPaymentMethod === 'bank_card' && {
+            bankCardDetails: {
+              bankName,
+              accountName,
+              accountNumber,
+            }
+          })
+        }
+      };
+
+      console.log('Sending booking payload:', bookingPayload);
+      
+      const result = await bookingService.createBooking(bookingPayload);
+      console.log('Booking API response:', result);
+      
+      // Check for successful response - either result.success is true OR result has data (201 created)
+      if (result.success || result.data || (result as any)._id) {
+        toast.success("Réservation créée avec succès !");
+        const bookingId = result.data?._id || (result as any)._id || 'unknown';
+        router.push(`/if/booking-widget/${id}/${serviceId}/confirmation-success?bookingId=${bookingId}&${searchParams.toString()}`);
+      } else {
+        console.error('Unexpected response structure:', result);
+        toast.error(result.message || "Erreur lors de la création de la réservation");
+      }
+    } catch (error: any) {
+      console.error('Booking error:', error);
+      console.error('Error response:', error.response?.data);
+      
+      // Check if it's actually a successful response (201) but wrapped in an error
+      if (error.response?.status === 201 && error.response?.data) {
+        console.log('201 response detected in error handler:', error.response.data);
+        toast.success("Réservation créée avec succès !");
+        const bookingId = error.response.data._id || error.response.data.data?._id || 'unknown';
+        router.push(`/if/booking-widget/${id}/${serviceId}/confirmation-success?bookingId=${bookingId}&${searchParams.toString()}`);
+        return;
+      }
+      
+      toast.error(error.message || error.response?.data?.message || "Erreur lors de la création de la réservation");
+    } finally {
       setIsProcessing(false);
-      toast.success("Paiement réussi ! Votre réservation a été confirmée.");
-      router.push(`/if/booking-widget/${id}/${serviceId}/confirmation-success?${searchParams.toString()}`);
-    }, 2000);
+    }
+  };
+
+  const renderPaymentMethodIcon = (method: string) => {
+    switch (method) {
+      case 'bank_card':
+        return <Building2 className="w-5 h-5" />;
+      case 'cheque':
+        return <Receipt className="w-5 h-5" />;
+      case 'stripe':
+        return <CreditCard className="w-5 h-5" />;
+      default:
+        return <CreditCard className="w-5 h-5" />;
+    }
+  };
+
+  const getPaymentMethodLabel = (method: string) => {
+    switch (method) {
+      case 'bank_card':
+        return 'Virement bancaire';
+      case 'cheque':
+        return 'Paiement par chèque';
+      case 'stripe':
+        return 'Carte bancaire (Stripe)';
+      default:
+        return method;
+    }
   };
 
   return (
@@ -168,60 +288,179 @@ function CheckoutContent({ id, serviceId }: { id: string, serviceId: string }) {
             <div>
               <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
                 <Lock className="w-5 h-5" style={{ color: colorCode }} />
-                Informations bancaires
+                Informations de paiement
               </h2>
               
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Payment Method Selection */}
                 <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Nom du porteur de la carte
+                  <label className="block text-sm font-medium mb-4">
+                    Mode de paiement
                   </label>
-                  <Input
-                    placeholder="Prénom et Nom"
-                    value={cardholderName}
-                    onChange={(e) => setCardholderName(e.target.value)}
-                    className="w-full"
-                  />
+                  {widgetData?.paymentMethods?.methods && widgetData.paymentMethods.methods.length > 0 ? (
+                    <RadioGroup value={selectedPaymentMethod} onValueChange={setSelectedPaymentMethod}>
+                      {widgetData.paymentMethods.methods.map((method) => (
+                        <div key={method} className="flex items-center space-x-2 p-3 border rounded-lg">
+                          <RadioGroupItem value={method} id={method} />
+                          <Label htmlFor={method} className="flex items-center gap-2 cursor-pointer flex-1">
+                            {renderPaymentMethodIcon(method)}
+                            <span>{getPaymentMethodLabel(method)}</span>
+                          </Label>
+                        </div>
+                      ))}
+                    </RadioGroup>
+                  ) : (
+                    // Fallback payment methods if none are loaded from API
+                    <RadioGroup value={selectedPaymentMethod} onValueChange={setSelectedPaymentMethod}>
+                      {['bank_card', 'cheque', 'stripe'].map((method) => (
+                        <div key={method} className="flex items-center space-x-2 p-3 border rounded-lg">
+                          <RadioGroupItem value={method} id={method} />
+                          <Label htmlFor={method} className="flex items-center gap-2 cursor-pointer flex-1">
+                            {renderPaymentMethodIcon(method)}
+                            <span>{getPaymentMethodLabel(method)}</span>
+                          </Label>
+                        </div>
+                      ))}
+                    </RadioGroup>
+                  )}
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Numéro de carte
-                  </label>
-                  <Input
-                    placeholder="1234 5678 9012 3456"
-                    value={cardNumber}
-                    onChange={handleCardNumberChange}
-                    className="w-full"
-                  />
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-2">
-                      Date d'expiration
-                    </label>
-                    <Input
-                      placeholder="MM/YY"
-                      value={expiryDate}
-                      onChange={handleExpiryChange}
-                    />
+                {/* Bank Card Details */}
+                {selectedPaymentMethod === 'bank_card' && (
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-medium">Informations bancaires</h3>
+                    
+                    <div>
+                      <label className="block text-sm font-medium mb-2">
+                        Nom de la banque *
+                      </label>
+                      <Input
+                        placeholder="Ex: BNP Paribas"
+                        value={bankName}
+                        onChange={(e) => setBankName(e.target.value)}
+                        className="w-full"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-2">
+                        Nom du titulaire du compte *
+                      </label>
+                      <Input
+                        placeholder="Prénom et Nom"
+                        value={accountName}
+                        onChange={(e) => setAccountName(e.target.value)}
+                        className="w-full"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-2">
+                        Numéro de compte *
+                      </label>
+                      <Input
+                        placeholder="Numéro de compte bancaire"
+                        value={accountNumber}
+                        onChange={(e) => setAccountNumber(e.target.value)}
+                        className="w-full"
+                        required
+                      />
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">
-                      CVV
-                    </label>
-                    <Input
-                      placeholder="123"
-                      value={cvv}
-                      onChange={handleCvvChange}
-                    />
+                )}
+
+                {/* Cheque Details */}
+                {selectedPaymentMethod === 'cheque' && (
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-medium">Informations du chèque</h3>
+                    
+                    <div>
+                      <label className="block text-sm font-medium mb-2">
+                        Numéro de chèque *
+                      </label>
+                      <Input
+                        placeholder="Ex: 0123456"
+                        value={chequeNumber}
+                        onChange={(e) => setChequeNumber(e.target.value)}
+                        className="w-full"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-2">
+                        Banque émettrice *
+                      </label>
+                      <Input
+                        placeholder="Ex: Crédit Agricole"
+                        value={chequeBankName}
+                        onChange={(e) => setChequeBankName(e.target.value)}
+                        className="w-full"
+                        required
+                      />
+                    </div>
                   </div>
-                </div>
+                )}
+
+                {/* Stripe Payment */}
+                {selectedPaymentMethod === 'stripe' && (
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-medium">Informations de carte bancaire</h3>
+                    
+                    <div>
+                      <label className="block text-sm font-medium mb-2">
+                        Nom du porteur de la carte
+                      </label>
+                      <Input
+                        placeholder="Prénom et Nom"
+                        value={cardholderName}
+                        onChange={(e) => setCardholderName(e.target.value)}
+                        className="w-full"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-2">
+                        Numéro de carte
+                      </label>
+                      <Input
+                        placeholder="1234 5678 9012 3456"
+                        value={cardNumber}
+                        onChange={handleCardNumberChange}
+                        className="w-full"
+                      />
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium mb-2">
+                          Date d'expiration
+                        </label>
+                        <Input
+                          placeholder="MM/YY"
+                          value={expiryDate}
+                          onChange={handleExpiryChange}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-2">
+                          CVV
+                        </label>
+                        <Input
+                          placeholder="123"
+                          value={cvv}
+                          onChange={handleCvvChange}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 <div className="flex items-center gap-2 text-sm text-muted-foreground mt-4">
                   <Lock className="w-4 h-4" />
-                  <span>Vos informations sont sécurisées par cryptage SSL</span>
+                  <span>Vos informations sont sécurisées</span>
                 </div>
               </form>
             </div>
@@ -249,6 +488,13 @@ function CheckoutContent({ id, serviceId }: { id: string, serviceId: string }) {
                 <div className="flex items-center gap-3">
                   <Globe className="w-5 h-5" style={{ color: colorCode }} />
                   <span className="text-sm">{bookingData?.language || "Français"}</span>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  {renderPaymentMethodIcon(selectedPaymentMethod)}
+                  <span className="text-sm" style={{ color: colorCode }}>
+                    {selectedPaymentMethod ? getPaymentMethodLabel(selectedPaymentMethod) : 'Mode de paiement non sélectionné'}
+                  </span>
                 </div>
 
                 <hr className="my-4" />
@@ -287,10 +533,15 @@ function CheckoutContent({ id, serviceId }: { id: string, serviceId: string }) {
                   Traitement en cours...
                 </div>
               ) : (
-                <>
-                  <CreditCard className="w-4 h-4 mr-2" />
-                  Payer {totalPrice} €
-                </>
+                <div className="flex items-center gap-2">
+                  {renderPaymentMethodIcon(selectedPaymentMethod)}
+                  <span>
+                    {selectedPaymentMethod === 'bank_card' ? 'Confirmer le virement' :
+                     selectedPaymentMethod === 'cheque' ? 'Confirmer le chèque' :
+                     selectedPaymentMethod === 'stripe' ? `Payer ${totalPrice} €` :
+                     `Confirmer ${totalPrice} €`}
+                  </span>
+                </div>
               )}
             </Button>
           </div>

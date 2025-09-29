@@ -31,7 +31,7 @@ function BookingWidgetContent({ id, serviceId }: { id: string; serviceId: string
     }
 
     return (
-        <div className="flex min-h-screen items-center justify-center bg-[#E8D6C9]">
+        <div className="flex min-h-screen items-center justify-center" style={{ backgroundColor: '#E8D6C9' }}>
             <div className="text-center">
                 <h1 className="mb-4 text-4xl font-bold" style={{ color: colorCode }}>
                     {widgetData?.service?.name || 'Expériences Vinicoles'}
@@ -67,9 +67,9 @@ export default function BookingWidgetPage(
 
     if (!resolvedParams) {
         return (
-            <div className="flex min-h-screen items-center justify-center bg-[#E8D6C9]">
+            <div className="flex min-h-screen items-center justify-center" style={{ backgroundColor: '#E8D6C9' }}>
                 <div className="text-center">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#3A7E53] mx-auto mb-4"></div>
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 mx-auto mb-4" style={{ borderColor: '#3A7E53' }}></div>
                     <p className="text-lg">Chargement...</p>
                 </div>
             </div>
