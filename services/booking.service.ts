@@ -13,11 +13,16 @@ export const apiClient = axios.create({
 
 // Types for booking creation
 export interface PaymentMethodDetails {
-  method: 'bank_card' | 'cheque' | 'stripe';
+  method: 'bank_card' | 'cheque' | 'stripe' | 'cash_on_onsite';
   bankCardDetails?: {
     bankName: string;
     accountName: string;
     accountNumber: string;
+  };
+  chequeDetails?: {
+    chequeNumber: string;
+    bankName: string;
+    issueDate: string; // ISO date string
   };
 }
 

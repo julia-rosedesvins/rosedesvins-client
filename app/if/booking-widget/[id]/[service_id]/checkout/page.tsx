@@ -63,6 +63,7 @@ function CheckoutContent({ id, serviceId }: { id: string, serviceId: string }) {
   // Cheque details
   const [chequeNumber, setChequeNumber] = useState("");
   const [chequeBankName, setChequeBankName] = useState("");
+  const [chequeIssueDate, setChequeIssueDate] = useState("");
   
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -183,12 +184,12 @@ function CheckoutContent({ id, serviceId }: { id: string, serviceId: string }) {
         return;
       }
     } else if (selectedPaymentMethod === 'cheque') {
-      if (!chequeNumber || !chequeBankName) {
+      if (!chequeNumber || !chequeBankName || !chequeIssueDate) {
         toast.error("Veuillez remplir tous les champs du chèque.");
         return;
       }
     }
-    // Cash payment doesn't need validation as it's handled on-site
+    // cash_on_onsite and stripe don't need additional validation
 
     setIsProcessing(true);
     
@@ -207,12 +208,19 @@ function CheckoutContent({ id, serviceId }: { id: string, serviceId: string }) {
         phoneNo: bookingData.phone || '',
         additionalNotes: bookingData.additionalInfo || '',
         paymentMethod: {
-          method: selectedPaymentMethod as 'bank_card' | 'cheque' | 'stripe',
+          method: selectedPaymentMethod as 'bank_card' | 'cheque' | 'stripe' | 'cash_on_onsite',
           ...(selectedPaymentMethod === 'bank_card' && {
             bankCardDetails: {
               bankName,
               accountName,
               accountNumber,
+            }
+          }),
+          ...(selectedPaymentMethod === 'cheque' && {
+            chequeDetails: {
+              chequeNumber,
+              bankName: chequeBankName,
+              issueDate: chequeIssueDate,
             }
           })
         }
@@ -261,6 +269,8 @@ function CheckoutContent({ id, serviceId }: { id: string, serviceId: string }) {
         return <Receipt className="w-5 h-5" />;
       case 'cash':
         return <Euro className="w-5 h-5" />;
+      case 'cash_on_onsite':
+        return <Euro className="w-5 h-5" />;
       case 'stripe':
         return <CreditCard className="w-5 h-5" />;
       default:
@@ -278,6 +288,8 @@ function CheckoutContent({ id, serviceId }: { id: string, serviceId: string }) {
         return 'Paiement par chèque';
       case 'cash':
         return 'Paiement en espèces';
+      case 'cash_on_onsite':
+        return 'Paiement sur place';
       case 'stripe':
         return 'Carte bancaire (Stripe)';
       default:
@@ -293,7 +305,9 @@ function CheckoutContent({ id, serviceId }: { id: string, serviceId: string }) {
       case 'checks':
         return 'cheque';
       case 'cash':
-        return 'cash';
+        return 'cash_on_onsite'; // Normalize 'cash' to 'cash_on_onsite'
+      case 'cash_on_onsite':
+        return 'cash_on_onsite';
       case 'stripe':
         return 'stripe';
       default:
@@ -308,7 +322,7 @@ function CheckoutContent({ id, serviceId }: { id: string, serviceId: string }) {
           <h1 className="text-2xl font-bold text-center mb-8" style={{ color: colorCode }}>
             Paiement sécurisé
           </h1>
-          
+
           <div className="grid md:grid-cols-2 gap-8">
             {/* Formulaire de paiement */}
             <div>
@@ -406,10 +420,10 @@ function CheckoutContent({ id, serviceId }: { id: string, serviceId: string }) {
                   </div>
                 )}
 
-                {/* Cash Payment */}
-                {selectedPaymentMethod === 'cash' && (
+                {/* Cash on Onsite Payment */}
+                {selectedPaymentMethod === 'cash_on_onsite' && (
                   <div className="space-y-4">
-                    <h3 className="text-lg font-medium">Paiement en espèces</h3>
+                    <h3 className="text-lg font-medium">Paiement sur place</h3>
                     <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
                       <p className="text-sm text-blue-800">
                         Le paiement en espèces sera effectué sur place au moment de votre visite.
@@ -445,6 +459,19 @@ function CheckoutContent({ id, serviceId }: { id: string, serviceId: string }) {
                         placeholder="Ex: Crédit Agricole"
                         value={chequeBankName}
                         onChange={(e) => setChequeBankName(e.target.value)}
+                        className="w-full"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-2">
+                        Date d'émission *
+                      </label>
+                      <Input
+                        type="date"
+                        value={chequeIssueDate}
+                        onChange={(e) => setChequeIssueDate(e.target.value)}
                         className="w-full"
                         required
                       />
@@ -597,7 +624,7 @@ function CheckoutContent({ id, serviceId }: { id: string, serviceId: string }) {
                   <span>
                     {selectedPaymentMethod === 'bank_card' ? 'Confirmer le virement' :
                      selectedPaymentMethod === 'cheque' ? 'Confirmer le chèque' :
-                     selectedPaymentMethod === 'cash' ? 'Confirmer la réservation' :
+                     selectedPaymentMethod === 'cash_on_onsite' ? 'Confirmer la réservation' :
                      selectedPaymentMethod === 'stripe' ? `Payer ${totalPrice} €` :
                      `Confirmer ${totalPrice} €`}
                   </span>
