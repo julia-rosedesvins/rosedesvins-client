@@ -7,9 +7,10 @@ import { cn } from "@/lib/utils";
 interface DatePickerProps {
   selectedDate: Date | null;
   onDateSelect: (date: Date | null) => void;
+  isDateAvailable?: (date: Date) => boolean;
 }
 
-export const DatePicker = ({ selectedDate, onDateSelect }: DatePickerProps) => {
+export const DatePicker = ({ selectedDate, onDateSelect, isDateAvailable }: DatePickerProps) => {
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
   const selectedButtonRef = useRef<HTMLButtonElement>(null);
@@ -121,19 +122,22 @@ export const DatePicker = ({ selectedDate, onDateSelect }: DatePickerProps) => {
       const isSelectedDay = isSelected(day);
       const isTodayDay = isToday(day);
       const isPast = isPastDate(day);
+      const currentDate = new Date(currentYear, currentMonth, day);
+      const isAvailable = isDateAvailable ? isDateAvailable(currentDate) : true;
+      const isDisabled = isPast || !isAvailable;
 
       days.push(
         <button
           key={day}
           ref={isSelectedDay ? selectedButtonRef : null}
           onClick={() => handleDateClick(day)}
-          disabled={isPast}
+          disabled={isDisabled}
           className={cn(
             "h-12 w-12 text-center text-base p-0 rounded-md flex items-center justify-center",
-            isPast && "text-muted-foreground opacity-50 cursor-not-allowed",
+            isDisabled && "text-muted-foreground opacity-50 cursor-not-allowed",
             // Only show "today" highlight when no date is selected
-            isTodayDay && !isSelectedDay && !selectedDate && "bg-accent text-accent-foreground",
-            !isPast && !isSelectedDay && !isTodayDay && "hover:bg-gray-100 hover:text-accent-foreground transition-colors"
+            isTodayDay && !isSelectedDay && !selectedDate && !isDisabled && "bg-accent text-accent-foreground",
+            !isDisabled && !isSelectedDay && !isTodayDay && "hover:bg-gray-100 hover:text-accent-foreground transition-colors"
           )}
           style={
             isSelectedDay 

@@ -18,6 +18,13 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
   const [morningStartIndex, setMorningStartIndex] = useState(0);
   const [afternoonStartIndex, setAfternoonStartIndex] = useState(0);
 
+  // Reset selected time when date changes
+  useEffect(() => {
+    setSelectedTime(null);
+    setMorningStartIndex(0);
+    setAfternoonStartIndex(0);
+  }, [selectedDate]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
@@ -38,26 +45,77 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
         </div>
       </div>
     );
-  }  // Generate time slots
-  const generateTimeSlots = (startHour: number, endHour: number) => {
-    const slots = [];
-    for (let hour = startHour; hour <= endHour; hour++) {
-      if (hour < endHour || (hour === endHour && startHour === 13)) {
-        slots.push(`${hour.toString().padStart(2, '0')}:00`);
-      }
-      if (hour < endHour) {
-        slots.push(`${hour.toString().padStart(2, '0')}:30`);
-      }
+  }
+
+  // Get available time slots for the selected date
+  const getAvailableTimeSlots = (date: Date | null) => {
+    if (!date || !widgetData?.availability?.weeklyAvailability) {
+      return { morning: [], afternoon: [] };
     }
-    return slots;
+
+    const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const dayName = dayNames[date.getDay()];
+    const dayAvailability = widgetData.availability.weeklyAvailability[dayName];
+
+    if (!dayAvailability?.isAvailable || !dayAvailability.timeSlots?.length) {
+      return { morning: [], afternoon: [] };
+    }
+
+    const morningSlots: string[] = [];
+    const afternoonSlots: string[] = [];
+
+    dayAvailability.timeSlots.forEach((slot: { startTime: string; endTime: string }) => {
+      const startTime = slot.startTime;
+      const endTime = slot.endTime;
+      
+      // Generate time slots within the available range based on service duration
+      const duration = widgetData.service?.timeOfServiceInMinutes || 60;
+      const slotDuration = widgetData.availability?.defaultSlotDuration || 30;
+      
+      const [startHour, startMinute] = startTime.split(':').map(Number);
+      const [endHour, endMinute] = endTime.split(':').map(Number);
+      
+      const startMinutes = startHour * 60 + startMinute;
+      const endMinutes = endHour * 60 + endMinute;
+      
+      // Only create a slot if the service can fit entirely within the time window
+      if (startMinutes + duration <= endMinutes) {
+        // Generate slots with the specified slot duration, but ensure service fits
+        for (let currentMinutes = startMinutes; currentMinutes + duration <= endMinutes; currentMinutes += slotDuration) {
+          const hours = Math.floor(currentMinutes / 60);
+          const minutes = currentMinutes % 60;
+          const timeSlot = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+          
+          if (hours < 12) {
+            morningSlots.push(timeSlot);
+          } else {
+            afternoonSlots.push(timeSlot);
+          }
+        }
+      }
+    });
+
+    return { morning: morningSlots, afternoon: afternoonSlots };
   };
 
-  const allMorningTimes = generateTimeSlots(9, 13);
-  const allAfternoonTimes = generateTimeSlots(13, 20);
+  const availableSlots = getAvailableTimeSlots(selectedDate);
+  const allMorningTimes = availableSlots.morning;
+  const allAfternoonTimes = availableSlots.afternoon;
   
   const visibleSlotsCount = 4;
   const morningTimes = allMorningTimes.slice(morningStartIndex, morningStartIndex + visibleSlotsCount);
   const afternoonTimes = allAfternoonTimes.slice(afternoonStartIndex, afternoonStartIndex + visibleSlotsCount);
+
+  // Check if a date has any available time slots
+  const isDateAvailable = (date: Date) => {
+    if (!widgetData?.availability?.weeklyAvailability) return false;
+    
+    const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const dayName = dayNames[date.getDay()];
+    const dayAvailability = widgetData.availability.weeklyAvailability[dayName];
+    
+    return dayAvailability?.isAvailable && dayAvailability.timeSlots?.length > 0;
+  };
 
   const handleAdultsChange = (increment: boolean) => {
     if (increment) {
@@ -119,6 +177,7 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
           <DatePicker 
             selectedDate={selectedDate}
             onDateSelect={setSelectedDate}
+            isDateAvailable={isDateAvailable}
           />
         </div>
 
@@ -126,103 +185,127 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
         <div className="mb-8 mt-4">
           <h2 className="text-2xl font-semibold mb-6 text-center" style={{ color: colorCode }}>Horaires</h2>
           
-          {/* Matin */}
+          {!selectedDate ? (
+            <div className="text-center text-gray-500 py-8">
+              Veuillez sélectionner une date pour voir les créneaux disponibles
+            </div>
+          ) : allMorningTimes.length === 0 && allAfternoonTimes.length === 0 ? (
+            <div className="text-center text-gray-500 py-8">
+              Aucun créneau disponible pour cette date. Veuillez choisir une autre date.
+            </div>
+          ) : (
+            <>
+              {/* Matin */}
           <div className="mb-8">
             <h3 className="text-lg font-medium mb-4 text-center">Matin</h3>
-            <div className="flex justify-center gap-3 mb-6">
-              <button
-                onClick={handleMorningPrevious}
-                disabled={morningStartIndex === 0}
-                className={cn(
-                  "flex items-center justify-center w-10 h-10 rounded-full bg-gray-100",
-                  morningStartIndex === 0 
-                    ? "text-gray-300 cursor-not-allowed" 
-                    : "text-muted-foreground hover:opacity-75 cursor-pointer hover:bg-gray-200"
-                )}
-                style={morningStartIndex === 0 ? {} : { color: colorCode }}
-              >
-                <ChevronLeft className="w-5 h-5" />
-              </button>
-              {morningTimes.map((time) => (
-                <Button
-                  key={time}
-                  variant={selectedTime === time ? "default" : "outline"}
-                  onClick={() => setSelectedTime(selectedTime === time ? null : time)}
+            {allMorningTimes.length === 0 ? (
+              <div className="text-center text-gray-500 py-4">
+                Aucun créneau disponible le matin
+              </div>
+            ) : (
+              <div className="flex justify-center gap-3 mb-6">
+                <button
+                  onClick={handleMorningPrevious}
+                  disabled={morningStartIndex === 0}
                   className={cn(
-                    "px-6 py-3 text-base min-w-[80px]",
-                    selectedTime === time 
-                      ? "text-white hover:opacity-90" 
-                      : "hover:bg-gray-100"
+                    "flex items-center justify-center w-10 h-10 rounded-full bg-gray-100",
+                    morningStartIndex === 0 
+                      ? "text-gray-300 cursor-not-allowed" 
+                      : "text-muted-foreground hover:opacity-75 cursor-pointer hover:bg-gray-200"
                   )}
-                  style={selectedTime === time ? { backgroundColor: colorCode } : {}}
+                  style={morningStartIndex === 0 ? {} : { color: colorCode }}
                 >
-                  {time}
-                </Button>
-              ))}
-              <button
-                onClick={handleMorningNext}
-                disabled={morningStartIndex + visibleSlotsCount >= allMorningTimes.length}
-                className={cn(
-                  "flex items-center justify-center w-10 h-10 rounded-full bg-gray-100",
-                  morningStartIndex + visibleSlotsCount >= allMorningTimes.length
-                    ? "text-gray-300 cursor-not-allowed" 
-                    : "text-muted-foreground hover:opacity-75 cursor-pointer hover:bg-gray-200"
-                )}
-                style={morningStartIndex + visibleSlotsCount >= allMorningTimes.length ? {} : { color: colorCode }}
-              >
-                <ChevronRight className="w-5 h-5" />
-              </button>
-            </div>
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+                {morningTimes.map((time) => (
+                  <Button
+                    key={time}
+                    variant={selectedTime === time ? "default" : "outline"}
+                    onClick={() => setSelectedTime(selectedTime === time ? null : time)}
+                    className={cn(
+                      "px-6 py-3 text-base min-w-[80px]",
+                      selectedTime === time 
+                        ? "text-white hover:opacity-90" 
+                        : "hover:bg-gray-100"
+                    )}
+                    style={selectedTime === time ? { backgroundColor: colorCode } : {}}
+                  >
+                    {time}
+                  </Button>
+                ))}
+                <button
+                  onClick={handleMorningNext}
+                  disabled={morningStartIndex + visibleSlotsCount >= allMorningTimes.length}
+                  className={cn(
+                    "flex items-center justify-center w-10 h-10 rounded-full bg-gray-100",
+                    morningStartIndex + visibleSlotsCount >= allMorningTimes.length
+                      ? "text-gray-300 cursor-not-allowed" 
+                      : "text-muted-foreground hover:opacity-75 cursor-pointer hover:bg-gray-200"
+                  )}
+                  style={morningStartIndex + visibleSlotsCount >= allMorningTimes.length ? {} : { color: colorCode }}
+                >
+                  <ChevronRight className="w-5 h-5" />
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Après-midi */}
           <div className="mb-8">
             <h3 className="text-lg font-medium mb-4 text-center">Après-midi</h3>
-            <div className="flex justify-center gap-3">
-              <button
-                onClick={handleAfternoonPrevious}
-                disabled={afternoonStartIndex === 0}
-                className={cn(
-                  "flex items-center justify-center w-10 h-10 rounded-full bg-gray-100",
-                  afternoonStartIndex === 0 
-                    ? "text-gray-300 cursor-not-allowed" 
-                    : "text-muted-foreground hover:opacity-75 cursor-pointer hover:bg-gray-200"
-                )}
-                style={afternoonStartIndex === 0 ? {} : { color: colorCode }}
-              >
-                <ChevronLeft className="w-5 h-5" />
-              </button>
-               {afternoonTimes.map((time) => (
-                <Button
-                  key={time}
-                  variant={selectedTime === time ? "default" : "outline"}
-                  onClick={() => setSelectedTime(selectedTime === time ? null : time)}
+            {allAfternoonTimes.length === 0 ? (
+              <div className="text-center text-gray-500 py-4">
+                Aucun créneau disponible l'après-midi
+              </div>
+            ) : (
+              <div className="flex justify-center gap-3">
+                <button
+                  onClick={handleAfternoonPrevious}
+                  disabled={afternoonStartIndex === 0}
                   className={cn(
-                    "px-6 py-3 text-base min-w-[80px]",
-                    selectedTime === time 
-                      ? "text-white hover:opacity-90" 
-                      : "hover:bg-gray-100"
+                    "flex items-center justify-center w-10 h-10 rounded-full bg-gray-100",
+                    afternoonStartIndex === 0 
+                      ? "text-gray-300 cursor-not-allowed" 
+                      : "text-muted-foreground hover:opacity-75 cursor-pointer hover:bg-gray-200"
                   )}
-                  style={selectedTime === time ? { backgroundColor: colorCode } : {}}
+                  style={afternoonStartIndex === 0 ? {} : { color: colorCode }}
                 >
-                  {time}
-                </Button>
-              ))}
-              <button
-                onClick={handleAfternoonNext}
-                disabled={afternoonStartIndex + visibleSlotsCount >= allAfternoonTimes.length}
-                className={cn(
-                  "flex items-center justify-center w-10 h-10 rounded-full bg-gray-100",
-                  afternoonStartIndex + visibleSlotsCount >= allAfternoonTimes.length
-                    ? "text-gray-300 cursor-not-allowed" 
-                    : "text-muted-foreground hover:opacity-75 cursor-pointer hover:bg-gray-200"
-                )}
-                style={afternoonStartIndex + visibleSlotsCount >= allAfternoonTimes.length ? {} : { color: colorCode }}
-              >
-                <ChevronRight className="w-5 h-5" />
-              </button>
-            </div>
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+                {afternoonTimes.map((time) => (
+                  <Button
+                    key={time}
+                    variant={selectedTime === time ? "default" : "outline"}
+                    onClick={() => setSelectedTime(selectedTime === time ? null : time)}
+                    className={cn(
+                      "px-6 py-3 text-base min-w-[80px]",
+                      selectedTime === time 
+                        ? "text-white hover:opacity-90" 
+                        : "hover:bg-gray-100"
+                    )}
+                    style={selectedTime === time ? { backgroundColor: colorCode } : {}}
+                  >
+                    {time}
+                  </Button>
+                ))}
+                <button
+                  onClick={handleAfternoonNext}
+                  disabled={afternoonStartIndex + visibleSlotsCount >= allAfternoonTimes.length}
+                  className={cn(
+                    "flex items-center justify-center w-10 h-10 rounded-full bg-gray-100",
+                    afternoonStartIndex + visibleSlotsCount >= allAfternoonTimes.length
+                      ? "text-gray-300 cursor-not-allowed" 
+                      : "text-muted-foreground hover:opacity-75 cursor-pointer hover:bg-gray-200"
+                  )}
+                  style={afternoonStartIndex + visibleSlotsCount >= allAfternoonTimes.length ? {} : { color: colorCode }}
+                >
+                  <ChevronRight className="w-5 h-5" />
+                </button>
+              </div>
+            )}
           </div>
+          </>
+          )}
 
           {/* Informations sur l'expérience */}
           <div className="flex justify-center gap-8 mb-8 text-muted-foreground">
