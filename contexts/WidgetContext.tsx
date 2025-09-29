@@ -31,10 +31,14 @@ export function WidgetProvider({ children, userId, serviceId }: WidgetProviderPr
       setLoading(true);
       setError(null);
       
+      console.log('Fetching widget data for userId:', uid, 'serviceId:', sid);
+      
       const response = await widgetService.getWidgetData({
         userId: uid,
         serviceId: sid,
       });
+      
+      console.log('Widget data response:', response);
       
       setWidgetData(response.data);
       
@@ -43,9 +47,48 @@ export function WidgetProvider({ children, userId, serviceId }: WidgetProviderPr
         setColorCode(response.data.domainProfile.colorCode);
       }
     } catch (err) {
-      const error = err as ApiError;
-      setError(error.message || 'Failed to fetch widget data');
-      console.error('Widget data fetch error:', error);
+      console.error('Full error object:', err);
+      console.error('Error type:', typeof err);
+      console.error('Error constructor:', err?.constructor?.name);
+      
+      let errorMessage = 'Failed to fetch widget data';
+      
+      // Handle different error types
+      if (err && typeof err === 'object') {
+        const error = err as any;
+        
+        // Check if it's an API error response from our backend
+        if (error.success === false && error.message) {
+          // Handle nested message structure from backend
+          if (typeof error.message === 'object' && error.message.message) {
+            let message = error.message.message;
+            // Provide more user-friendly messages for common errors
+            if (message.includes('subscription is not active')) {
+              message = 'Votre abonnement n\'est pas actif ou a expiré. Veuillez contacter l\'administrateur.';
+            } else if (message.includes('User not found')) {
+              message = 'Utilisateur introuvable. Veuillez vérifier l\'URL.';
+            } else if (message.includes('Service not found')) {
+              message = 'Service introuvable. Veuillez vérifier l\'URL.';
+            }
+            errorMessage = message;
+          } else if (typeof error.message === 'string') {
+            errorMessage = error.message;
+          }
+        } else if (error.message) {
+          errorMessage = error.message;
+        } else if (error.response?.data?.message) {
+          errorMessage = error.response.data.message;
+        } else if (error.response?.statusText) {
+          errorMessage = `HTTP Error: ${error.response.statusText}`;
+        } else if (error.code) {
+          errorMessage = `Network Error: ${error.code}`;
+        }
+      } else if (typeof err === 'string') {
+        errorMessage = err;
+      }
+      
+      setError(errorMessage);
+      console.error('Widget data fetch error:', errorMessage);
     } finally {
       setLoading(false);
     }
