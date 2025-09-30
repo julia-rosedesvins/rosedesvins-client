@@ -42,6 +42,19 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
     }
   }, [id]);
 
+  // Auto-select today's date if available and has time slots
+  useEffect(() => {
+    if (widgetData?.availability && bookedSlots && !loadingSchedule && !selectedDate) {
+      const today = new Date();
+      if (isDateAvailable(today)) {
+        const availableSlots = getAvailableTimeSlots(today);
+        if (availableSlots.morning.length > 0 || availableSlots.afternoon.length > 0) {
+          setSelectedDate(today);
+        }
+      }
+    }
+  }, [widgetData, bookedSlots, loadingSchedule, selectedDate]);
+
   // Reset selected time when date changes
   useEffect(() => {
     setSelectedTime(null);
@@ -265,6 +278,7 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
               selectedDate={selectedDate}
               onDateSelect={setSelectedDate}
               isDateAvailable={isDateAvailable}
+              colorCode={colorCode}
             />
           )}
         </div>

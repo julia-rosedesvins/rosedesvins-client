@@ -8,20 +8,24 @@ interface DatePickerProps {
   selectedDate: Date | null;
   onDateSelect: (date: Date | null) => void;
   isDateAvailable?: (date: Date) => boolean;
+  colorCode?: string;
 }
 
-export const DatePicker = ({ selectedDate, onDateSelect, isDateAvailable }: DatePickerProps) => {
+export const DatePicker = ({ selectedDate, onDateSelect, isDateAvailable, colorCode = '#3A7E53' }: DatePickerProps) => {
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
   const selectedButtonRef = useRef<HTMLButtonElement>(null);
 
-  // Force white text on selected date after any re-render
+  // Force styling on selected date after any re-render
   useEffect(() => {
     if (selectedButtonRef.current && selectedDate) {
+      selectedButtonRef.current.style.backgroundColor = colorCode;
       selectedButtonRef.current.style.color = 'white';
+      selectedButtonRef.current.style.border = `2px solid ${colorCode}`;
       selectedButtonRef.current.style.setProperty('color', 'white', 'important');
+      selectedButtonRef.current.style.setProperty('background-color', colorCode, 'important');
     }
-  }, [selectedDate, currentMonth, currentYear]);
+  }, [selectedDate, currentMonth, currentYear, colorCode]);
 
   // Debug logs pour le composant DatePicker
   console.log("=== DATEPICKER DEBUG ===");
@@ -133,38 +137,48 @@ export const DatePicker = ({ selectedDate, onDateSelect, isDateAvailable }: Date
           onClick={() => handleDateClick(day)}
           disabled={isDisabled}
           className={cn(
-            "h-12 w-12 text-center text-base p-0 rounded-md flex items-center justify-center",
+            "h-12 w-12 text-center text-base p-0 rounded-md flex items-center justify-center transition-colors",
             isDisabled && "text-muted-foreground opacity-50 cursor-not-allowed",
-            // Only show "today" highlight when no date is selected
-            isTodayDay && !isSelectedDay && !selectedDate && !isDisabled && "bg-accent text-accent-foreground",
-            !isDisabled && !isSelectedDay && !isTodayDay && "hover:bg-gray-100 hover:text-accent-foreground transition-colors"
+            // Show "today" highlight when today is not selected
+            isTodayDay && !isSelectedDay && !isDisabled && "bg-accent text-accent-foreground border-2",
+            !isDisabled && !isSelectedDay && !isTodayDay && "hover:bg-gray-100 hover:text-accent-foreground",
+            isSelectedDay && "!text-white font-semibold"
           )}
           style={
             isSelectedDay 
               ? { 
-                  backgroundColor: '#3A7E53 !important', 
-                  color: 'white !important',
-                } as any
+                  backgroundColor: colorCode,
+                  color: 'white',
+                  border: `2px solid ${colorCode}`,
+                } 
               : {}
           }
           onFocus={(e) => {
             if (isSelectedDay) {
-              (e.target as HTMLButtonElement).style.setProperty('color', 'white', 'important');
+              const btn = e.target as HTMLButtonElement;
+              btn.style.setProperty('color', 'white', 'important');
+              btn.style.setProperty('background-color', colorCode, 'important');
             }
           }}
           onBlur={(e) => {
             if (isSelectedDay) {
-              (e.target as HTMLButtonElement).style.setProperty('color', 'white', 'important');
+              const btn = e.target as HTMLButtonElement;
+              btn.style.setProperty('color', 'white', 'important');
+              btn.style.setProperty('background-color', colorCode, 'important');
             }
           }}
           onMouseEnter={(e) => {
             if (isSelectedDay) {
-              (e.target as HTMLButtonElement).style.setProperty('color', 'white', 'important');
+              const btn = e.target as HTMLButtonElement;
+              btn.style.setProperty('color', 'white', 'important');
+              btn.style.setProperty('background-color', colorCode, 'important');
             }
           }}
           onMouseLeave={(e) => {
             if (isSelectedDay) {
-              (e.target as HTMLButtonElement).style.setProperty('color', 'white', 'important');
+              const btn = e.target as HTMLButtonElement;
+              btn.style.setProperty('color', 'white', 'important');
+              btn.style.setProperty('background-color', colorCode, 'important');
             }
           }}
         >
