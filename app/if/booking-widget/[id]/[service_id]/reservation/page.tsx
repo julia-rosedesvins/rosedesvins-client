@@ -49,16 +49,18 @@ function ReservationContent({ id, serviceId }: { id: string, serviceId: string }
                 {/* Main Content Card */}
                 <Card className="overflow-hidden shadow-lg bg-card">
                     {/* Hero Image */}
-                    <div className="relative h-64 md:h-80 overflow-hidden">
-                        <Image
-                            src="/assets/wine-cellar.jpg"
-                            alt="Cave troglodyte avec dégustation de vins"
-                            fill
-                            className="object-cover"
-                            priority
-                        />
-                        {/* <div className="absolute inset-0 bg-black bg-opacity-20 z-10"></div> */}
-                    </div>
+                    {widgetData?.domainProfile?.domainProfilePictureUrl && (
+                        <div className="relative h-64 md:h-80 overflow-hidden">
+                            <Image
+                                src={`${process.env.NEXT_PUBLIC_API_BASE_URL}${widgetData.domainProfile.domainProfilePictureUrl}`}
+                                alt="Cave troglodyte avec dégustation de vins"
+                                fill
+                                className="object-cover"
+                                priority
+                            />
+                            {/* <div className="absolute inset-0 bg-black bg-opacity-20 z-10"></div> */}
+                        </div>
+                    )}
 
                     {/* Content */}
                     <div className="p-6 md:p-8">
