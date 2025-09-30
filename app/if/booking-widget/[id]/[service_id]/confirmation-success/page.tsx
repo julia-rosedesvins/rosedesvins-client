@@ -105,7 +105,7 @@ function ConfirmationSuccessContent({ id, serviceId }: { id: string, serviceId: 
 
           {/* Bouton retour à l'accueil */}
           <div className="flex justify-center mt-8">
-            <Link href={`/if/booking-widget/${id}/${serviceId}`}>
+            <Link href={`/if/booking-widget/${id}/${serviceId}/reservation`}>
               <Button 
                 className="hover:opacity-90 text-white px-8 py-3 flex items-center gap-2"
                 style={{ backgroundColor: colorCode }}

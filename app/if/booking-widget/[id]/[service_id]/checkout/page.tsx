@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { Clock, Users, Globe, Euro, CreditCard, Grape, Lock, Building2, Receipt } from "lucide-react";
+import { Clock, Users, Globe, Euro, CreditCard, Grape, Lock, Building2, Receipt, Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { useSearchParams, useRouter } from "next/navigation";
@@ -66,6 +67,7 @@ function CheckoutContent({ id, serviceId }: { id: string, serviceId: string }) {
   const [chequeIssueDate, setChequeIssueDate] = useState("");
   
   const [isProcessing, setIsProcessing] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
   // Set default payment method when widget data loads
   useEffect(() => {
@@ -79,6 +81,99 @@ function CheckoutContent({ id, serviceId }: { id: string, serviceId: string }) {
       // Don't set a default payment method if none are available from API
     }
   }, [widgetData, selectedPaymentMethod]);
+
+  // Validation functions
+  const validateBankCardDetails = (): string[] => {
+    const errors: string[] = [];
+    
+    if (!bankName.trim()) {
+      errors.push("Le nom de la banque est requis");
+    }
+    
+    if (!accountName.trim()) {
+      errors.push("Le nom du titulaire du compte est requis");
+    }
+    
+    if (!accountNumber.trim()) {
+      errors.push("Le numéro de compte est requis");
+    }
+    
+    return errors;
+  };
+
+  const validateChequeDetails = (): string[] => {
+    const errors: string[] = [];
+    
+    if (!chequeNumber.trim()) {
+      errors.push("Le numéro de chèque est requis");
+    }
+    
+    if (!chequeBankName.trim()) {
+      errors.push("Le nom de la banque du chèque est requis");
+    }
+    
+    if (!chequeIssueDate.trim()) {
+      errors.push("La date d'émission du chèque est requise");
+    }
+    
+    return errors;
+  };
+
+  const validateStripeDetails = (): string[] => {
+    const errors: string[] = [];
+    
+    if (!cardNumber.trim()) {
+      errors.push("Le numéro de carte est requis");
+    } else if (cardNumber.replace(/\s/g, '').length < 13) {
+      errors.push("Le numéro de carte doit contenir au moins 13 chiffres");
+    }
+    
+    if (!expiryDate.trim()) {
+      errors.push("La date d'expiration est requise");
+    } else if (!/^\d{2}\/\d{2}$/.test(expiryDate)) {
+      errors.push("La date d'expiration doit être au format MM/YY");
+    }
+    
+    if (!cvv.trim()) {
+      errors.push("Le code CVV est requis");
+    } else if (cvv.length < 3 || cvv.length > 4) {
+      errors.push("Le code CVV doit contenir 3 ou 4 chiffres");
+    }
+    
+    if (!cardholderName.trim()) {
+      errors.push("Le nom du titulaire de la carte est requis");
+    }
+    
+    return errors;
+  };
+
+  const validateCheckout = (): boolean => {
+    const errors: string[] = [];
+    
+    // Check payment method selection
+    if (!selectedPaymentMethod) {
+      errors.push("Veuillez sélectionner un mode de paiement");
+    } else {
+      // Validate payment-specific fields
+      switch (selectedPaymentMethod) {
+        case 'bank_card':
+          errors.push(...validateBankCardDetails());
+          break;
+        case 'cheque':
+          errors.push(...validateChequeDetails());
+          break;
+        case 'stripe':
+          errors.push(...validateStripeDetails());
+          break;
+        case 'cash_on_onsite':
+          // No additional validation needed for cash payment
+          break;
+      }
+    }
+    
+    setValidationErrors(errors);
+    return errors.length === 0;
+  };
 
   if (loading) {
     return (
@@ -172,24 +267,14 @@ function CheckoutContent({ id, serviceId }: { id: string, serviceId: string }) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!selectedPaymentMethod) {
-      toast.error("Veuillez sélectionner un mode de paiement.");
+    if (isProcessing) return; // Prevent double clicks
+    
+    // Run comprehensive validation
+    if (!validateCheckout()) {
+      // Scroll to top to show errors
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
-
-    // Validate payment method specific fields
-    if (selectedPaymentMethod === 'bank_card') {
-      if (!bankName || !accountName || !accountNumber) {
-        toast.error("Veuillez remplir tous les champs bancaires.");
-        return;
-      }
-    } else if (selectedPaymentMethod === 'cheque') {
-      if (!chequeNumber || !chequeBankName || !chequeIssueDate) {
-        toast.error("Veuillez remplir tous les champs du chèque.");
-        return;
-      }
-    }
-    // cash_on_onsite and stripe don't need additional validation
 
     setIsProcessing(true);
     
@@ -322,6 +407,21 @@ function CheckoutContent({ id, serviceId }: { id: string, serviceId: string }) {
           <h1 className="text-2xl font-bold text-center mb-8" style={{ color: colorCode }}>
             Paiement sécurisé
           </h1>
+
+          {/* Validation Errors */}
+          {validationErrors.length > 0 && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <h3 className="text-red-800 font-medium mb-2">Veuillez corriger les erreurs suivantes :</h3>
+              <ul className="text-red-700 space-y-1">
+                {validationErrors.map((error, index) => (
+                  <li key={index} className="flex items-start">
+                    <span className="text-red-500 mr-2">•</span>
+                    {error}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           <div className="grid md:grid-cols-2 gap-8">
             {/* Formulaire de paiement */}
@@ -603,14 +703,19 @@ function CheckoutContent({ id, serviceId }: { id: string, serviceId: string }) {
             
             <Button 
               onClick={handleSubmit}
-              className="hover:opacity-90 text-white px-8 py-2"
+              disabled={isProcessing || !selectedPaymentMethod || (widgetData?.paymentMethods?.methods && widgetData.paymentMethods.methods.length === 0)}
+              className={cn(
+                "text-white px-8 py-2",
+                isProcessing 
+                  ? "opacity-70 cursor-not-allowed" 
+                  : "hover:opacity-90"
+              )}
               style={{ backgroundColor: colorCode }}
               size="lg"
-              disabled={isProcessing || !selectedPaymentMethod || (widgetData?.paymentMethods?.methods && widgetData.paymentMethods.methods.length === 0)}
             >
               {isProcessing ? (
                 <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  <Loader2 className="w-4 h-4 animate-spin" />
                   Traitement en cours...
                 </div>
               ) : !selectedPaymentMethod || (widgetData?.paymentMethods?.methods && widgetData.paymentMethods.methods.length === 0) ? (
