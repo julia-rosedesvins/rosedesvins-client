@@ -5,900 +5,87 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ChevronLeft, ChevronRight, Clock, Users, Grape, Globe, MessageCircle, Download, CalendarIcon } from "lucide-react";
-import { useState } from "react";
+import { ChevronLeft, ChevronRight, Clock, Users, Grape, Globe, MessageCircle, Download, CalendarIcon, Loader2, AlertCircle, RefreshCw } from "lucide-react";
+import { useState, useEffect } from "react";
 import { ReservationDetailsModal } from "./ReservationDetailsModal";
 import { cn } from "@/lib/utils";
+import { eventsService, EventData } from "@/services/events.service";
+import toast from "react-hot-toast";
+
+interface Reservation {
+  id: number;
+  time: string;
+  people: number;
+  activity: string;
+  language: string;
+  comments: string;
+  date?: string;
+  customerName?: string;
+  customerPhone?: string;
+  customerEmail?: string;
+  eventType?: string;
+  eventStatus?: string;
+  backgroundColor?: string;
+}
 
 export const ReservationsList = () => {
-  const [currentDate, setCurrentDate] = useState(new Date(2025, 6, 1)); // July 1, 2025
-  const [selectedReservation, setSelectedReservation] = useState<any>(null);
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [events, setEvents] = useState<EventData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Événements par jour 
-  // 1er mardi (1er juillet): 0 réservations
-  // 1er jeudi (3 juillet): 1 réservation  
-  // 1er samedi (5 juillet): 3 réservations
-  // Tous les dimanches (6, 13, 20, 27): 0 réservations
-  const allEvents = {
-    // 1 juillet = 1er mardi du mois - VIDE
-    2: [ // Mercredi - 2 réservations
-      {
-        id: 2,
-        time: "14:30",
-        people: 3,
-        activity: "Dégustation de vins",
-        language: "FR",
-        comments: "Oui"
-      },
-      {
-        id: 3,
-        time: "16:30",
-        people: 4,
-        activity: "Atelier vins & fromages",
-        language: "FR",
-        comments: "Aucun"
-      }
-    ],
-    3: [ // 3 juillet = 1er jeudi du mois - 1 réservation
-      {
-        id: 4,
-        time: "10:30",
-        people: 4,
-        activity: "Visite de cave et dégustation",
-        language: "FR",
-        comments: "Nous serons accompagnés de notre petit chien."
-      }
-    ],
-    4: [ // Vendredi - 3 réservations
-      {
-        id: 5,
-        time: "10:00",
-        people: 2,
-        activity: "Dégustation de vins",
-        language: "FR",
-        comments: "Aucun"
-      },
-      {
-        id: 6,
-        time: "14:00",
-        people: 6,
-        activity: "Atelier vins & fromage",
-        language: "EN",
-        comments: "Aucun"
-      },
-      {
-        id: 7,
-        time: "16:30",
-        people: 3,
-        activity: "Visite de cave et dégustation",
-        language: "EN",
-        comments: "Allergie aux noix"
-      }
-    ],
-    5: [ // 5 juillet = 1er samedi du mois - 3 réservations
-      {
-        id: 8,
-        time: "10:00",
-        people: 2,
-        activity: "Dégustation de vins",
-        language: "FR",
-        comments: "Aucun"
-      },
-      {
-        id: 9,
-        time: "14:00",
-        people: 4,
-        activity: "Visite de cave et dégustation",
-        language: "EN",
-        comments: "Aucun"
-      },
-      {
-        id: 10,
-        time: "16:30",
-        people: 3,
-        activity: "Atelier vins & fromages",
-        language: "FR",
-        comments: "Aucun"
-      }
-    ],
-    // 6 juillet = Dimanche - VIDE
-    7: [
-      {
-        id: 11,
-        time: "11:30",
-        people: 3,
-        activity: "Dégustation de vins",
-        language: "EN",
-        comments: "Aucun"
-      }
-    ],
-    8: [
-      {
-        id: 10,
-        time: "14:00",
-        people: 4,
-        activity: "Visite de cave et dégustation",
-        language: "FR",
-        comments: "Aucun"
-      }
-    ],
-    9: [ // Mercredi - 2 réservations
-      {
-        id: 11,
-        time: "11:00",
-        people: 3,
-        activity: "Dégustation de vins",
-        language: "FR",
-        comments: "Végétarien"
-      },
-      {
-        id: 12,
-        time: "15:30",
-        people: 5,
-        activity: "Atelier vins & fromages",
-        language: "EN",
-        comments: "Aucun"
-      }
-    ],
-    10: [
-      {
-        id: 13,
-        time: "10:00",
-        people: 2,
-        activity: "Dégustation de vins",
-        language: "FR",
-        comments: "Aucun"
-      }
-    ],
-    11: [ // Vendredi - 3 réservations
-      {
-        id: 14,
-        time: "09:30",
-        people: 4,
-        activity: "Visite de cave et dégustation",
-        language: "EN",
-        comments: "Aucun"
-      },
-      {
-        id: 15,
-        time: "14:30",
-        people: 2,
-        activity: "Dégustation de vins",
-        language: "FR",
-        comments: "Première visite"
-      },
-      {
-        id: 16,
-        time: "16:30",
-        people: 5,
-        activity: "Atelier vins & fromages",
-        language: "FR",
-        comments: "Aucun"
-      }
-    ],
-    12: [
-      {
-        id: 17,
-        time: "11:00",
-        people: 3,
-        activity: "Dégustation de vins",
-        language: "FR",
-        comments: "Aucun"
-      }
-    ],
-    // 13 juillet = Dimanche - VIDE
-    14: [
-      {
-        id: 18,
-        time: "15:00",
-        people: 3,
-        activity: "Dégustation de vins",
-        language: "FR",
-        comments: "Aucun"
-      }
-    ],
-    15: [
-      {
-        id: 19,
-        time: "11:00",
-        people: 6,
-        activity: "Visite de cave et dégustation",
-        language: "FR",
-        comments: "Aucun"
-      }
-    ],
-    16: [ // Mercredi - 2 réservations
-      {
-        id: 20,
-        time: "10:30",
-        people: 2,
-        activity: "Dégustation de vins",
-        language: "EN",
-        comments: "Aucun"
-      },
-      {
-        id: 21,
-        time: "14:30",
-        people: 4,
-        activity: "Visite de cave et dégustation",
-        language: "FR",
-        comments: "Groupe d'étudiants"
-      }
-    ],
-    17: [
-      {
-        id: 22,
-        time: "10:30",
-        people: 4,
-        activity: "Atelier vins & fromages",
-        language: "FR",
-        comments: "Aucun"
-      }
-    ],
-    18: [ // Vendredi - 3 réservations
-      {
-        id: 23,
-        time: "09:00",
-        people: 3,
-        activity: "Dégustation de vins",
-        language: "FR",
-        comments: "Aucun"
-      },
-      {
-        id: 24,
-        time: "11:30",
-        people: 2,
-        activity: "Visite de cave et dégustation",
-        language: "EN",
-        comments: "Lune de miel"
-      },
-      {
-        id: 25,
-        time: "16:00",
-        people: 5,
-        activity: "Atelier vins & fromages",
-        language: "FR",
-        comments: "Aucun"
-      }
-    ],
-    19: [
-      {
-        id: 26,
-        time: "16:00",
-        people: 3,
-        activity: "Dégustation de vins",
-        language: "FR",
-        comments: "Aucun"
-      }
-    ],
-    // 20 juillet = Dimanche - VIDE
-    21: [
-      {
-        id: 27,
-        time: "14:00",
-        people: 4,
-        activity: "Dégustation de vins",
-        language: "FR",
-        comments: "Aucun"
-      }
-    ],
-    22: [
-      {
-        id: 28,
-        time: "11:30",
-        people: 4,
-        activity: "Dégustation de vins",
-        language: "EN",
-        comments: "Aucun"
-      }
-    ],
-    23: [ // Mercredi - 2 réservations
-      {
-        id: 29,
-        time: "10:00",
-        people: 3,
-        activity: "Visite de cave et dégustation",
-        language: "FR",
-        comments: "Aucun"
-      },
-      {
-        id: 30,
-        time: "15:30",
-        people: 5,
-        activity: "Atelier vins & fromages",
-        language: "EN",
-        comments: "Anniversaire"
-      }
-    ],
-    24: [
-      {
-        id: 31,
-        time: "11:00",
-        people: 2,
-        activity: "Dégustation de vins",
-        language: "FR",
-        comments: "Aucun"
-      }
-    ],
-    25: [ // Vendredi - 3 réservations
-      {
-        id: 32,
-        time: "10:00",
-        people: 2,
-        activity: "Dégustation de vins",
-        language: "FR",
-        comments: "Aucun"
-      },
-      {
-        id: 33,
-        time: "14:00",
-        people: 4,
-        activity: "Visite de cave et dégustation",
-        language: "EN",
-        comments: "Aucun"
-      },
-      {
-        id: 34,
-        time: "16:30",
-        people: 6,
-        activity: "Atelier vins & fromages",
-        language: "FR",
-        comments: "Entreprise"
-      }
-    ],
-    26: [
-      {
-        id: 35,
-        time: "14:00",
-        people: 6,
-        activity: "Atelier vins & fromages",
-        language: "EN",
-        comments: "Aucun"
-      }
-    ],
-    // 27 juillet = Dimanche - VIDE
-    28: [
-      {
-        id: 36,
-        time: "11:00",
-        people: 3,
-        activity: "Dégustation de vins",
-        language: "FR",
-        comments: "Aucun"
-      }
-    ],
-    29: [
-      {
-        id: 37,
-        time: "16:30",
-        people: 4,
-        activity: "Visite de cave et dégustation",
-        language: "EN",
-        comments: "Aucun"
-      }
-    ],
-    30: [ // Mercredi - 2 réservations
-      {
-        id: 38,
-        time: "11:30",
-        people: 3,
-        activity: "Dégustation de vins",
-        language: "FR",
-        comments: "Aucun"
-      },
-      {
-        id: 39,
-        time: "15:00",
-        people: 2,
-        activity: "Visite de cave et dégustation",
-        language: "EN",
-        comments: "Aucun"
-      }
-    ],
-    31: [
-      {
-        id: 40,
-        time: "15:00",
-        people: 2,
-        activity: "Dégustation de vins",
-        language: "FR",
-        comments: "Aucun"
-      }
-    ]
+  // Fetch events from API
+  const fetchEvents = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await eventsService.getUserEvents();
+      setEvents(response.data);
+    } catch (err) {
+      console.error('Error fetching events:', err);
+      setError('Failed to load reservations');
+      toast.error('Failed to load reservations');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // Données pour octobre 2025
-  const octoberEvents = {
-    // 1 octobre = Mercredi - 2 réservations
-    1: [
-      {
-        id: 41,
-        time: "11:00",
-        people: 3,
-        activity: "Dégustation de vins",
-        language: "FR",
-        comments: "Aucun"
-      },
-      {
-        id: 42,
-        time: "15:30",
-        people: 4,
-        activity: "Atelier vins & fromages",
-        language: "EN",
-        comments: "Aucun"
-      }
-    ],
-    // 2 octobre = Premier jeudi - 1 réservation (supprimé 1 réservation)
-    2: [
-      {
-        id: 43,
-        time: "14:00",
-        people: 2,
-        activity: "Visite de cave et dégustation",
-        language: "FR",
-        comments: "Aucun"
-      }
-    ],
-    // 3 octobre = Vendredi - 3 réservations
-    3: [
-      {
-        id: 44,
-        time: "09:30",
-        people: 4,
-        activity: "Dégustation de vins",
-        language: "FR",
-        comments: "Aucun"
-      },
-      {
-        id: 45,
-        time: "14:30",
-        people: 3,
-        activity: "Visite de cave et dégustation",
-        language: "EN",
-        comments: "Aucun"
-      },
-      {
-        id: 46,
-        time: "16:30",
-        people: 5,
-        activity: "Atelier vins & fromages",
-        language: "FR",
-        comments: "Aucun"
-      }
-    ],
-    // 4 octobre = Samedi - 2 réservations
-    4: [
-      {
-        id: 47,
-        time: "11:00",
-        people: 2,
-        activity: "Dégustation de vins",
-        language: "FR",
-        comments: "Aucun"
-      },
-      {
-        id: 48,
-        time: "16:00",
-        people: 6,
-        activity: "Atelier vins & fromages",
-        language: "EN",
-        comments: "Aucun"
-      }
-    ],
-    // 6 octobre = Lundi - 1 réservation
-    6: [
-      {
-        id: 49,
-        time: "15:00",
-        people: 3,
-        activity: "Dégustation de vins",
-        language: "FR",
-        comments: "Aucun"
-      }
-    ],
-    // 7 octobre = Mardi - 2 réservations
-    7: [
-      {
-        id: 50,
-        time: "10:30",
-        people: 4,
-        activity: "Visite de cave et dégustation",
-        language: "FR",
-        comments: "Aucun"
-      },
-      {
-        id: 51,
-        time: "14:30",
-        people: 2,
-        activity: "Dégustation de vins",
-        language: "EN",
-        comments: "Aucun"
-      }
-    ],
-    // 8 octobre = Mercredi - 1 réservation
-    8: [
-      {
-        id: 53,
-        time: "11:30",
-        people: 3,
-        activity: "Atelier vins & fromages",
-        language: "FR",
-        comments: "Aucun"
-      }
-    ],
-    // 9 octobre = Jeudi - 1 réservation
-    9: [
-      {
-        id: 54,
-        time: "14:00",
-        people: 4,
-        activity: "Visite de cave et dégustation",
-        language: "FR",
-        comments: "Aucun"
-      }
-    ],
-    // 10 octobre = Vendredi - 2 réservations
-    10: [
-      {
-        id: 55,
-        time: "10:00",
-        people: 2,
-        activity: "Dégustation de vins",
-        language: "FR",
-        comments: "Aucun"
-      },
-      {
-        id: 56,
-        time: "16:30",
-        people: 4,
-        activity: "Visite de cave et dégustation",
-        language: "EN",
-        comments: "Aucun"
-      }
-    ],
-    // 11 octobre = Samedi - 3 réservations
-    11: [
-      {
-        id: 57,
-        time: "10:00",
-        people: 2,
-        activity: "Dégustation de vins",
-        language: "FR",
-        comments: "Aucun"
-      },
-      {
-        id: 58,
-        time: "14:00",
-        people: 4,
-        activity: "Visite de cave et dégustation",
-        language: "FR",
-        comments: "Aucun"
-      },
-      {
-        id: 59,
-        time: "16:30",
-        people: 6,
-        activity: "Atelier vins & fromages",
-        language: "FR",
-        comments: "Aucun"
-      }
-    ],
-    // 14 octobre = Mardi - 1 réservation
-    14: [
-      {
-        id: 58,
-        time: "15:00",
-        people: 3,
-        activity: "Dégustation de vins",
-        language: "FR",
-        comments: "Aucun"
-      }
-    ],
-    // 15 octobre = Mercredi - 2 réservations
-    15: [
-      {
-        id: 59,
-        time: "11:00",
-        people: 6,
-        activity: "Visite de cave et dégustation",
-        language: "FR",
-        comments: "Aucun"
-      },
-      {
-        id: 60,
-        time: "16:00",
-        people: 2,
-        activity: "Dégustation de vins",
-        language: "EN",
-        comments: "Aucun"
-      }
-    ],
-    // 16 octobre = Jeudi - 2 réservations
-    16: [
-      {
-        id: 62,
-        time: "10:30",
-        people: 2,
-        activity: "Dégustation de vins",
-        language: "EN",
-        comments: "Aucun"
-      },
-      {
-        id: 63,
-        time: "14:30",
-        people: 4,
-        activity: "Visite de cave et dégustation",
-        language: "FR",
-        comments: "Groupe d'étudiants"
-      }
-    ],
-    // 17 octobre = Vendredi - 5 réservations
-    17: [
-      {
-        id: 64,
-        time: "09:00",
-        people: 3,
-        activity: "Dégustation de vins",
-        language: "FR",
-        comments: "Aucun"
-      },
-      {
-        id: 65,
-        time: "11:30",
-        people: 2,
-        activity: "Visite de cave et dégustation",
-        language: "EN",
-        comments: "Lune de miel"
-      },
-      {
-        id: 66,
-        time: "16:00",
-        people: 5,
-        activity: "Atelier vins & fromages",
-        language: "FR",
-        comments: "Aucun"
-      },
-      {
-        id: 67,
-        time: "13:30",
-        people: 4,
-        activity: "Visite de cave et dégustation",
-        language: "FR",
-        comments: "Aucun"
-      },
-      {
-        id: 68,
-        time: "15:00",
-        people: 3,
-        activity: "Dégustation de vins",
-        language: "EN",
-        comments: "Aucun"
-      }
-    ],
-    // 18 octobre = Samedi - 2 réservations
-    18: [
-      {
-        id: 66,
-        time: "11:00",
-        people: 3,
-        activity: "Dégustation de vins",
-        language: "FR",
-        comments: "Aucun"
-      },
-      {
-        id: 67,
-        time: "15:30",
-        people: 4,
-        activity: "Atelier vins & fromages",
-        language: "EN",
-        comments: "Aucun"
-      }
-    ],
-    // 20 octobre = Lundi - 1 réservation
-    20: [
-      {
-        id: 69,
-        time: "15:30",
-        people: 4,
-        activity: "Visite de cave et dégustation",
-        language: "FR",
-        comments: "Aucun"
-      }
-    ],
-    // 21 octobre = Mardi - 1 réservation
-    21: [
-      {
-        id: 68,
-        time: "14:00",
-        people: 4,
-        activity: "Dégustation de vins",
-        language: "FR",
-        comments: "Aucun"
-      }
-    ],
-    // 22 octobre = Mercredi - 2 réservations
-    22: [
-      {
-        id: 69,
-        time: "10:00",
-        people: 3,
-        activity: "Visite de cave et dégustation",
-        language: "FR",
-        comments: "Aucun"
-      },
-      {
-        id: 70,
-        time: "15:30",
-        people: 5,
-        activity: "Atelier vins & fromages",
-        language: "EN",
-        comments: "Anniversaire"
-      }
-    ],
-    // 23 octobre = Jeudi - 2 réservations
-    23: [
-      {
-        id: 72,
-        time: "14:30",
-        people: 3,
-        activity: "Dégustation de vins",
-        language: "EN",
-        comments: "Aucun"
-      },
-      {
-        id: 73,
-        time: "16:00",
-        people: 4,
-        activity: "Dégustation de vins",
-        language: "FR",
-        comments: "Aucun"
-      }
-    ],
-    // 24 octobre = Vendredi - 3 réservations
-    24: [
-      {
-        id: 74,
-        time: "10:00",
-        people: 2,
-        activity: "Dégustation de vins",
-        language: "FR",
-        comments: "Aucun"
-      },
-      {
-        id: 75,
-        time: "14:00",
-        people: 4,
-        activity: "Visite de cave et dégustation",
-        language: "EN",
-        comments: "Aucun"
-      },
-      {
-        id: 76,
-        time: "16:30",
-        people: 6,
-        activity: "Atelier vins & fromages",
-        language: "FR",
-        comments: "Entreprise"
-      }
-    ],
-    // 25 octobre = Samedi - 4 réservations
-    25: [
-      {
-        id: 77,
-        time: "14:00",
-        people: 6,
-        activity: "Atelier vins & fromages",
-        language: "EN",
-        comments: "Aucun"
-      },
-      {
-        id: 78,
-        time: "16:30",
-        people: 3,
-        activity: "Dégustation de vins",
-        language: "FR",
-        comments: "Aucun"
-      },
-      {
-        id: 79,
-        time: "11:00",
-        people: 2,
-        activity: "Visite de cave et dégustation",
-        language: "FR",
-        comments: "Aucun"
-      },
-      {
-        id: 80,
-        time: "15:30",
-        people: 4,
-        activity: "Dégustation de vins",
-        language: "EN",
-        comments: "Aucun"
-      }
-    ],
-    // 28 octobre = Mardi - 2 réservations
-    28: [
-      {
-        id: 77,
-        time: "11:00",
-        people: 3,
-        activity: "Dégustation de vins",
-        language: "FR",
-        comments: "Aucun"
-      },
-      {
-        id: 83,
-        time: "15:30",
-        people: 4,
-        activity: "Dégustation de vins",
-        language: "FR",
-        comments: "Aucun"
-      }
-    ],
-    // 29 octobre = Mercredi - 2 réservations
-    29: [
-      {
-        id: 78,
-        time: "11:30",
-        people: 3,
-        activity: "Dégustation de vins",
-        language: "FR",
-        comments: "Aucun"
-      },
-      {
-        id: 79,
-        time: "15:00",
-        people: 2,
-        activity: "Visite de cave et dégustation",
-        language: "EN",
-        comments: "Aucun"
-      }
-    ],
-    // 30 octobre = Jeudi - 1 réservation
-    30: [
-      {
-        id: 80,
-        time: "15:00",
-        people: 2,
-        activity: "Dégustation de vins",
-        language: "FR",
-        comments: "Aucun"
-      }
-    ],
-    // 31 octobre = Vendredi - 2 réservations
-    31: [
-      {
-        id: 81,
-        time: "10:30",
-        people: 4,
-        activity: "Visite de cave et dégustation",
-        language: "FR",
-        comments: "Aucun"
-      },
-      {
-        id: 82,
-        time: "16:00",
-        people: 3,
-        activity: "Atelier vins & fromages",
-        language: "EN",
-        comments: "Halloween"
-      }
-    ]
+  useEffect(() => {
+    fetchEvents();
+  }, []);
+
+  // Transform EventData to Reservation format
+  const transformEventToReservation = (event: EventData, index: number): Reservation => {
+    const eventDateTime = new Date(`${event.eventDate}T${event.eventTime}`);
+    
+    return {
+      id: index + 1, // Use index as numeric ID
+      time: event.eventTime,
+      people: event.bookingId ? 1 : 1, // Default to 1 person, could be enhanced with booking details
+      activity: event.eventName || event.eventType,
+      language: 'French', // Default language, could be enhanced with user preferences
+      comments: event.eventDescription || 'No comments',
+      date: event.eventDate,
+      customerName: event.bookingId ? 
+        `${event.bookingId.userContactFirstname} ${event.bookingId.userContactLastname}` : 
+        'Unknown',
+      eventType: event.eventType,
+      eventStatus: event.eventStatus
+    };
   };
 
-  // Fonction pour vérifier si c'est un dimanche (jour 0)
+  // Function to check if it's a Sunday (day 0)
   const isSunday = (date: Date) => date.getDay() === 0;
 
-  // Récupérer les réservations pour le jour sélectionné
-  // RÈGLE : Aucune réservation le dimanche
-  let rawReservations = [];
-  if (currentDate.getMonth() === 9) { // Octobre - données spécifiques
-    rawReservations = octoberEvents[currentDate.getDate() as keyof typeof octoberEvents] || [];
-  } else { // Tous les autres mois utilisent les données par défaut
-    rawReservations = allEvents[currentDate.getDate() as keyof typeof allEvents] || [];
-  }
-  const reservations = isSunday(currentDate) ? [] : rawReservations;
+  // Filter events for the current date
+  const reservations = events
+    .filter(event => {
+      const eventDate = new Date(event.eventDate);
+      return eventDate.toDateString() === currentDate.toDateString();
+    })
+    .map((event, index) => transformEventToReservation(event, index));
 
   const goToPreviousDay = () => {
     const newDate = new Date(currentDate);
@@ -939,7 +126,19 @@ export const ReservationsList = () => {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-lg lg:text-xl">Réservations</CardTitle>
+        <div className="flex justify-between items-center">
+          <CardTitle className="text-lg lg:text-xl">Réservations</CardTitle>
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={fetchEvents}
+            disabled={loading}
+            className="h-8 px-3"
+          >
+            <RefreshCw className={cn("h-3 w-3", loading && "animate-spin")} />
+            <span className="ml-2 hidden sm:inline">Refresh</span>
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
         <div className="p-3 lg:p-4 rounded-lg mb-4 lg:mb-6" style={{ backgroundColor: '#3A7B59' }}>
@@ -989,7 +188,26 @@ export const ReservationsList = () => {
           </div>
         </div>
 
-        {reservations.length === 0 ? (
+        {loading ? (
+          <div className="text-center py-6 lg:py-8">
+            <Loader2 className="h-6 w-6 animate-spin mx-auto text-gray-500" />
+            <p className="text-gray-500 mt-2">Loading reservations...</p>
+          </div>
+        ) : error ? (
+          <div className="text-center py-6 lg:py-8 text-red-500">
+            <AlertCircle className="h-6 w-6 mx-auto mb-2" />
+            <p className="text-base lg:text-lg">{error}</p>
+            <Button 
+              variant="outline" 
+              className="mt-2"
+              onClick={fetchEvents}
+              disabled={loading}
+            >
+              <RefreshCw className={cn("h-4 w-4 mr-2", loading && "animate-spin")} />
+              Retry
+            </Button>
+          </div>
+        ) : reservations.length === 0 ? (
           <div className="text-center py-6 lg:py-8 text-gray-500">
             <p className="text-base lg:text-lg">Aucune réservation pour cette date</p>
             {isSunday(currentDate) && (
