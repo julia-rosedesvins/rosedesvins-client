@@ -71,17 +71,49 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
     );
   }
 
-  // Check if a specific time slot is already booked
-  const isTimeSlotBooked = (date: Date, time: string): boolean => {
+  // Check if a time slot has passed for today
+  const isTimeSlotPast = (date: Date, time: string): boolean => {
+    const now = new Date();
+    const isToday = date.getDate() === now.getDate() && 
+                   date.getMonth() === now.getMonth() && 
+                   date.getFullYear() === now.getFullYear();
+    
+    if (!isToday) return false; // Only check for today
+    
+    const [hours, minutes] = time.split(':').map(Number);
+    const slotTime = new Date(now);
+    slotTime.setHours(hours, minutes, 0, 0);
+    
+    // Add a small buffer (5 minutes) to prevent booking slots that are about to start
+    const bufferTime = new Date(now.getTime() + 5 * 60 * 1000);
+    
+    return slotTime <= bufferTime;
+  };
+
+  // Check if a time slot conflicts with existing bookings considering service duration
+  const isTimeSlotConflicting = (date: Date, time: string): boolean => {
     if (!bookedSlots.length) return false;
     
     const dateString = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
+    const serviceDuration = widgetData?.service?.timeOfServiceInMinutes || 60;
+    
+    const [requestHours, requestMinutes] = time.split(':').map(Number);
+    const requestStartTime = requestHours * 60 + requestMinutes; // Convert to minutes
+    const requestEndTime = requestStartTime + serviceDuration;
     
     return bookedSlots.some(slot => {
       const slotDate = new Date(slot.eventDate);
       const slotDateString = `${slotDate.getFullYear()}-${(slotDate.getMonth() + 1).toString().padStart(2, '0')}-${slotDate.getDate().toString().padStart(2, '0')}`;
       
-      return slotDateString === dateString && slot.eventTime === time;
+      // Only check slots on the same date
+      if (slotDateString !== dateString) return false;
+      
+      const [slotHours, slotMinutes] = slot.eventTime.split(':').map(Number);
+      const slotStartTime = slotHours * 60 + slotMinutes; // Convert to minutes
+      const slotEndTime = slotStartTime + serviceDuration;
+      
+      // Two time ranges overlap if: start1 < end2 AND start2 < end1
+      return (requestStartTime < slotEndTime) && (slotStartTime < requestEndTime);
     });
   };
 
@@ -124,8 +156,8 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
           const minutes = currentMinutes % 60;
           const timeSlot = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
           
-          // Only add the slot if it's not already booked
-          if (!isTimeSlotBooked(date, timeSlot)) {
+          // Skip if time slot has passed (for today) or conflicts with existing bookings
+          if (!isTimeSlotPast(date, timeSlot) && !isTimeSlotConflicting(date, timeSlot)) {
             if (hours < 12) {
               morningSlots.push(timeSlot);
             } else {
@@ -247,7 +279,13 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
             </div>
           ) : allMorningTimes.length === 0 && allAfternoonTimes.length === 0 ? (
             <div className="text-center text-gray-500 py-8">
-              Aucun créneau disponible pour cette date. Veuillez choisir une autre date.
+              <p className="mb-2">Aucun créneau disponible pour cette date.</p>
+              <p className="text-sm">
+                {selectedDate && selectedDate.toDateString() === new Date().toDateString() 
+                  ? "Les créneaux passés ne sont plus disponibles aujourd'hui."
+                  : "Tous les créneaux sont déjà réservés."}
+              </p>
+              <p className="text-sm mt-1">Veuillez choisir une autre date.</p>
             </div>
           ) : (
             <>
