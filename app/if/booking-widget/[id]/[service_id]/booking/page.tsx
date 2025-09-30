@@ -6,11 +6,13 @@ import { DatePicker } from "@/components/DatePicker";
 import { ChevronLeft, ChevronRight, Plus, Minus, Clock, Euro, Wine, Users, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { WidgetProvider, useWidget } from "@/contexts/WidgetContext";
 import { eventsService, PublicScheduleData } from "@/services/events.service";
 
 function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
     const { widgetData, loading, error, colorCode } = useWidget();
+    const router = useRouter();
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [adults, setAdults] = useState(2);
@@ -66,7 +68,7 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
       // Add a small delay for better UX (optional)
       await new Promise(resolve => setTimeout(resolve, 500));
       
-      // If validation passes, navigate to confirmation
+      // If validation passes, navigate to confirmation using Next.js router
       const query = new URLSearchParams({
         date: selectedDate ? `${selectedDate.getFullYear()}-${(selectedDate.getMonth() + 1).toString().padStart(2, '0')}-${selectedDate.getDate().toString().padStart(2, '0')}` : '',
         selectedTime: selectedTime || '',
@@ -76,7 +78,7 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
         widgetId: id,
       });
       
-      window.location.href = `/if/booking-widget/${id}/${serviceId}/booking-confirmation?${query.toString()}`;
+      router.push(`/if/booking-widget/${id}/${serviceId}/booking-confirmation?${query.toString()}`);
     } catch (error) {
       // Reset loading state if something goes wrong
       setIsSubmitting(false);

@@ -6,11 +6,12 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { CountrySelector } from "@/components/CountrySelector";
-import { Clock, Users, Globe, Euro, CreditCard, Grape } from "lucide-react";
+import { Clock, Users, Globe, Euro, CreditCard, Grape, Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { WidgetProvider, useWidget } from "@/contexts/WidgetContext";
 
 interface BookingData {
@@ -24,6 +25,7 @@ interface BookingData {
 function BookingConfirmationContent({ id, serviceId }: { id: string, serviceId: string }) {
   const { widgetData, loading, error, colorCode } = useWidget();
   const searchParams = useSearchParams();
+  const router = useRouter();
   
   // Extract booking data from URL parameters
   const bookingData: BookingData = {
@@ -34,10 +36,10 @@ function BookingConfirmationContent({ id, serviceId }: { id: string, serviceId: 
     language: searchParams.get('language') || 'Français',
   };
   
-  const [email, setEmail] = useState("juliette.dupont@gmail.com");
-  const [firstName, setFirstName] = useState("Juliette");
-  const [lastName, setLastName] = useState("Dupont");
-  const [phone, setPhone] = useState("06 17 86 99 36");
+  const [email, setEmail] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [phone, setPhone] = useState("");
   const [additionalInfo, setAdditionalInfo] = useState("");
   const [selectedCountry, setSelectedCountry] = useState({
     code: "FR",
@@ -45,6 +47,88 @@ function BookingConfirmationContent({ id, serviceId }: { id: string, serviceId: 
     flag: "🇫🇷",
     dialCode: "+33"
   });
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Email validation helper
+  const isValidEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  // Phone validation helper
+  const isValidPhone = (phone: string): boolean => {
+    const phoneRegex = /^[+]?[\d\s\-()]{8,}$/;
+    return phoneRegex.test(phone.trim());
+  };
+
+  // Validation function
+  const validateBookingConfirmation = (): boolean => {
+    const errors: string[] = [];
+    
+    if (!email.trim()) {
+      errors.push("L'adresse e-mail est requise");
+    } else if (!isValidEmail(email)) {
+      errors.push("Veuillez saisir une adresse e-mail valide");
+    }
+    
+    if (!firstName.trim()) {
+      errors.push("Le prénom est requis");
+    }
+    
+    if (!lastName.trim()) {
+      errors.push("Le nom est requis");
+    }
+    
+    if (!phone.trim()) {
+      errors.push("Le numéro de téléphone est requis");
+    } else if (!isValidPhone(phone)) {
+      errors.push("Veuillez saisir un numéro de téléphone valide");
+    }
+    
+    setValidationErrors(errors);
+    return errors.length === 0;
+  };
+
+  // Handle booking confirmation
+  const handleBookingConfirmation = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    
+    if (isSubmitting) return; // Prevent double clicks
+    
+    if (!validateBookingConfirmation()) {
+      // Scroll to top to show errors
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+    
+    // Set loading state
+    setIsSubmitting(true);
+    
+    try {
+      // Add a small delay for better UX
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // If validation passes, navigate to checkout using Next.js router
+      const query = new URLSearchParams({
+        date: bookingData.date,
+        selectedTime: bookingData.selectedTime || '',
+        adults: bookingData.adults.toString(),
+        children: bookingData.children.toString(),
+        language: bookingData.language,
+        email: email,
+        firstName: firstName,
+        lastName: lastName,
+        phone: phone,
+        additionalInfo: additionalInfo,
+      });
+      
+      router.push(`/if/booking-widget/${id}/${serviceId}/checkout?${query.toString()}`);
+    } catch (error) {
+      // Reset loading state if something goes wrong
+      setIsSubmitting(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -96,6 +180,21 @@ function BookingConfirmationContent({ id, serviceId }: { id: string, serviceId: 
           <h1 className="text-2xl font-bold text-center mb-8" style={{ color: colorCode }}>
             Demande de réservation
           </h1>
+
+          {/* Validation Errors */}
+          {validationErrors.length > 0 && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <h3 className="text-red-800 font-medium mb-2">Veuillez corriger les erreurs suivantes :</h3>
+              <ul className="text-red-700 space-y-1">
+                {validationErrors.map((error, index) => (
+                  <li key={index} className="flex items-start">
+                    <span className="text-red-500 mr-2">•</span>
+                    {error}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           <div className="grid md:grid-cols-2 gap-8">
             {/* Informations de contact */}
@@ -176,7 +275,7 @@ function BookingConfirmationContent({ id, serviceId }: { id: string, serviceId: 
 
                 <div className="mt-6">
                   <Link
-                    href={`/if/booking-widget/${id}/booking?${new URLSearchParams({
+                    href={`/if/booking-widget/${id}/${serviceId}/booking?${new URLSearchParams({
                       date: bookingData.date,
                       selectedTime: bookingData.selectedTime || '',
                       adults: bookingData.adults.toString(),
@@ -209,28 +308,27 @@ function BookingConfirmationContent({ id, serviceId }: { id: string, serviceId: 
 
           {/* Bouton Confirmer */}
           <div className="flex justify-end mt-6">
-            <Link
-              href={`/if/booking-widget/${id}/${serviceId}/checkout?${new URLSearchParams({
-                date: bookingData.date,
-                selectedTime: bookingData.selectedTime || '',
-                adults: bookingData.adults.toString(),
-                children: bookingData.children.toString(),
-                language: bookingData.language,
-                email: email,
-                firstName: firstName,
-                lastName: lastName,
-                phone: phone,
-                additionalInfo: additionalInfo,
-              }).toString()}`}
+            <Button 
+              onClick={handleBookingConfirmation}
+              disabled={isSubmitting}
+              className={cn(
+                "text-white px-8 py-2",
+                isSubmitting 
+                  ? "opacity-70 cursor-not-allowed" 
+                  : "hover:opacity-90"
+              )}
+              style={{ backgroundColor: colorCode }}
+              size="lg"
             >
-              <Button 
-                className="hover:opacity-90 text-white px-8 py-2"
-                style={{ backgroundColor: colorCode }}
-                size="lg"
-              >
-                Confirmer
-              </Button>
-            </Link>
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  Traitement...
+                </>
+              ) : (
+                "Confirmer"
+              )}
+            </Button>
           </div>
         </div>
       </div>
