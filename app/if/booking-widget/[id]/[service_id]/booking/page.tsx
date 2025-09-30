@@ -15,11 +15,21 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [adults, setAdults] = useState(2);
   const [children, setChildren] = useState(0);
-  const [selectedLanguage, setSelectedLanguage] = useState("Français");
+  const [selectedLanguage, setSelectedLanguage] = useState("");
   const [morningStartIndex, setMorningStartIndex] = useState(0);
   const [afternoonStartIndex, setAfternoonStartIndex] = useState(0);
   const [bookedSlots, setBookedSlots] = useState<PublicScheduleData[]>([]);
   const [loadingSchedule, setLoadingSchedule] = useState(false);
+
+  // Auto-select first language when widget data is loaded
+  useEffect(() => {
+    if (widgetData?.service?.languagesOffered && widgetData.service.languagesOffered.length > 0 && !selectedLanguage) {
+      setSelectedLanguage(widgetData.service.languagesOffered[0]);
+    } else if (!widgetData?.service?.languagesOffered && !selectedLanguage) {
+      // Fallback to default if no languages are provided
+      setSelectedLanguage("Français");
+    }
+  }, [widgetData?.service?.languagesOffered, selectedLanguage]);
 
   // Fetch booked slots for the user on component mount
   useEffect(() => {
