@@ -7,6 +7,7 @@ import { ChevronLeft, ChevronRight, Plus, Minus, Clock, Euro, Wine, Users } from
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { WidgetProvider, useWidget } from "@/contexts/WidgetContext";
+import { eventsService, PublicScheduleData } from "@/services/events.service";
 
 function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
     const { widgetData, loading, error, colorCode } = useWidget();
@@ -17,6 +18,29 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
   const [selectedLanguage, setSelectedLanguage] = useState("Français");
   const [morningStartIndex, setMorningStartIndex] = useState(0);
   const [afternoonStartIndex, setAfternoonStartIndex] = useState(0);
+  const [bookedSlots, setBookedSlots] = useState<PublicScheduleData[]>([]);
+  const [loadingSchedule, setLoadingSchedule] = useState(false);
+
+  // Fetch booked slots for the user on component mount
+  useEffect(() => {
+    const fetchBookedSlots = async () => {
+      try {
+        setLoadingSchedule(true);
+        const response = await eventsService.getPublicUserSchedule(id);
+        setBookedSlots(response.data);
+      } catch (error) {
+        console.error('Failed to fetch booked slots:', error);
+        // Continue without booked slots data - don't block the user
+        setBookedSlots([]);
+      } finally {
+        setLoadingSchedule(false);
+      }
+    };
+
+    if (id) {
+      fetchBookedSlots();
+    }
+  }, [id]);
 
   // Reset selected time when date changes
   useEffect(() => {
@@ -46,6 +70,20 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
       </div>
     );
   }
+
+  // Check if a specific time slot is already booked
+  const isTimeSlotBooked = (date: Date, time: string): boolean => {
+    if (!bookedSlots.length) return false;
+    
+    const dateString = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
+    
+    return bookedSlots.some(slot => {
+      const slotDate = new Date(slot.eventDate);
+      const slotDateString = `${slotDate.getFullYear()}-${(slotDate.getMonth() + 1).toString().padStart(2, '0')}-${slotDate.getDate().toString().padStart(2, '0')}`;
+      
+      return slotDateString === dateString && slot.eventTime === time;
+    });
+  };
 
   // Get available time slots for the selected date
   const getAvailableTimeSlots = (date: Date | null) => {
@@ -86,10 +124,13 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
           const minutes = currentMinutes % 60;
           const timeSlot = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
           
-          if (hours < 12) {
-            morningSlots.push(timeSlot);
-          } else {
-            afternoonSlots.push(timeSlot);
+          // Only add the slot if it's not already booked
+          if (!isTimeSlotBooked(date, timeSlot)) {
+            if (hours < 12) {
+              morningSlots.push(timeSlot);
+            } else {
+              afternoonSlots.push(timeSlot);
+            }
           }
         }
       }
@@ -106,7 +147,7 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
   const morningTimes = allMorningTimes.slice(morningStartIndex, morningStartIndex + visibleSlotsCount);
   const afternoonTimes = allAfternoonTimes.slice(afternoonStartIndex, afternoonStartIndex + visibleSlotsCount);
 
-  // Check if a date has any available time slots
+  // Check if a date has any available time slots (excluding booked ones)
   const isDateAvailable = (date: Date) => {
     if (!widgetData?.availability?.weeklyAvailability) return false;
     
@@ -114,7 +155,13 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
     const dayName = dayNames[date.getDay()];
     const dayAvailability = widgetData.availability.weeklyAvailability[dayName];
     
-    return dayAvailability?.isAvailable && dayAvailability.timeSlots?.length > 0;
+    if (!dayAvailability?.isAvailable || !dayAvailability.timeSlots?.length) {
+      return false;
+    }
+
+    // Check if there are any available (non-booked) time slots for this date
+    const availableSlots = getAvailableTimeSlots(date);
+    return availableSlots.morning.length > 0 || availableSlots.afternoon.length > 0;
   };
 
   const handleAdultsChange = (increment: boolean) => {
@@ -174,11 +221,20 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
 
         {/* Calendar */}
         <div className="mb-6">
-          <DatePicker 
-            selectedDate={selectedDate}
-            onDateSelect={setSelectedDate}
-            isDateAvailable={isDateAvailable}
-          />
+          {loadingSchedule ? (
+            <div className="flex justify-center items-center py-8">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 mx-auto mb-2" style={{ borderColor: colorCode }}></div>
+                <p className="text-sm text-gray-600">Chargement des créneaux disponibles...</p>
+              </div>
+            </div>
+          ) : (
+            <DatePicker 
+              selectedDate={selectedDate}
+              onDateSelect={setSelectedDate}
+              isDateAvailable={isDateAvailable}
+            />
+          )}
         </div>
 
         {/* Horaires */}
