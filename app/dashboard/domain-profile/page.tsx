@@ -330,7 +330,7 @@ export default function UserDomainProfile() {
             const userId = domainProfile.userId._id;
             const serviceId = service._id; // Use service._id if available, otherwise fallback to index
             
-            const iframeCode = `<iframe src="${hostname}/if/booking-widget/${userId}/${serviceId}/reservation" width="100%" height="100%" frameborder="0" style="border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);"></iframe>`;
+            const iframeCode = `<iframe src="${hostname}/if/booking-widget/${userId}/${serviceId}/reservation" scrolling="no" seamless></iframe>`;
             
             await navigator.clipboard.writeText(iframeCode);
             toast.success('Code iframe copié dans le presse-papiers !');
