@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { DatePicker } from "@/components/DatePicker";
-import { ChevronLeft, ChevronRight, Plus, Minus, Clock, Euro, Wine, Users } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Minus, Clock, Euro, Wine, Users, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { WidgetProvider, useWidget } from "@/contexts/WidgetContext";
@@ -20,6 +20,68 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
   const [afternoonStartIndex, setAfternoonStartIndex] = useState(0);
   const [bookedSlots, setBookedSlots] = useState<PublicScheduleData[]>([]);
   const [loadingSchedule, setLoadingSchedule] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Validation function
+  const validateBooking = (): boolean => {
+    const errors: string[] = [];
+    
+    if (!selectedDate) {
+      errors.push("Veuillez sélectionner une date");
+    }
+    
+    if (!selectedTime) {
+      errors.push("Veuillez sélectionner un horaire");
+    }
+    
+    if (adults <= 0) {
+      errors.push("Le nombre d'adultes doit être d'au moins 1");
+    }
+    
+    if (!selectedLanguage) {
+      errors.push("Veuillez sélectionner une langue");
+    }
+    
+    setValidationErrors(errors);
+    return errors.length === 0;
+  };
+
+  // Handle booking selection
+  const handleBookingSelect = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    
+    if (isSubmitting) return; // Prevent double clicks
+    
+    if (!validateBooking()) {
+      // Scroll to top to show errors
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+    
+    // Set loading state
+    setIsSubmitting(true);
+    
+    try {
+      // Add a small delay for better UX (optional)
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // If validation passes, navigate to confirmation
+      const query = new URLSearchParams({
+        date: selectedDate ? `${selectedDate.getFullYear()}-${(selectedDate.getMonth() + 1).toString().padStart(2, '0')}-${selectedDate.getDate().toString().padStart(2, '0')}` : '',
+        selectedTime: selectedTime || '',
+        adults: adults.toString(),
+        children: children.toString(),
+        language: selectedLanguage,
+        widgetId: id,
+      });
+      
+      window.location.href = `/if/booking-widget/${id}/${serviceId}/booking-confirmation?${query.toString()}`;
+    } catch (error) {
+      // Reset loading state if something goes wrong
+      setIsSubmitting(false);
+    }
+  };
 
   // Auto-select first language when widget data is loaded
   useEffect(() => {
@@ -273,6 +335,21 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
         <h1 className="text-2xl lg:text-3xl font-bold mb-8 lg:mb-12 text-center" style={{ color: colorCode }}>
           {widgetData?.service?.name || 'Visite libre & dégustation des cuvées Tradition'}
         </h1>
+
+        {/* Validation Errors */}
+        {validationErrors.length > 0 && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <h3 className="text-red-800 font-medium mb-2">Veuillez corriger les erreurs suivantes :</h3>
+            <ul className="text-red-700 space-y-1">
+              {validationErrors.map((error, index) => (
+                <li key={index} className="flex items-start">
+                  <span className="text-red-500 mr-2">•</span>
+                  {error}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         {/* Calendar */}
         <div className="mb-6">
@@ -560,27 +637,27 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
 
         {/* Button Sélectionner */}
         <div className="flex justify-center">
-          <Link
-            href={{
-              pathname: `/if/booking-widget/${id}/${serviceId}/booking-confirmation`,
-              query: {
-                date: selectedDate ? `${selectedDate.getFullYear()}-${(selectedDate.getMonth() + 1).toString().padStart(2, '0')}-${selectedDate.getDate().toString().padStart(2, '0')}` : '',
-                selectedTime: selectedTime,
-                adults: adults.toString(),
-                children: children.toString(),
-                language: selectedLanguage,
-                widgetId: id,
-              }
-            }}
+          <Button 
+            onClick={handleBookingSelect}
+            disabled={isSubmitting}
+            className={cn(
+              "text-white px-12 py-4 text-xl font-semibold",
+              isSubmitting 
+                ? "opacity-70 cursor-not-allowed" 
+                : "hover:opacity-90"
+            )}
+            style={{ backgroundColor: colorCode }}
+            size="lg"
           >
-            <Button 
-              className="hover:opacity-90 text-white px-12 py-4 text-xl font-semibold"
-              style={{ backgroundColor: colorCode }}
-              size="lg"
-            >
-              Sélectionner
-            </Button>
-          </Link>
+            {isSubmitting ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                Traitement...
+              </>
+            ) : (
+              "Sélectionner"
+            )}
+          </Button>
         </div>
       </div>
     </div>
