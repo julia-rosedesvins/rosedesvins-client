@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Upload, Image, Camera, Plus, Edit, Trash2, Loader2 } from "lucide-react";
+import { Upload, Image, Camera, Plus, Edit, Trash2, Loader2, Code } from "lucide-react";
 import { AddServiceModal } from "@/components/AddServiceModal";
 import { EditServiceModal } from "@/components/EditServiceModal";
 import { Switch } from "@/components/ui/switch";
@@ -229,6 +229,7 @@ export default function UserDomainProfile() {
         try {
             // The modal already sends data in the correct format, so use it directly
             const service: DomainService = {
+                _id: newService._id || '',
                 serviceName: newService.serviceName || '',
                 serviceDescription: newService.serviceDescription || '',
                 numberOfPeople: newService.numberOfPeople || 1,
@@ -308,6 +309,34 @@ export default function UserDomainProfile() {
         } catch (error: any) {
             console.error('Error deleting service:', error);
             toast.error(error.message || 'Failed to delete service');
+        }
+    };
+
+    const handleCopyIframeCode = async (prestationId: number) => {
+        try {
+            const serviceIndex = prestationId - 1;
+            const service = services[serviceIndex];
+            
+            if (!service || !domainProfile?.userId?._id) {
+                toast.error('Informations du service manquantes');
+                return;
+            }
+
+            // Get the current hostname or use localhost as fallback
+            const hostname = window.location.hostname === 'localhost' 
+                ? 'http://localhost:3000' 
+                : `${window.location.protocol}//${window.location.host}`;
+            
+            const userId = domainProfile.userId._id;
+            const serviceId = service._id; // Use service._id if available, otherwise fallback to index
+            
+            const iframeCode = `<iframe src="${hostname}/if/booking-widget/${userId}/${serviceId}/reservation" width="100%" height="100%" frameborder="0" style="border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);"></iframe>`;
+            
+            await navigator.clipboard.writeText(iframeCode);
+            toast.success('Code iframe copié dans le presse-papiers !');
+        } catch (error) {
+            console.error('Error copying iframe code:', error);
+            toast.error('Erreur lors de la copie du code iframe');
         }
     };
     return (
@@ -573,6 +602,13 @@ export default function UserDomainProfile() {
                                                 }}>
                                                     <Edit className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" />
                                                     <span className="hidden sm:inline">Editer</span>
+                                                </Button>
+                                                <Button variant="ghost" size="sm" className="text-gray-600 hover:text-gray-800 text-xs sm:text-sm p-1 sm:p-2" onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleCopyIframeCode(prestation.id);
+                                                }}>
+                                                    <Code className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" />
+                                                    <span className="hidden sm:inline">Code</span>
                                                 </Button>
                                                 <div className="flex items-center space-x-2" onClick={(e) => e.stopPropagation()}>
                                                     <Switch

@@ -117,6 +117,7 @@ export interface ApiError {
 
 // Types for domain profile
 export interface DomainService {
+  _id: string;
   serviceName: string;
   serviceDescription: string;
   numberOfPeople: number;
