@@ -290,6 +290,7 @@ function CheckoutContent({ id, serviceId }: { id: string, serviceId: string }) {
         selectedLanguage: bookingData.language,
         userContactFirstname: bookingData.firstName || '',
         userContactLastname: bookingData.lastName || '',
+        customerEmail: bookingData.email || '',
         phoneNo: bookingData.phone || '',
         additionalNotes: bookingData.additionalInfo || '',
         paymentMethod: {
