@@ -355,7 +355,16 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
 
         {/* Calendar */}
         <div className="mb-6">
-          {loadingSchedule ? (
+          {error ? (
+            <div className="flex justify-center items-center py-8">
+              <div className="text-center">
+                <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+                  <p className="text-red-600 mb-2 font-medium">Calendrier indisponible</p>
+                  <p className="text-sm text-red-500">{error}</p>
+                </div>
+              </div>
+            </div>
+          ) : loadingSchedule ? (
             <div className="flex justify-center items-center py-8">
               <div className="text-center">
                 <div className="animate-spin rounded-full h-6 w-6 border-b-2 mx-auto mb-2" style={{ borderColor: colorCode }}></div>
@@ -376,7 +385,14 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
         <div className="mb-8 mt-4">
           <h2 className="text-2xl font-semibold mb-6 text-center" style={{ color: colorCode }}>Horaires</h2>
           
-          {!selectedDate ? (
+          {error ? (
+            <div className="text-center text-gray-500 py-8">
+              <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-md mx-auto">
+                <p className="text-red-600 mb-2 font-medium">Horaires indisponibles</p>
+                <p className="text-sm text-red-500">Impossible de charger les créneaux horaires en raison d'une erreur.</p>
+              </div>
+            </div>
+          ) : !selectedDate ? (
             <div className="text-center text-gray-500 py-8">
               Veuillez sélectionner une date pour voir les créneaux disponibles
             </div>
@@ -641,10 +657,10 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
         <div className="flex justify-center">
           <Button 
             onClick={handleBookingSelect}
-            disabled={isSubmitting}
+            disabled={isSubmitting || !!error}
             className={cn(
               "text-white px-12 py-4 text-xl font-semibold",
-              isSubmitting 
+              (isSubmitting || !!error)
                 ? "opacity-70 cursor-not-allowed" 
                 : "hover:opacity-90"
             )}
@@ -656,6 +672,8 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
                 <Loader2 className="w-5 h-5 animate-spin mr-2" />
                 Traitement...
               </>
+            ) : error ? (
+              "Service indisponible"
             ) : (
               "Sélectionner"
             )}

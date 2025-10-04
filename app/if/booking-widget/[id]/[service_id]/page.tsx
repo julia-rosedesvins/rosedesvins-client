@@ -19,16 +19,7 @@ function BookingWidgetContent({ id, serviceId }: { id: string; serviceId: string
         );
     }
 
-    if (error) {
-        return (
-            <div className="flex min-h-screen items-center justify-center bg-[#E8D6C9]">
-                <div className="text-center">
-                    <h1 className="mb-4 text-2xl font-bold text-red-600">Erreur</h1>
-                    <p className="text-lg text-gray-600 mb-8">{error}</p>
-                </div>
-            </div>
-        );
-    }
+    // Don't show error screen - continue with normal flow but calendar will be disabled
 
     return (
         <div className="flex min-h-screen items-center justify-center" style={{ backgroundColor: '#E8D6C9' }}>
