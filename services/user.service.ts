@@ -125,6 +125,7 @@ export interface DomainService {
   timeOfServiceInMinutes: number;
   numberOfWinesTasted: number;
   languagesOffered: string[];
+  serviceBannerUrl?: string;
   isActive: boolean;
 }
 
@@ -329,11 +330,38 @@ class UserService {
   /**
    * Add a new service to domain profile
    * @param serviceData - Service data to add
+   * @param serviceBanner - Optional service banner file
    * @returns Promise with service response
    */
-  async addService(serviceData: DomainService): Promise<{ success: boolean; message: string; data: any }> {
+  async addService(
+    serviceData: Omit<DomainService, '_id'>,
+    serviceBanner?: File
+  ): Promise<{ success: boolean; message: string; data: any }> {
     try {
-      const response = await apiClient.post('/domain-profile/services', serviceData);
+      const formData = new FormData();
+      
+      // Add form fields
+      Object.entries(serviceData).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          if (Array.isArray(value)) {
+            // Handle arrays (like languagesOffered)
+            value.forEach((item) => formData.append(`${key}[]`, String(item)));
+          } else {
+            formData.append(key, String(value));
+          }
+        }
+      });
+
+      // Add service banner file if provided
+      if (serviceBanner) {
+        formData.append('serviceBanner', serviceBanner);
+      }
+
+      const response = await apiClient.post('/domain-profile/services/add', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
       return response.data;
     } catch (error) {
       console.error('UserService: Add service error:', error);
@@ -365,11 +393,39 @@ class UserService {
    * Update a service by index
    * @param serviceIndex - Index of the service to update
    * @param serviceData - Updated service data
+   * @param serviceBanner - Optional service banner file
    * @returns Promise with updated service response
    */
-  async updateService(serviceIndex: number, serviceData: Partial<DomainService>): Promise<{ success: boolean; message: string; data: any }> {
+  async updateService(
+    serviceIndex: number, 
+    serviceData: Partial<DomainService>,
+    serviceBanner?: File
+  ): Promise<{ success: boolean; message: string; data: any }> {
     try {
-      const response = await apiClient.put(`/domain-profile/services/${serviceIndex}`, serviceData);
+      const formData = new FormData();
+      
+      // Add form fields
+      Object.entries(serviceData).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          if (Array.isArray(value)) {
+            // Handle arrays (like languagesOffered)
+            value.forEach((item) => formData.append(`${key}[]`, String(item)));
+          } else {
+            formData.append(key, String(value));
+          }
+        }
+      });
+
+      // Add service banner file if provided
+      if (serviceBanner) {
+        formData.append('serviceBanner', serviceBanner);
+      }
+
+      const response = await apiClient.put(`/domain-profile/services/${serviceIndex}`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
       return response.data;
     } catch (error) {
       console.error('UserService: Update service error:', error);

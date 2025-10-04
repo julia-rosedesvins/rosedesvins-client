@@ -170,7 +170,8 @@ export default function UserDomainProfile() {
         description: service.serviceDescription,
         price: `${service.pricePerPerson}€`,
         duration: `${Math.floor(service.timeOfServiceInMinutes / 60)}h${service.timeOfServiceInMinutes % 60 > 0 ? (service.timeOfServiceInMinutes % 60) + 'min' : ''}`,
-        active: service.isActive
+        active: service.isActive,
+        serviceBannerUrl: service.serviceBannerUrl
     }));
 
     const handleEditPrestation = (prestation: any) => {
@@ -225,7 +226,7 @@ export default function UserDomainProfile() {
         setIsEditServiceModalOpen(true);
     };
 
-    const handleAddService = async (newService: any) => {
+    const handleAddService = async (newService: any, serviceBanner?: File | null) => {
         try {
             // The modal already sends data in the correct format, so use it directly
             const service: DomainService = {
@@ -240,7 +241,7 @@ export default function UserDomainProfile() {
                 isActive: newService.isActive !== undefined ? newService.isActive : true
             };
             
-            const response = await userService.addService(service);
+            const response = await userService.addService(service, serviceBanner || undefined);
             
             // Reload services to get updated list
             const servicesResponse = await userService.getServices();
@@ -254,7 +255,7 @@ export default function UserDomainProfile() {
         }
     };
 
-    const handleSavePrestation = async (updatedService: any) => {
+    const handleSavePrestation = async (updatedService: any, serviceBanner?: File | null) => {
         try {
             if (updatedService.originalIndex !== undefined) {
                 const updateData = {
@@ -268,7 +269,7 @@ export default function UserDomainProfile() {
                     isActive: updatedService.isActive !== undefined ? updatedService.isActive : true
                 };
                 
-                await userService.updateService(updatedService.originalIndex, updateData);
+                await userService.updateService(updatedService.originalIndex, updateData, serviceBanner || undefined);
                 
                 // Reload services to get updated list
                 const servicesResponse = await userService.getServices();

@@ -5,12 +5,12 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useState } from "react";
-import { X, Wine, Users, Clock, Euro } from "lucide-react";
+import { X, Wine, Users, Clock, Euro, Upload, Image as ImageIcon } from "lucide-react";
 
 interface AddServiceModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave?: (serviceData: any) => void;
+  onSave?: (serviceData: any, serviceBanner?: File | null) => void;
 }
 
 export const AddServiceModal = ({ isOpen, onClose, onSave }: AddServiceModalProps) => {
@@ -31,7 +31,50 @@ export const AddServiceModal = ({ isOpen, onClose, onSave }: AddServiceModalProp
     autreLangue: ""
   });
 
+  const [serviceBanner, setServiceBanner] = useState<File | null>(null);
+  const [bannerPreview, setBannerPreview] = useState<string | null>(null);
+
   const [errors, setErrors] = useState<{[key: string]: string}>({});
+
+  const handleBannerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit
+        setErrors(prev => ({ ...prev, banner: "La taille du fichier ne doit pas dépasser 5MB" }));
+        return;
+      }
+      
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+      if (!allowedTypes.includes(file.type)) {
+        setErrors(prev => ({ ...prev, banner: "Format non supporté. Utilisez JPG, PNG ou WebP" }));
+        return;
+      }
+
+      setServiceBanner(file);
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors.banner;
+        return newErrors;
+      });
+
+      // Create preview
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setBannerPreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removeBanner = () => {
+    setServiceBanner(null);
+    setBannerPreview(null);
+    setErrors(prev => {
+      const newErrors = { ...prev };
+      delete newErrors.banner;
+      return newErrors;
+    });
+  };
 
   const validateForm = () => {
     const newErrors: {[key: string]: string} = {};
@@ -91,19 +134,18 @@ export const AddServiceModal = ({ isOpen, onClose, onSave }: AddServiceModalProp
       serviceDescription: formData.description,
       numberOfPeople: parseInt(formData.nombrePersonnes) || 1,
       pricePerPerson: parseFloat(formData.prix) || 0,
-      timeOfServiceInMinutes: parseInt(formData.temps) || 60,
+      timeOfServiceInMinutes: parseInt(formData.temps) || 30,
       numberOfWinesTasted: parseInt(formData.vinsDesgustes) || 0,
       languagesOffered: selectedLanguages,
       isActive: true
     };
-
+    
     console.log("Service data:", serviceData);
+    console.log("Service banner:", serviceBanner);
     
     if (onSave) {
-      onSave(serviceData);
-    }
-    
-    // Reset form and errors
+      onSave(serviceData, serviceBanner);
+    }    // Reset form and errors
     setFormData({
       nom: "",
       description: "",
@@ -120,6 +162,8 @@ export const AddServiceModal = ({ isOpen, onClose, onSave }: AddServiceModalProp
       },
       autreLangue: ""
     });
+    setServiceBanner(null);
+    setBannerPreview(null);
     setErrors({});
     
     onClose();
@@ -167,6 +211,58 @@ export const AddServiceModal = ({ isOpen, onClose, onSave }: AddServiceModalProp
                 className={`w-full text-sm sm:text-base border-2 focus:border-[#3A7B59] rounded-lg resize-none ${errors.description ? 'border-red-300 focus:border-red-500' : ''}`}
               />
               {errors.description && <p className="text-red-500 text-xs sm:text-sm">{errors.description}</p>}
+            </div>
+
+            {/* Service Banner Upload */}
+            <div className="space-y-2 w-full">
+              <Label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                <ImageIcon size={14} className="sm:w-4 sm:h-4 shrink-0" />
+                Image de la prestation
+              </Label>
+              
+              {!bannerPreview ? (
+                <div className="relative">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleBannerChange}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                  />
+                  <div className={`w-full p-6 border-2 border-dashed rounded-lg text-center transition-colors hover:border-[#3A7B59] hover:bg-gray-50 ${errors.banner ? 'border-red-300' : 'border-gray-300'}`}>
+                    <Upload className="mx-auto h-8 w-8 text-gray-400 mb-2" />
+                    <p className="text-sm text-gray-600">
+                      Cliquez pour ajouter une image de votre prestation
+                    </p>
+                    <p className="text-xs text-gray-400 mt-1">
+                      JPG, PNG ou WebP (max. 5MB)
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="relative">
+                  <div className="relative w-full h-48 rounded-lg overflow-hidden border-2 border-gray-200">
+                    <img
+                      src={bannerPreview}
+                      alt="Aperçu de la bannière"
+                      className="w-full h-full object-cover"
+                    />
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      onClick={removeBanner}
+                      className="absolute top-2 right-2 h-8 w-8 p-0"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {serviceBanner?.name}
+                  </p>
+                </div>
+              )}
+              
+              {errors.banner && <p className="text-red-500 text-xs sm:text-sm">{errors.banner}</p>}
             </div>
 
             {/* Grid Layout for Numbers - Stack on mobile */}
