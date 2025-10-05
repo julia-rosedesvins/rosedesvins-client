@@ -27,10 +27,10 @@ export const Header = () => {
 
   const languages = [
     { code: 'FR', flag: '🇫🇷', name: 'Français' },
-    { code: 'EN', flag: '🇬🇧', name: 'English' },
-    { code: 'ES', flag: '🇪🇸', name: 'Español' },
-    { code: 'DE', flag: '🇩🇪', name: 'Deutsch' },
-    { code: 'IT', flag: '🇮🇹', name: 'Italiano' }
+    // { code: 'EN', flag: '🇬🇧', name: 'English' },
+    // { code: 'ES', flag: '🇪🇸', name: 'Español' },
+    // { code: 'DE', flag: '🇩🇪', name: 'Deutsch' },
+    // { code: 'IT', flag: '🇮🇹', name: 'Italiano' }
   ];
 
   const handleNavigation = (path: string) => {
