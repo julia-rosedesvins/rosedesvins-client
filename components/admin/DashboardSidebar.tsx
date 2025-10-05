@@ -25,7 +25,7 @@ const sidebarItems: SidebarItem[] = [
   { icon: CreditCard, label: "Abonnements", href: "/admin/subscriptions" },
   // { icon: Wine, label: "Dégustations", href: "/admin/degustations" },
   // { icon: BarChart3, label: "Statistiques", href: "/admin/statistiques" },
-  // { icon: Settings, label: "Paramètres", href: "/admin/parametres" },
+  { icon: Settings, label: "Paramètres", href: "/admin/settings" },
 ]
 
 export default function DashboardSidebar({ isOpen, onClose, currentPath = "/admin/dashboard" }: SidebarProps) {
