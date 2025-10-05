@@ -141,7 +141,7 @@ export interface DomainProfile {
   domainDescription?: string;
   domainType?: string;
   domainTag?: string;
-  domainColor?: string;
+  colorCode?: string;
   domainProfilePictureUrl?: string;
   domainLogoUrl?: string;
   services: DomainService[];

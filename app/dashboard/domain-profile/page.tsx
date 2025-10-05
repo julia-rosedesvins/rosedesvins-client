@@ -57,7 +57,7 @@ export default function UserDomainProfile() {
                     domainDescription: profileResponse.data.domainDescription || '',
                     domainType: profileResponse.data.domainType || '',
                     domainTag: profileResponse.data.domainTag || '',
-                    domainColor: profileResponse.data.domainColor || '#3A7B59'
+                    domainColor: profileResponse.data.colorCode || '#3A7B59'
                 });
 
                 // Set existing image previews if available
