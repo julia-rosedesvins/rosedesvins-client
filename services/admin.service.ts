@@ -101,6 +101,15 @@ export interface UpdateTicketStatusRequest {
   status: 'pending' | 'in-progress' | 'resolved' | 'closed';
 }
 
+export interface AdminAnalyticsData {
+  totalActiveUsers: number;
+  totalPendingUsers: number;
+  totalRejectedUsers: number;
+  totalActiveSubscriptions: number;
+  totalExpiredSubscriptions: number;
+  totalOpenSupportTickets: number;
+}
+
 class AdminService {
   /**
    * Login admin user
@@ -291,6 +300,26 @@ class AdminService {
   }> {
     try {
       const response = await apiClient.put('/support-contact/admin/update-status', request);
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response) {
+        throw error.response.data as ApiError;
+      }
+      throw new Error('Network error occurred');
+    }
+  }
+
+  /**
+   * Get admin analytics data (requires admin authentication)
+   * @returns Promise with admin analytics data
+   */
+  async getAdminAnalytics(): Promise<{
+    success: boolean;
+    message: string;
+    data: AdminAnalyticsData;
+  }> {
+    try {
+      const response = await apiClient.get('/dashboard-analytics/admin');
       return response.data;
     } catch (error) {
       if (axios.isAxiosError(error) && error.response) {
