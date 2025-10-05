@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Search, ChevronLeft, ChevronRight, MessageSquare, Clock, CheckCircle, XCircle, AlertCircle, Loader2 } from "lucide-react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Search, ChevronLeft, ChevronRight, MessageSquare, Clock, CheckCircle, XCircle, AlertCircle, Eye, Loader2 } from "lucide-react"
 import DashboardLayout from "@/components/admin/DashboardLayout"
 import { useAdmin } from '@/contexts/AdminContext'
 import { adminService, SupportTicket, UpdateTicketStatusRequest } from '@/services/admin.service'
@@ -23,7 +24,8 @@ export default function AdminSupportTickets() {
     const [statusUpdateLoading, setStatusUpdateLoading] = useState<{[key: string]: boolean}>({});
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
-    const [expandedTicket, setExpandedTicket] = useState<string | null>(null);
+    const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
+    const [viewDialogOpen, setViewDialogOpen] = useState(false);
 
     // Ensure component is mounted on client side
     useEffect(() => {
@@ -69,6 +71,10 @@ export default function AdminSupportTickets() {
                             : ticket
                     )
                 );
+                // Update selected ticket if it's currently viewed
+                if (selectedTicket && selectedTicket._id === ticketId) {
+                    setSelectedTicket(prev => prev ? { ...prev, status: newStatus, updatedAt: new Date() } : null);
+                }
             } else {
                 toast.error('Erreur lors de la mise à jour du statut');
             }
@@ -78,6 +84,11 @@ export default function AdminSupportTickets() {
         } finally {
             setStatusUpdateLoading(prev => ({ ...prev, [ticketId]: false }));
         }
+    };
+
+    const handleViewTicket = (ticket: SupportTicket) => {
+        setSelectedTicket(ticket);
+        setViewDialogOpen(true);
     };
 
     useEffect(() => {
@@ -270,8 +281,8 @@ export default function AdminSupportTickets() {
                                 </div>
 
                                 <div className="mb-4">
-                                    <p className={`text-gray-700 ${expandedTicket === ticket._id ? '' : 'overflow-hidden'}`} 
-                                       style={expandedTicket === ticket._id ? {} : { 
+                                    <p className="text-gray-700 overflow-hidden" 
+                                       style={{ 
                                            display: '-webkit-box',
                                            WebkitLineClamp: 2,
                                            WebkitBoxOrient: 'vertical' as any
@@ -279,42 +290,47 @@ export default function AdminSupportTickets() {
                                         {ticket.message}
                                     </p>
                                     {ticket.message.length > 150 && (
-                                        <Button
-                                            variant="link"
-                                            size="sm"
-                                            className="p-0 h-auto text-[#3A7B59] hover:text-[#2d5f43]"
-                                            onClick={() => setExpandedTicket(
-                                                expandedTicket === ticket._id ? null : ticket._id
-                                            )}
-                                        >
-                                            {expandedTicket === ticket._id ? 'Voir moins' : 'Voir plus'}
-                                        </Button>
+                                        <p className="text-sm text-gray-500 mt-1">
+                                            Cliquez sur "Voir" pour lire le message complet
+                                        </p>
                                     )}
                                 </div>
                             </div>
 
-                            <div className="ml-6 flex flex-col space-y-2">
-                                <Select
-                                    value={ticket.status}
-                                    onValueChange={(value) => handleStatusUpdate(ticket._id, value as any)}
-                                    disabled={statusUpdateLoading[ticket._id]}
+                            <div className="ml-6 flex items-start space-x-2">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleViewTicket(ticket)}
+                                    className="flex items-center space-x-1"
                                 >
-                                    <SelectTrigger className="w-40">
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="pending">En attente</SelectItem>
-                                        <SelectItem value="in-progress">En cours</SelectItem>
-                                        <SelectItem value="resolved">Résolu</SelectItem>
-                                        <SelectItem value="closed">Fermé</SelectItem>
-                                    </SelectContent>
-                                </Select>
+                                    <Eye className="h-4 w-4" />
+                                    <span>Voir</span>
+                                </Button>
                                 
-                                {statusUpdateLoading[ticket._id] && (
-                                    <div className="flex items-center justify-center">
-                                        <Loader2 className="h-4 w-4 animate-spin text-[#3A7B59]" />
-                                    </div>
-                                )}
+                                <div className="flex flex-col space-y-2">
+                                    <Select
+                                        value={ticket.status}
+                                        onValueChange={(value) => handleStatusUpdate(ticket._id, value as any)}
+                                        disabled={statusUpdateLoading[ticket._id]}
+                                    >
+                                        <SelectTrigger className="w-40">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="pending">En attente</SelectItem>
+                                            <SelectItem value="in-progress">En cours</SelectItem>
+                                            <SelectItem value="resolved">Résolu</SelectItem>
+                                            <SelectItem value="closed">Fermé</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                    
+                                    {statusUpdateLoading[ticket._id] && (
+                                        <div className="flex items-center justify-center">
+                                            <Loader2 className="h-4 w-4 animate-spin text-[#3A7B59]" />
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     </CardContent>
@@ -442,6 +458,109 @@ export default function AdminSupportTickets() {
                     {!searchTerm && statusFilter === 'all' && renderPagination()}
                 </CardContent>
             </Card>
+            
+            {/* Ticket Details Dialog */}
+            <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
+                <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center space-x-2">
+                            <MessageSquare className="h-5 w-5" />
+                            <span>Détails du ticket</span>
+                        </DialogTitle>
+                    </DialogHeader>
+                    
+                    {selectedTicket && (
+                        <div className="space-y-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <h4 className="font-semibold text-gray-900 mb-2">Informations du ticket</h4>
+                                    <div className="space-y-3">
+                                        <div>
+                                            <label className="text-sm font-medium text-gray-600">Sujet</label>
+                                            <p className="text-gray-900">{selectedTicket.subject}</p>
+                                        </div>
+                                        <div>
+                                            <label className="text-sm font-medium text-gray-600">Statut</label>
+                                            <div className="mt-1">
+                                                {getStatusBadge(selectedTicket.status)}
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label className="text-sm font-medium text-gray-600">Créé le</label>
+                                            <p className="text-gray-900">{formatDate(selectedTicket.createdAt)}</p>
+                                        </div>
+                                        <div>
+                                            <label className="text-sm font-medium text-gray-600">Dernière mise à jour</label>
+                                            <p className="text-gray-900">{formatDate(selectedTicket.updatedAt)}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <h4 className="font-semibold text-gray-900 mb-2">Informations du client</h4>
+                                    <div className="space-y-3">
+                                        <div>
+                                            <label className="text-sm font-medium text-gray-600">Nom complet</label>
+                                            <p className="text-gray-900">
+                                                {selectedTicket.userId.firstName} {selectedTicket.userId.lastName}
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <label className="text-sm font-medium text-gray-600">Email</label>
+                                            <p className="text-gray-900">{selectedTicket.userId.email}</p>
+                                        </div>
+                                        {selectedTicket.userId.domainName && (
+                                            <div>
+                                                <label className="text-sm font-medium text-gray-600">Nom de domaine</label>
+                                                <p className="text-gray-900">{selectedTicket.userId.domainName}</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <h4 className="font-semibold text-gray-900 mb-2">Message</h4>
+                                <div className="bg-gray-50 p-4 rounded-lg">
+                                    <p className="text-gray-900 whitespace-pre-wrap">{selectedTicket.message}</p>
+                                </div>
+                            </div>
+                            
+                            <div className="flex items-center justify-between pt-4 border-t">
+                                <div>
+                                    <label className="text-sm font-medium text-gray-600 block mb-2">
+                                        Changer le statut
+                                    </label>
+                                    <div className="flex items-center space-x-2">
+                                        <Select
+                                            value={selectedTicket.status}
+                                            onValueChange={(value) => handleStatusUpdate(selectedTicket._id, value as any)}
+                                            disabled={statusUpdateLoading[selectedTicket._id]}
+                                        >
+                                            <SelectTrigger className="w-40">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="pending">En attente</SelectItem>
+                                                <SelectItem value="in-progress">En cours</SelectItem>
+                                                <SelectItem value="resolved">Résolu</SelectItem>
+                                                <SelectItem value="closed">Fermé</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        {statusUpdateLoading[selectedTicket._id] && (
+                                            <Loader2 className="h-4 w-4 animate-spin" />
+                                        )}
+                                    </div>
+                                </div>
+                                
+                                <Button onClick={() => setViewDialogOpen(false)}>
+                                    Fermer
+                                </Button>
+                            </div>
+                        </div>
+                    )}
+                </DialogContent>
+            </Dialog>
         </DashboardLayout>
     )
 }
