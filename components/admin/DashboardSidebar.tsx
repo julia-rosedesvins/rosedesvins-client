@@ -19,13 +19,13 @@ interface SidebarProps {
 
 const sidebarItems: SidebarItem[] = [
   { icon: Home, label: "Tableau de bord", href: "/admin/dashboard" },
-  { icon: Calendar, label: "Réservations", href: "/admin/reservations" },
+  // { icon: Calendar, label: "Réservations", href: "/admin/reservations" },
   { icon: Users, label: "Clients", href: "/admin/clients" },
   { icon: MessageSquare, label: "Support", href: "/admin/support-tickets" },
   { icon: CreditCard, label: "Abonnements", href: "/admin/subscriptions" },
-  { icon: Wine, label: "Dégustations", href: "/admin/degustations" },
-  { icon: BarChart3, label: "Statistiques", href: "/admin/statistiques" },
-  { icon: Settings, label: "Paramètres", href: "/admin/parametres" },
+  // { icon: Wine, label: "Dégustations", href: "/admin/degustations" },
+  // { icon: BarChart3, label: "Statistiques", href: "/admin/statistiques" },
+  // { icon: Settings, label: "Paramètres", href: "/admin/parametres" },
 ]
 
 export default function DashboardSidebar({ isOpen, onClose, currentPath = "/admin/dashboard" }: SidebarProps) {
