@@ -253,7 +253,7 @@ export default function UserMyAccount() {
             </Card>
 
             {/* Modifier le mot de passe */}
-            <div className="mb-6 lg:mb-8">
+            {/* <div className="mb-6 lg:mb-8">
                 <Button
                     variant="link"
                     className="p-0 h-auto font-medium text-base lg:text-lg hover:opacity-80"
@@ -261,7 +261,7 @@ export default function UserMyAccount() {
                 >
                     Modifier le mot de passe
                 </Button>
-            </div>
+            </div> */}
 
             {/* Mon abonnement */}
             <Card>
@@ -338,7 +338,7 @@ export default function UserMyAccount() {
                                         </div>
                                     )}
 
-                                    {user.subscription.isActive && !user.subscription.cancelledById && (
+                                    {/* {user.subscription.isActive && !user.subscription.cancelledById && (
                                         <div className="flex justify-end">
                                             <Button
                                                 variant="link"
@@ -347,7 +347,7 @@ export default function UserMyAccount() {
                                                 Demander la résiliation
                                             </Button>
                                         </div>
-                                    )}
+                                    )} */}
                                 </div>
                             ) : (
                                 <div className="text-center py-8">

@@ -3,36 +3,70 @@
 import UserDashboardLayout from "@/components/userDashboard/UserDashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar, Users, Wine, CreditCard } from "lucide-react";
-import { useState } from "react";
+import { Calendar, Users, Wine, CreditCard, Loader2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { userService, DashboardAnalytics } from "@/services/user.service";
+import toast from "react-hot-toast";
 
 export default function UserDashboard() {
     const [selectedPeriod, setSelectedPeriod] = useState("ce-mois");
+    const [analytics, setAnalytics] = useState<DashboardAnalytics | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
 
-    const getPeriodData = () => {
-        switch (selectedPeriod) {
-            case "cette-semaine":
-                return {
-                    reservations: { title: "Réservations cette semaine", value: "8", change: "+25% par rapport à la semaine dernière" },
-                    visiteurs: { title: "Nombre de visiteurs", value: "32", period: "Cette semaine" },
-                    chiffre: { title: "Chiffre d'affaires", value: "445€", period: "Cette semaine" }
-                };
-            case "cette-annee":
-                return {
-                    reservations: { title: "Réservations cette année", value: "287", change: "+18% par rapport à l'année dernière" },
-                    visiteurs: { title: "Nombre de visiteurs", value: "1 247", period: "Cette année" },
-                    chiffre: { title: "Chiffre d'affaires", value: "14 225€", period: "Cette année" }
-                };
-            default: // ce-mois
-                return {
-                    reservations: { title: "Réservations ce mois", value: "24", change: "+12% par rapport au mois dernier" },
-                    visiteurs: { title: "Nombre de visiteurs", value: "142", period: "Ce mois-ci" },
-                    chiffre: { title: "Chiffre d'affaires", value: "1 225€", period: "Ce mois-ci" }
-                };
+    useEffect(() => {
+        loadAnalytics();
+    }, []);
+
+    const loadAnalytics = async () => {
+        try {
+            setIsLoading(true);
+            const response = await userService.getDashboardAnalytics();
+            setAnalytics(response.data);
+        } catch (error: any) {
+            console.error('Error loading analytics:', error);
+            toast.error('Erreur lors du chargement des statistiques');
+        } finally {
+            setIsLoading(false);
         }
     };
 
-    const periodData = getPeriodData();
+    const formatDate = (dateString: string) => {
+        const date = new Date(dateString);
+        return date.toLocaleDateString('fr-FR', {
+            day: 'numeric',
+            month: 'short',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    };
+
+    const formatParticipants = (adults: number, children: number) => {
+        const total = adults + children;
+        if (children > 0) {
+            return `${total} personnes (${adults} adultes, ${children} enfants)`;
+        }
+        return `${adults} personnes (adultes)`;
+    };
+
+    // For now, we're only showing current month data from the API
+    // The period selector is kept for UI consistency but currently only shows "ce-mois" data
+    const periodData = {
+        reservations: { 
+            title: "Réservations ce mois", 
+            value: analytics?.reservationsThisMonth?.toString() || "0", 
+            change: "Ce mois-ci" 
+        },
+        visiteurs: { 
+            title: "Nombre de visiteurs", 
+            value: analytics?.visitors?.toString() || "0", 
+            period: "Ce mois-ci" 
+        },
+        chiffre: { 
+            title: "Chiffre d'affaires", 
+            value: analytics ? `${analytics.turnover.toFixed(2)}€` : "0€", 
+            period: "Ce mois-ci" 
+        }
+    };
     return (
         <UserDashboardLayout title="Tableau de bord">
             <div className="mb-6 lg:mb-8">
@@ -65,7 +99,13 @@ export default function UserDashboard() {
                         <Calendar className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-xl sm:text-2xl font-bold">{periodData.reservations.value}</div>
+                        <div className="text-xl sm:text-2xl font-bold">
+                            {isLoading ? (
+                                <Loader2 className="h-6 w-6 animate-spin" />
+                            ) : (
+                                periodData.reservations.value
+                            )}
+                        </div>
                         <p className="text-xs text-muted-foreground mt-1">{periodData.reservations.change}</p>
                     </CardContent>
                 </Card>
@@ -76,7 +116,13 @@ export default function UserDashboard() {
                         <Users className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-xl sm:text-2xl font-bold">{periodData.visiteurs.value}</div>
+                        <div className="text-xl sm:text-2xl font-bold">
+                            {isLoading ? (
+                                <Loader2 className="h-6 w-6 animate-spin" />
+                            ) : (
+                                periodData.visiteurs.value
+                            )}
+                        </div>
                         <p className="text-xs text-muted-foreground mt-1">{periodData.visiteurs.period}</p>
                     </CardContent>
                 </Card>
@@ -87,7 +133,13 @@ export default function UserDashboard() {
                         <Wine className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-xl sm:text-2xl font-bold">68%</div>
+                        <div className="text-xl sm:text-2xl font-bold">
+                            {isLoading ? (
+                                <Loader2 className="h-6 w-6 animate-spin" />
+                            ) : (
+                                `${analytics?.conversionRate?.toFixed(1) || '0'}%`
+                            )}
+                        </div>
                         <p className="text-xs text-muted-foreground mt-1">Visiteurs → Réservations</p>
                     </CardContent>
                 </Card>
@@ -98,7 +150,13 @@ export default function UserDashboard() {
                         <CreditCard className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-xl sm:text-2xl font-bold">{periodData.chiffre.value}</div>
+                        <div className="text-xl sm:text-2xl font-bold">
+                            {isLoading ? (
+                                <Loader2 className="h-6 w-6 animate-spin" />
+                            ) : (
+                                periodData.chiffre.value
+                            )}
+                        </div>
                         <p className="text-xs text-muted-foreground mt-1">{periodData.chiffre.period}</p>
                     </CardContent>
                 </Card>
@@ -111,22 +169,33 @@ export default function UserDashboard() {
                         <CardDescription className="text-sm">Vos prochains visiteurs</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <div className="space-y-3 lg:space-y-4">
-                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 bg-gray-50 rounded-lg gap-2">
-                                <div className="flex-1">
-                                    <p className="font-medium text-sm lg:text-base">Bruno Mercier</p>
-                                    <p className="text-xs lg:text-sm text-muted-foreground">Atelier vins et fromages - 4 personnes</p>
-                                </div>
-                                <p className="text-xs lg:text-sm font-medium text-right sm:text-left">Demain 14h00</p>
+                        {isLoading ? (
+                            <div className="flex items-center justify-center py-8">
+                                <Loader2 className="h-6 w-6 animate-spin" />
                             </div>
-                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 bg-gray-50 rounded-lg gap-2">
-                                <div className="flex-1">
-                                    <p className="font-medium text-sm lg:text-base">Groupe Entreprise</p>
-                                    <p className="text-xs lg:text-sm text-muted-foreground">Visite + dégustation - 12 personnes</p>
-                                </div>
-                                <p className="text-xs lg:text-sm font-medium text-right sm:text-left">Samedi 10h00</p>
+                        ) : analytics?.nextReservations && analytics.nextReservations.length > 0 ? (
+                            <div className="space-y-3 lg:space-y-4">
+                                {analytics.nextReservations.map((reservation, index) => (
+                                    <div key={index} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 bg-gray-50 rounded-lg gap-2">
+                                        <div className="flex-1">
+                                            <p className="font-medium text-sm lg:text-base">{reservation.customerEmail}</p>
+                                            <p className="text-xs lg:text-sm text-muted-foreground">
+                                                {reservation.eventName} - {formatParticipants(reservation.participantsAdults, reservation.participantsEnfants)}
+                                            </p>
+                                            <p className="text-xs text-muted-foreground">{reservation.phoneNo}</p>
+                                        </div>
+                                        <p className="text-xs lg:text-sm font-medium text-right sm:text-left">
+                                            {formatDate(`${reservation.bookingDate}T${reservation.bookingTime}`)}
+                                        </p>
+                                    </div>
+                                ))}
                             </div>
-                        </div>
+                        ) : (
+                            <div className="text-center py-8 text-muted-foreground">
+                                <Calendar className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                                <p className="text-sm">Aucune réservation à venir</p>
+                            </div>
+                        )}
                     </CardContent>
                 </Card>
 

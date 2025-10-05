@@ -172,6 +172,31 @@ export interface GetDomainProfileResponse {
   data: DomainProfile | null;
 }
 
+// Types for dashboard analytics
+export interface NextReservation {
+  bookingTime: string;
+  bookingDate: string;
+  participantsAdults: number;
+  participantsEnfants: number;
+  eventName: string;
+  customerEmail: string;
+  phoneNo: string;
+}
+
+export interface DashboardAnalytics {
+  reservationsThisMonth: number;
+  visitors: number;
+  conversionRate: number;
+  turnover: number;
+  nextReservations: NextReservation[];
+}
+
+export interface DashboardAnalyticsResponse {
+  success: boolean;
+  message: string;
+  data: DashboardAnalytics;
+}
+
 class UserService {
   /**
    * Submit contact form
@@ -465,6 +490,23 @@ class UserService {
       return response.data;
     } catch (error) {
       console.error('UserService: Toggle service active error:', error);
+      if (axios.isAxiosError(error) && error.response) {
+        throw error.response.data as ApiError;
+      }
+      throw new Error('Network error occurred');
+    }
+  }
+
+  /**
+   * Get user dashboard analytics
+   * @returns Promise with dashboard analytics data
+   */
+  async getDashboardAnalytics(): Promise<DashboardAnalyticsResponse> {
+    try {
+      const response = await apiClient.get<DashboardAnalyticsResponse>('/dashboard-analytics/user');
+      return response.data;
+    } catch (error) {
+      console.error('UserService: Get dashboard analytics error:', error);
       if (axios.isAxiosError(error) && error.response) {
         throw error.response.data as ApiError;
       }
