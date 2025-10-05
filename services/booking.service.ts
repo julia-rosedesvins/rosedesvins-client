@@ -95,6 +95,8 @@ class BookingService {
       throw new Error('Network error occurred');
     }
   }
+
+
 }
 
 // Export singleton instance

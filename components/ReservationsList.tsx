@@ -338,7 +338,7 @@ export const ReservationsList = () => {
           </div>
         )}
 
-        <div className="flex justify-end mt-4 lg:mt-6">
+        {/* <div className="flex justify-end mt-4 lg:mt-6">
           <Button 
             variant="outline" 
             className="text-sm lg:text-base px-3 lg:px-4 py-2 border-2 hover:bg-opacity-5"
@@ -356,7 +356,7 @@ export const ReservationsList = () => {
             <span className="hidden sm:inline">Télécharger</span>
             <span className="sm:hidden">PDF</span>
           </Button>
-        </div>
+        </div> */}
       </CardContent>
       
       <ReservationDetailsModal 

@@ -80,20 +80,23 @@ export const CalendarSection = () => {
         const calendarEvent = {
           id: event._id,
           time: event.eventTime,
-          people: event.bookingId?.userContactFirstname ? 
-            `${event.bookingId.userContactFirstname} ${event.bookingId.userContactLastname}` : 
-            'N/A', // For non-booking events
+          people: event.bookingId ? 
+            (event.bookingId.participantsAdults + event.bookingId.participantsEnfants) : 
+            'N/A',
           activity: event.eventName,
-          language: 'FR', // Default, could be extracted from booking details if needed
-          comments: event.eventDescription || 'Aucun',
+          language: event.bookingId?.selectedLanguage || 'FR',
+          comments: event.bookingId?.additionalNotes || event.eventDescription || 'Aucun',
           customerName: event.bookingId ? 
             `${event.bookingId.userContactFirstname} ${event.bookingId.userContactLastname}` : 
-            'Event',
-          customerPhone: 'N/A', // Not available in event data
-          customerEmail: 'N/A', // Not available in event data
+            'Événement',
+          customerPhone: event.bookingId?.phoneNo || 'Non disponible',
+          customerEmail: event.bookingId?.customerEmail || 'Non disponible',
+          participantsAdults: event.bookingId?.participantsAdults || 1,
+          participantsChildren: event.bookingId?.participantsEnfants || 0,
           eventType: event.eventType,
           eventStatus: event.eventStatus,
           isAllDay: event.isAllDay,
+          bookingId: event.bookingId?._id,
           originalEvent: event, // Keep reference to original event data
           backgroundColor: getEventColor(event.eventType) // Add color based on type
         };

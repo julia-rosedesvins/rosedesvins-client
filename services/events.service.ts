@@ -7,11 +7,26 @@ export interface EventData {
   userId: string;
   bookingId?: {
     _id: string;
+    userId: string;
+    serviceId: string;
     bookingDate: string;
     bookingTime: string;
+    participantsAdults: number;
+    participantsEnfants: number;
+    selectedLanguage: string;
     userContactFirstname: string;
     userContactLastname: string;
+    phoneNo: string;
+    customerEmail: string;
+    additionalNotes?: string;
+    paymentMethod: {
+      method: string;
+      bankCardDetails?: any;
+      chequeDetails?: any;
+    };
     bookingStatus: string;
+    createdAt: string;
+    updatedAt: string;
   } | null;
   eventName: string;
   eventDate: string;

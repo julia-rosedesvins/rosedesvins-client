@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Clock, Users, Grape, Globe, Phone, Mail } from "lucide-react";
 
 interface Reservation {
-  id: number;
+  id: number | string;
   time: string;
   people: number | string;
   activity: string;
@@ -13,9 +13,12 @@ interface Reservation {
   customerName?: string;
   customerPhone?: string;
   customerEmail?: string;
+  participantsAdults?: number;
+  participantsChildren?: number;
   eventType?: string;
   eventStatus?: string;
   backgroundColor?: string;
+  bookingId?: string;
 }
 
 interface ReservationDetailsModalProps {
@@ -51,7 +54,10 @@ export const ReservationDetailsModal = ({ reservation, isOpen, onClose }: Reserv
               </div>
               <div className="flex items-center space-x-3">
                 <Users className="h-4 w-4 lg:h-5 lg:w-5 text-muted-foreground" />
-                <span className="text-sm lg:text-base">{reservation.people} personne{(typeof reservation.people === 'number' ? reservation.people > 1 : parseInt(reservation.people.toString()) > 1) ? 's' : ''} (adultes)</span>
+                <span className="text-sm lg:text-base">
+                  {reservation.participantsAdults || 1} adulte{(reservation.participantsAdults || 1) > 1 ? 's' : ''}
+                  {(reservation.participantsChildren && reservation.participantsChildren > 0) ? `, ${reservation.participantsChildren} enfant${reservation.participantsChildren > 1 ? 's' : ''}` : ''}
+                </span>
               </div>
               <div className="flex items-center space-x-3">
                 <Grape className="h-4 w-4 lg:h-5 lg:w-5 text-muted-foreground" />
@@ -59,7 +65,15 @@ export const ReservationDetailsModal = ({ reservation, isOpen, onClose }: Reserv
               </div>
               <div className="flex items-center space-x-3">
                 <Globe className="h-4 w-4 lg:h-5 lg:w-5 text-muted-foreground" />
-                <span className="text-sm lg:text-base">{reservation.language === 'FR' ? 'Français' : reservation.language === 'EN' ? 'English' : reservation.language}</span>
+                <span className="text-sm lg:text-base">
+                  {reservation.language === 'French' ? 'Français' : 
+                   reservation.language === 'English' ? 'English' : 
+                   reservation.language === 'German' ? 'Allemand' : 
+                   reservation.language === 'Spanish' ? 'Espagnol' : 
+                   reservation.language === 'FR' ? 'Français' : 
+                   reservation.language === 'EN' ? 'English' : 
+                   reservation.language || 'Non spécifié'}
+                </span>
               </div>
               {reservation.eventType && (
                 <div className="flex items-center space-x-3">
@@ -80,30 +94,38 @@ export const ReservationDetailsModal = ({ reservation, isOpen, onClose }: Reserv
           </div>
 
           {/* Information complémentaire */}
-          {reservation.comments && reservation.comments !== "Aucun" && (
+          {(reservation.comments && reservation.comments !== "Aucun") && (
             <div>
               <h3 className="text-lg lg:text-xl font-semibold mb-3 lg:mb-4">Information complémentaire :</h3>
-              <p className="text-muted-foreground text-sm lg:text-base">{reservation.comments}</p>
+              <p className="text-muted-foreground text-sm lg:text-base">
+                {reservation.comments}
+              </p>
             </div>
           )}
 
           {/* Détails du visiteur */}
-          <div>
-            <h3 className="text-lg lg:text-xl font-semibold mb-3 lg:mb-4">Détails du visiteur :</h3>
-            <div className="space-y-3">
-              <div className="text-base lg:text-lg font-semibold">
-                {reservation.customerName || "Juliette MARTIN"}
-              </div>
-              <div className="flex items-center space-x-3">
-                <Phone className="h-4 w-4 lg:h-5 lg:w-5 text-muted-foreground" />
-                <span className="text-sm lg:text-base">{reservation.customerPhone || "+ 33 6 18 45 67 89"}</span>
-              </div>
-              <div className="flex items-center space-x-3">
-                <Mail className="h-4 w-4 lg:h-5 lg:w-5 text-muted-foreground" />
-                <span className="text-sm lg:text-base">{reservation.customerEmail || "juliettemartin@gmail.com"}</span>
+          {reservation.eventType === 'booking' && (
+            <div>
+              <h3 className="text-lg lg:text-xl font-semibold mb-3 lg:mb-4">Détails du visiteur :</h3>
+              <div className="space-y-3">
+                <div className="text-base lg:text-lg font-semibold">
+                  {reservation.customerName || "Nom non disponible"}
+                </div>
+                <div className="flex items-center space-x-3">
+                  <Phone className="h-4 w-4 lg:h-5 lg:w-5 text-muted-foreground" />
+                  <span className="text-sm lg:text-base">
+                    {reservation.customerPhone || "Non disponible"}
+                  </span>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <Mail className="h-4 w-4 lg:h-5 lg:w-5 text-muted-foreground" />
+                  <span className="text-sm lg:text-base">
+                    {reservation.customerEmail || "Non disponible"}
+                  </span>
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
           {/* Bouton d'annulation */}
           <div className="flex justify-center sm:justify-end">
