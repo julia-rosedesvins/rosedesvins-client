@@ -10,7 +10,7 @@ import { useState, useEffect, useMemo } from "react";
 import { fr } from "date-fns/locale";
 import { startOfMonth, endOfMonth, eachDayOfInterval, format, getDay, startOfWeek, endOfWeek, parseISO } from "date-fns";
 import { ReservationDetailsModal } from "./ReservationDetailsModal";
-import { AddServiceModal } from "./AddServiceModal";
+import { AddBookingModal } from "./AddBookingModal";
 import { cn } from "@/lib/utils";
 import { eventsService, EventData } from "@/services/events.service";
 
@@ -19,7 +19,7 @@ export const CalendarSection = () => {
   const [currentMonth, setCurrentMonth] = useState(new Date()); // Current month
   const [selectedReservation, setSelectedReservation] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isAddServiceModalOpen, setIsAddServiceModalOpen] = useState(false);
+  const [isAddBookingModalOpen, setIsAddBookingModalOpen] = useState(false);
   const [events, setEvents] = useState<EventData[]>([]);
   const [eventsLoading, setEventsLoading] = useState(true);
   const [eventsError, setEventsError] = useState<string | null>(null);
@@ -350,7 +350,7 @@ export const CalendarSection = () => {
           <Button 
             className="text-white hover:opacity-90 text-sm lg:text-base px-4 lg:px-6 py-2"
             style={{ backgroundColor: '#3A7B59' }}
-            onClick={() => setIsAddServiceModalOpen(true)}
+            onClick={() => setIsAddBookingModalOpen(true)}
           >
             <Plus className="h-4 w-4 mr-2" />
             Ajouter une réservation
@@ -364,9 +364,26 @@ export const CalendarSection = () => {
         onClose={handleCloseModal}
       />
       
-      <AddServiceModal 
-        isOpen={isAddServiceModalOpen}
-        onClose={() => setIsAddServiceModalOpen(false)}
+      <AddBookingModal 
+        isOpen={isAddBookingModalOpen}
+        onClose={() => setIsAddBookingModalOpen(false)}
+        onBookingCreated={() => {
+          // Refresh events when a new booking is created
+          const fetchEvents = async () => {
+            try {
+              setEventsLoading(true);
+              setEventsError(null);
+              const response = await eventsService.getUserEvents();
+              setEvents(response.data);
+            } catch (error: any) {
+              console.error('Failed to fetch events:', error);
+              setEventsError(error.message || 'Failed to load events');
+            } finally {
+              setEventsLoading(false);
+            }
+          };
+          fetchEvents();
+        }}
       />
     </Card>
   );

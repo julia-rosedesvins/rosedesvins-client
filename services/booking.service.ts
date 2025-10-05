@@ -36,6 +36,7 @@ export interface CreateBookingRequest {
   selectedLanguage: string;
   userContactFirstname: string;
   userContactLastname: string;
+  customerEmail: string;
   phoneNo: string;
   additionalNotes?: string;
   paymentMethod: PaymentMethodDetails;
