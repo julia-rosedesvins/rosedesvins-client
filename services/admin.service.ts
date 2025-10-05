@@ -80,6 +80,27 @@ export interface ApiError {
   statusCode: number;
 }
 
+export interface SupportTicket {
+  _id: string;
+  userId: {
+    _id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    domainName?: string;
+  };
+  subject: string;
+  message: string;
+  status: 'pending' | 'in-progress' | 'resolved' | 'closed';
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface UpdateTicketStatusRequest {
+  ticketId: string;
+  status: 'pending' | 'in-progress' | 'resolved' | 'closed';
+}
+
 class AdminService {
   /**
    * Login admin user
@@ -217,6 +238,59 @@ class AdminService {
   async performUserAction(request: UserActionRequest): Promise<UserActionResponse> {
     try {
       const response = await apiClient.put('/users/admin/user-action', request);
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response) {
+        throw error.response.data as ApiError;
+      }
+      throw new Error('Network error occurred');
+    }
+  }
+
+  /**
+   * Get all support tickets (requires admin authentication)
+   * @param query - Pagination parameters
+   * @returns Promise with paginated support tickets
+   */
+  async getAllSupportTickets(query: PaginationQuery = {}): Promise<{
+    success: boolean;
+    message: string;
+    data: SupportTicket[];
+    pagination: {
+      currentPage: number;
+      totalPages: number;
+      totalTickets: number;
+      hasNextPage: boolean;
+      hasPrevPage: boolean;
+    };
+  }> {
+    try {
+      const params = new URLSearchParams();
+      if (query.page) params.append('page', query.page.toString());
+      if (query.limit) params.append('limit', query.limit.toString());
+      
+      const response = await apiClient.get(`/support-contact/admin/all-tickets?${params.toString()}`);
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response) {
+        throw error.response.data as ApiError;
+      }
+      throw new Error('Network error occurred');
+    }
+  }
+
+  /**
+   * Update support ticket status (requires admin authentication)
+   * @param request - Ticket status update request
+   * @returns Promise with updated ticket
+   */
+  async updateTicketStatus(request: UpdateTicketStatusRequest): Promise<{
+    success: boolean;
+    message: string;
+    data: SupportTicket;
+  }> {
+    try {
+      const response = await apiClient.put('/support-contact/admin/update-status', request);
       return response.data;
     } catch (error) {
       if (axios.isAxiosError(error) && error.response) {
