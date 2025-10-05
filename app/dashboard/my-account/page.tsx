@@ -9,8 +9,10 @@ import { Badge } from "@/components/ui/badge";
 import { PhoneSelector } from "@/components/PhoneSelector";
 import { useState, useEffect } from "react";
 import { contactDetailsService, ContactDetails } from "@/services/contactDetails.service";
+import { userService, ChangePasswordRequest } from "@/services/user.service";
 import { useUser } from "@/contexts/UserContext";
 import { toast } from "react-hot-toast";
+import { Eye, EyeOff } from "lucide-react";
 
 export default function UserMyAccount() {
     const { user } = useUser();
@@ -29,6 +31,19 @@ export default function UserMyAccount() {
 
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
+    
+    // Password change states
+    const [passwordData, setPasswordData] = useState<ChangePasswordRequest>({
+        currentPassword: '',
+        newPassword: ''
+    });
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [isChangingPassword, setIsChangingPassword] = useState(false);
+    const [showPasswords, setShowPasswords] = useState({
+        current: false,
+        new: false,
+        confirm: false
+    });
 
     // Ensure client-side rendering
     useEffect(() => {
@@ -111,6 +126,64 @@ export default function UserMyAccount() {
         } finally {
             setIsSaving(false);
         }
+    };
+
+    const handlePasswordChange = async () => {
+        // Validation
+        if (!passwordData.currentPassword.trim()) {
+            toast.error('Le mot de passe actuel est requis');
+            return;
+        }
+        
+        if (!passwordData.newPassword.trim()) {
+            toast.error('Le nouveau mot de passe est requis');
+            return;
+        }
+        
+        if (passwordData.newPassword.length < 8) {
+            toast.error('Le nouveau mot de passe doit contenir au moins 8 caractères');
+            return;
+        }
+        
+        if (passwordData.newPassword !== confirmPassword) {
+            toast.error('Les mots de passe ne correspondent pas');
+            return;
+        }
+
+        try {
+            setIsChangingPassword(true);
+            
+            const response = await userService.changePassword(passwordData);
+            
+            if (response.success) {
+                toast.success('Mot de passe modifié avec succès');
+                // Reset form
+                setPasswordData({ currentPassword: '', newPassword: '' });
+                setConfirmPassword('');
+                setShowPasswords({ current: false, new: false, confirm: false });
+            } else {
+                toast.error(response.message || 'Erreur lors de la modification du mot de passe');
+            }
+        } catch (error: any) {
+            console.error('Error changing password:', error);
+            if (error?.response?.data?.errors && Array.isArray(error.response.data.errors)) {
+                const errorMessages = error.response.data.errors.map((err: any) => err.message).join(', ');
+                toast.error(errorMessages);
+            } else if (error?.message) {
+                toast.error(error.message);
+            } else {
+                toast.error('Erreur lors de la modification du mot de passe');
+            }
+        } finally {
+            setIsChangingPassword(false);
+        }
+    };
+
+    const togglePasswordVisibility = (field: 'current' | 'new' | 'confirm') => {
+        setShowPasswords(prev => ({
+            ...prev,
+            [field]: !prev[field]
+        }));
     };
     return (
         <UserDashboardLayout title="Mon compte">
@@ -365,6 +438,132 @@ export default function UserMyAccount() {
                             )}
                         </div>
                     )}
+                </CardContent>
+            </Card>
+
+            {/* Modifier le mot de passe */}
+            <Card className="mt-6 lg:mt-8">
+                <CardHeader>
+                    <CardTitle className="text-xl lg:text-2xl font-semibold leading-none tracking-tight">
+                        Modifier le mot de passe
+                    </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                    {/* Current Password */}
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                        <Label className="font-medium sm:min-w-[160px] sm:text-right text-sm">
+                            Mot de passe actuel *
+                        </Label>
+                        <div className="flex-1 relative">
+                            <Input
+                                type={showPasswords.current ? "text" : "password"}
+                                value={passwordData.currentPassword}
+                                onChange={(e) => setPasswordData(prev => ({ ...prev, currentPassword: e.target.value }))}
+                                className="pr-10"
+                                placeholder="Entrez votre mot de passe actuel"
+                                disabled={isChangingPassword}
+                            />
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                                onClick={() => togglePasswordVisibility('current')}
+                                disabled={isChangingPassword}
+                            >
+                                {showPasswords.current ? (
+                                    <EyeOff className="h-4 w-4 text-gray-500" />
+                                ) : (
+                                    <Eye className="h-4 w-4 text-gray-500" />
+                                )}
+                            </Button>
+                        </div>
+                    </div>
+
+                    {/* New Password */}
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                        <Label className="font-medium sm:min-w-[160px] sm:text-right text-sm">
+                            Nouveau mot de passe *
+                        </Label>
+                        <div className="flex-1 relative">
+                            <Input
+                                type={showPasswords.new ? "text" : "password"}
+                                value={passwordData.newPassword}
+                                onChange={(e) => setPasswordData(prev => ({ ...prev, newPassword: e.target.value }))}
+                                className="pr-10"
+                                placeholder="Entrez votre nouveau mot de passe"
+                                disabled={isChangingPassword}
+                            />
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                                onClick={() => togglePasswordVisibility('new')}
+                                disabled={isChangingPassword}
+                            >
+                                {showPasswords.new ? (
+                                    <EyeOff className="h-4 w-4 text-gray-500" />
+                                ) : (
+                                    <Eye className="h-4 w-4 text-gray-500" />
+                                )}
+                            </Button>
+                        </div>
+                    </div>
+
+                    {/* Confirm New Password */}
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                        <Label className="font-medium sm:min-w-[160px] sm:text-right text-sm">
+                            Confirmer le mot de passe *
+                        </Label>
+                        <div className="flex-1 relative">
+                            <Input
+                                type={showPasswords.confirm ? "text" : "password"}
+                                value={confirmPassword}
+                                onChange={(e) => setConfirmPassword(e.target.value)}
+                                className="pr-10"
+                                placeholder="Confirmez votre nouveau mot de passe"
+                                disabled={isChangingPassword}
+                            />
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                                onClick={() => togglePasswordVisibility('confirm')}
+                                disabled={isChangingPassword}
+                            >
+                                {showPasswords.confirm ? (
+                                    <EyeOff className="h-4 w-4 text-gray-500" />
+                                ) : (
+                                    <Eye className="h-4 w-4 text-gray-500" />
+                                )}
+                            </Button>
+                        </div>
+                    </div>
+
+                    {/* Password Requirements */}
+                    <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
+                        <div className="sm:min-w-[160px]"></div>
+                        <div className="flex-1">
+                            <p className="text-xs text-muted-foreground">
+                                Le mot de passe doit contenir au moins 8 caractères.
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* Save Button */}
+                    <div className="flex justify-end pt-4">
+                        <Button 
+                            onClick={handlePasswordChange}
+                            disabled={isChangingPassword}
+                            className="w-full sm:w-auto px-8 text-white hover:opacity-90"
+                            style={{ backgroundColor: '#3A7B59' }}
+                        >
+                            {isChangingPassword ? 'Modification...' : 'Changer le mot de passe'}
+                        </Button>
+                    </div>
+
                 </CardContent>
             </Card>
                 </>
