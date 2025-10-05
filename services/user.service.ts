@@ -197,6 +197,41 @@ export interface DashboardAnalyticsResponse {
   data: DashboardAnalytics;
 }
 
+// Types for support tickets
+export interface CreateSupportTicketRequest {
+  subject: string;
+  message: string;
+}
+
+export interface SupportTicket {
+  _id: string;
+  userId: string;
+  subject: string;
+  message: string;
+  status: 'pending' | 'in_progress' | 'resolved' | 'closed';
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateSupportTicketResponse {
+  success: boolean;
+  message: string;
+  data: SupportTicket;
+}
+
+export interface GetSupportTicketsResponse {
+  success: boolean;
+  message: string;
+  data: SupportTicket[];
+  pagination: {
+    currentPage: number;
+    totalPages: number;
+    totalTickets: number;
+    hasNextPage: boolean;
+    hasPrevPage: boolean;
+  };
+}
+
 class UserService {
   /**
    * Submit contact form
@@ -507,6 +542,43 @@ class UserService {
       return response.data;
     } catch (error) {
       console.error('UserService: Get dashboard analytics error:', error);
+      if (axios.isAxiosError(error) && error.response) {
+        throw error.response.data as ApiError;
+      }
+      throw new Error('Network error occurred');
+    }
+  }
+
+  /**
+   * Create a new support ticket
+   * @param ticketData - Support ticket data
+   * @returns Promise with created ticket response
+   */
+  async createSupportTicket(ticketData: CreateSupportTicketRequest): Promise<CreateSupportTicketResponse> {
+    try {
+      const response = await apiClient.post<CreateSupportTicketResponse>('/support-contact', ticketData);
+      return response.data;
+    } catch (error) {
+      console.error('UserService: Create support ticket error:', error);
+      if (axios.isAxiosError(error) && error.response) {
+        throw error.response.data as ApiError;
+      }
+      throw new Error('Network error occurred');
+    }
+  }
+
+  /**
+   * Get user's support tickets
+   * @param page - Page number (default: 1)
+   * @param limit - Items per page (default: 10)
+   * @returns Promise with support tickets response
+   */
+  async getSupportTickets(page: number = 1, limit: number = 10): Promise<GetSupportTicketsResponse> {
+    try {
+      const response = await apiClient.get<GetSupportTicketsResponse>(`/support-contact/my-tickets?page=${page}&limit=${limit}`);
+      return response.data;
+    } catch (error) {
+      console.error('UserService: Get support tickets error:', error);
       if (axios.isAxiosError(error) && error.response) {
         throw error.response.data as ApiError;
       }
