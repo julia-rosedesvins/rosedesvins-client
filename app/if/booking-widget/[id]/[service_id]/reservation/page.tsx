@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Clock, Wine, Euro, Users, MapPin } from "lucide-react";
 import Link from "next/link";
-import Image from "next/image";
 import { useState, useEffect } from "react";
 import { WidgetProvider, useWidget } from "@/contexts/WidgetContext";
 
@@ -42,12 +41,11 @@ function ReservationContent({ id, serviceId }: { id: string, serviceId: string }
                     {/* Hero Image */}
                     {widgetData?.domainProfile?.domainProfilePictureUrl && (
                         <div className="relative h-64 md:h-80 overflow-hidden">
-                            <Image
+                            <img
                                 src={`${process.env.NEXT_PUBLIC_API_BASE_URL}${widgetData.domainProfile.domainProfilePictureUrl}`}
                                 alt="Cave troglodyte avec dégustation de vins"
-                                fill
-                                className="object-cover"
-                                priority
+                                className="w-full h-full object-cover"
+                                loading="eager"
                             />
                             {/* <div className="absolute inset-0 bg-black bg-opacity-20 z-10"></div> */}
                         </div>
