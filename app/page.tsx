@@ -148,22 +148,77 @@ export default function HomePage() {
             </Button>
           </div>
           <div className="relative">
-            <div className="bg-white rounded-lg shadow-lg p-8">
-              <div className="space-y-4">
-                <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-                <div className="h-4 bg-gray-200 rounded w-5/6"></div>
-                <div className="grid grid-cols-7 gap-2 mt-6">
-                  {Array.from({ length: 35 }, (_, i) => (
-                    <div
-                      key={i}
-                      className={`h-8 rounded ${i === 15 || i === 22 ? "" : "bg-gray-100"}`}
-                      style={i === 15 || i === 22 ? { backgroundColor: "#3A7B59" } : {}}
-                    ></div>
-                  ))}
+            {/* Video Container with Professional Styling */}
+            <div className="relative bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl shadow-2xl overflow-hidden border border-gray-200">
+              {/* Video Header */}
+              <div className="bg-white px-6 py-4 border-b border-gray-200">
+                <div className="flex items-center space-x-3">
+                  <div className="flex space-x-2">
+                    <div className="w-3 h-3 rounded-full bg-red-400"></div>
+                    <div className="w-3 h-3 rounded-full bg-yellow-400"></div>
+                    <div className="w-3 h-3 rounded-full bg-green-400"></div>
+                  </div>
+                  <div className="flex-1">
+                    <div className="text-sm font-medium text-gray-600">
+                      Démonstration - Système de réservation Rose des Vins
+                    </div>
+                  </div>
+                  <div className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded">
+                    DEMO
+                  </div>
                 </div>
               </div>
+              
+              {/* Video Content */}
+              <div className="relative aspect-video bg-black">
+                {/* Loading Placeholder */}
+                <div className="absolute inset-0 bg-gray-900 flex items-center justify-center">
+                  <div className="text-center">
+                    <div className="w-12 h-12 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                    <p className="text-white text-sm">Chargement de la vidéo...</p>
+                  </div>
+                </div>
+                
+                {/* Iframe */}
+                <iframe
+                  src="https://drive.google.com/file/d/1qk9D1CUH6Mj2tryhv_bL2Qmibncg2pSg/preview"
+                  className="absolute inset-0 w-full h-full border-0"
+                  allow="autoplay; fullscreen"
+                  allowFullScreen
+                  title="Démonstration du système de réservation Rose des Vins"
+                  loading="lazy"
+                  onLoad={(e) => {
+                    // Hide loading indicator when video loads
+                    const loadingDiv = e.currentTarget.previousElementSibling as HTMLElement;
+                    if (loadingDiv) loadingDiv.style.display = 'none';
+                  }}
+                ></iframe>
+              </div>
+              
+              {/* Video Footer */}
+              <div className="bg-white px-4 sm:px-6 py-3 border-t border-gray-200">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0">
+                  <div className="text-gray-600 text-xs sm:text-sm font-medium">
+                    🎥 Automatisez vos réservations
+                  </div>
+                  <div className="flex items-center space-x-3 sm:space-x-4 text-gray-500">
+                    <span className="flex items-center space-x-1 text-xs sm:text-sm">
+                      <Clock className="w-3 h-3 sm:w-4 sm:h-4" />
+                      <span>2 min</span>
+                    </span>
+                    <span className="flex items-center space-x-1 text-xs sm:text-sm">
+                      <Users className="w-3 h-3 sm:w-4 sm:h-4" />
+                      <span>Vignerons</span>
+                    </span>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Decorative Elements */}
+              <div className="absolute -top-2 -right-2 w-20 h-20 bg-gradient-to-br from-green-400 to-green-600 opacity-10 rounded-full blur-xl"></div>
+              <div className="absolute -bottom-2 -left-2 w-16 h-16 bg-gradient-to-br from-blue-400 to-blue-600 opacity-10 rounded-full blur-xl"></div>
             </div>
+
           </div>
         </div>
       </section>
