@@ -9,7 +9,7 @@ export default function Footer() {
             <p>Copyright © {new Date().getFullYear()} Rose des Vins</p>
           </div>
           <div className="flex gap-6">
-            <Link href="#" className="hover:text-gray-900">
+            <Link href="/faqs" className="hover:text-gray-900">
               FAQ
             </Link>
             <Link href="/legal-notices" className="hover:text-gray-900">
