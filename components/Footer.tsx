@@ -1,3 +1,5 @@
+import Link from "next/link"
+
 export default function Footer() {
   return (
     <footer className="bg-gray-100 py-8">
@@ -7,15 +9,15 @@ export default function Footer() {
             <p>Copyright © {new Date().getFullYear()} Rose des Vins</p>
           </div>
           <div className="flex gap-6">
-            <a href="#" className="hover:text-gray-900">
+            <Link href="#" className="hover:text-gray-900">
               FAQ
-            </a>
-            <a href="#" className="hover:text-gray-900">
+            </Link>
+            <Link href="/legal-notices" className="hover:text-gray-900">
               Mentions légales
-            </a>
-            <a href="#" className="hover:text-gray-900">
+            </Link>
+            <Link href="#" className="hover:text-gray-900">
               Politique de confidentialité
-            </a>
+            </Link>
           </div>
         </div>
       </div>
