@@ -150,24 +150,6 @@ export default function HomePage() {
           <div className="relative">
             {/* Video Container with Professional Styling */}
             <div className="relative bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl shadow-2xl overflow-hidden border border-gray-200">
-              {/* Video Header */}
-              <div className="bg-white px-6 py-4 border-b border-gray-200">
-                <div className="flex items-center space-x-3">
-                  <div className="flex space-x-2">
-                    <div className="w-3 h-3 rounded-full bg-red-400"></div>
-                    <div className="w-3 h-3 rounded-full bg-yellow-400"></div>
-                    <div className="w-3 h-3 rounded-full bg-green-400"></div>
-                  </div>
-                  <div className="flex-1">
-                    <div className="text-sm font-medium text-gray-600">
-                      Démonstration - Système de réservation Rose des Vins
-                    </div>
-                  </div>
-                  <div className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded">
-                    DEMO
-                  </div>
-                </div>
-              </div>
               
               {/* Video Content */}
               <div className="relative aspect-video bg-black">
@@ -193,25 +175,6 @@ export default function HomePage() {
                     if (loadingDiv) loadingDiv.style.display = 'none';
                   }}
                 ></iframe>
-              </div>
-              
-              {/* Video Footer */}
-              <div className="bg-white px-4 sm:px-6 py-3 border-t border-gray-200">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0">
-                  <div className="text-gray-600 text-xs sm:text-sm font-medium">
-                    🎥 Automatisez vos réservations
-                  </div>
-                  <div className="flex items-center space-x-3 sm:space-x-4 text-gray-500">
-                    <span className="flex items-center space-x-1 text-xs sm:text-sm">
-                      <Clock className="w-3 h-3 sm:w-4 sm:h-4" />
-                      <span>2 min</span>
-                    </span>
-                    <span className="flex items-center space-x-1 text-xs sm:text-sm">
-                      <Users className="w-3 h-3 sm:w-4 sm:h-4" />
-                      <span>Vignerons</span>
-                    </span>
-                  </div>
-                </div>
               </div>
               
               {/* Decorative Elements */}

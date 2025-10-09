@@ -9,7 +9,8 @@ import { useRouter, usePathname } from "next/navigation"
 const navLinks = [
   { href: "#contact", label: "Contact", isSpecial: true },
   { href: "/about", label: "À propos" },
-  { href: "#blog", label: "Blog" },
+  // { href: "#blog", label: "Blog" },
+  { href: "/faqs", label: "FAQ" },
 ]
 
 const socialLinks = [
