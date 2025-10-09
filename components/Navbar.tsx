@@ -91,7 +91,7 @@ export default function Navbar() {
               <h1 className="font-semibold text-lg cursor-pointer hover:opacity-80">Rose des Vins</h1>
             </Link>
             <p className="text-sm" style={{ color: "#8BB5A3" }}>
-              Un accompagnement sur-mesure de vos événements
+              La technologie au service de l’œnotourisme
             </p>
           </div>
         </div>
