@@ -1,6 +1,7 @@
 import { Dialog, DialogContent, DialogHeader } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Clock, Users, Grape, Globe, Phone, Mail } from "lucide-react";
+import { parseISO, format } from "date-fns";
 
 interface Reservation {
   id: number | string;
@@ -27,6 +28,58 @@ interface ReservationDetailsModalProps {
   onClose: () => void;
 }
 
+// Helper function to format date and time properly
+const formatDateTime = (dateString: string | undefined, timeString: string) => {
+  let formattedDate = '';
+  let formattedTime = timeString;
+  
+  // Format the date part
+  if (dateString && dateString.includes('/')) {
+    // Already formatted date from CalendarSection
+    formattedDate = dateString;
+  } else if (dateString && dateString.includes('T')) {
+    // ISO date string, parse and format it
+    try {
+      const date = parseISO(dateString);
+      formattedDate = format(date, 'dd / MM / yyyy');
+    } catch (error) {
+      console.error('Error parsing ISO date:', error);
+      formattedDate = dateString;
+    }
+  } else if (dateString) {
+    // Simple date string, try to parse it
+    try {
+      const date = new Date(dateString);
+      if (!isNaN(date.getTime())) {
+        formattedDate = `${date.getDate().toString().padStart(2, '0')} / ${(date.getMonth() + 1).toString().padStart(2, '0')} / ${date.getFullYear()}`;
+      } else {
+        formattedDate = dateString;
+      }
+    } catch (error) {
+      console.error('Error parsing date:', error);
+      formattedDate = dateString;
+    }
+  } else {
+    formattedDate = "Date non disponible";
+  }
+  
+  // Format the time part (ensure HH:MM format)
+  if (timeString) {
+    // If time is already in HH:MM format, keep it
+    if (/^\d{1,2}:\d{2}$/.test(timeString)) {
+      // Add leading zero if needed
+      const [hours, minutes] = timeString.split(':');
+      formattedTime = `${hours.padStart(2, '0')}:${minutes}`;
+    } else if (/^\d{1,2}h\d{2}$/.test(timeString)) {
+      // Convert from "14h30" format to "14:30"
+      formattedTime = timeString.replace('h', ':');
+    }
+    // Otherwise keep the original time format
+  }
+  
+  return `${formattedDate} - ${formattedTime}`;
+};
+
 export const ReservationDetailsModal = ({ reservation, isOpen, onClose }: ReservationDetailsModalProps) => {
   if (!reservation) return null;
 
@@ -50,7 +103,7 @@ export const ReservationDetailsModal = ({ reservation, isOpen, onClose }: Reserv
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:gap-4">
               <div className="flex items-center space-x-3">
                 <Clock className="h-4 w-4 lg:h-5 lg:w-5 text-muted-foreground" />
-                <span className="text-sm lg:text-base">{reservation.date || "23 / 07 / 2025"} - {reservation.time}</span>
+                <span className="text-sm lg:text-base">{formatDateTime(reservation.date, reservation.time)}</span>
               </div>
               <div className="flex items-center space-x-3">
                 <Users className="h-4 w-4 lg:h-5 lg:w-5 text-muted-foreground" />

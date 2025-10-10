@@ -11,6 +11,7 @@ import { ReservationDetailsModal } from "./ReservationDetailsModal";
 import { cn } from "@/lib/utils";
 import { eventsService, EventData } from "@/services/events.service";
 import toast from "react-hot-toast";
+import { useDate } from "@/contexts/DateContext";
 
 interface Reservation {
   id: number;
@@ -29,7 +30,7 @@ interface Reservation {
 }
 
 export const ReservationsList = () => {
-  const [currentDate, setCurrentDate] = useState(new Date());
+  const { selectedDate: currentDate, setSelectedDate: setCurrentDate } = useDate();
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [events, setEvents] = useState<EventData[]>([]);
@@ -60,17 +61,51 @@ export const ReservationsList = () => {
   const transformEventToReservation = (event: EventData, index: number): Reservation => {
     const eventDateTime = new Date(`${event.eventDate}T${event.eventTime}`);
     
+    // Get actual participant count from booking
+    const totalPeople = event.bookingId ? 
+      (event.bookingId.participantsAdults || 0) + (event.bookingId.participantsEnfants || 0) : 
+      1;
+    
+    // Get actual language from booking, with fallback
+    const getLanguageDisplay = (language: string | undefined) => {
+      if (!language) return 'Non spécifié';
+      
+      // Handle different language formats
+      switch (language.toLowerCase()) {
+        case 'french':
+        case 'français':
+        case 'fr':
+          return 'Français';
+        case 'english':
+        case 'anglais':
+        case 'en':
+          return 'English';
+        case 'german':
+        case 'allemand':
+        case 'de':
+          return 'Allemand';
+        case 'spanish':
+        case 'espagnol':
+        case 'es':
+          return 'Espagnol';
+        default:
+          return language; // Return as-is if not recognized
+      }
+    };
+    
     return {
       id: index + 1, // Use index as numeric ID
       time: event.eventTime,
-      people: event.bookingId ? 1 : 1, // Default to 1 person, could be enhanced with booking details
+      people: totalPeople,
       activity: event.eventName || event.eventType,
-      language: 'French', // Default language, could be enhanced with user preferences
-      comments: event.eventDescription || 'No comments',
+      language: getLanguageDisplay(event.bookingId?.selectedLanguage),
+      comments: event.bookingId?.additionalNotes || event.eventDescription || 'Aucun commentaire',
       date: event.eventDate,
       customerName: event.bookingId ? 
         `${event.bookingId.userContactFirstname} ${event.bookingId.userContactLastname}` : 
-        'Unknown',
+        'Événement',
+      customerPhone: event.bookingId?.phoneNo || 'Non disponible',
+      customerEmail: event.bookingId?.customerEmail || 'Non disponible',
       eventType: event.eventType,
       eventStatus: event.eventStatus
     };

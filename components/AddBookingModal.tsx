@@ -145,10 +145,18 @@ export const AddBookingModal = ({ isOpen, onClose, onBookingCreated }: AddBookin
         return;
       }
 
+      // Format date without timezone conversion
+      const formatDateForBackend = (date: Date) => {
+        const year = date.getFullYear();
+        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+        const day = date.getDate().toString().padStart(2, '0');
+        return `${year}-${month}-${day}T00:00:00.000Z`;
+      };
+
       const bookingData: CreateBookingRequest = {
         userId: user._id,
         serviceId: formData.serviceId,
-        bookingDate: formData.bookingDate!.toISOString(),
+        bookingDate: formatDateForBackend(formData.bookingDate!),
         bookingTime: formData.bookingTime,
         participantsAdults: formData.participantsAdults,
         participantsEnfants: formData.participantsEnfants,
