@@ -13,10 +13,12 @@ import { ReservationDetailsModal } from "./ReservationDetailsModal";
 import { AddBookingModal } from "./AddBookingModal";
 import { cn } from "@/lib/utils";
 import { eventsService, EventData } from "@/services/events.service";
+import { useDate } from "@/contexts/DateContext";
 
 export const CalendarSection = () => {
-  const [date, setDate] = useState<Date | undefined>(new Date());
-  const [currentMonth, setCurrentMonth] = useState(new Date()); // Current month
+  const { selectedDate, setSelectedDate } = useDate();
+  const [date, setDate] = useState<Date | undefined>(selectedDate);
+  const [currentMonth, setCurrentMonth] = useState(selectedDate); // Current month
   const [selectedReservation, setSelectedReservation] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAddBookingModalOpen, setIsAddBookingModalOpen] = useState(false);
@@ -139,10 +141,11 @@ export const CalendarSection = () => {
     setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1));
   };
 
-  const handleDateSelect = (selectedDate: Date | undefined) => {
-    if (selectedDate) {
-      setCurrentMonth(selectedDate);
-      setDate(selectedDate);
+  const handleDateSelect = (newSelectedDate: Date | undefined) => {
+    if (newSelectedDate) {
+      setCurrentMonth(newSelectedDate);
+      setDate(newSelectedDate);
+      setSelectedDate(newSelectedDate); // Update shared context
     }
   };
 
@@ -172,6 +175,13 @@ export const CalendarSection = () => {
     };
     setSelectedReservation(reservationWithDate);
     setIsModalOpen(true);
+  };
+
+  const handleDayClick = (day: Date) => {
+    if (day.getMonth() === currentMonth.getMonth()) {
+      setSelectedDate(day); // Update shared context when clicking on a day
+      setDate(day);
+    }
   };
 
   const handleCloseModal = () => {
@@ -318,9 +328,12 @@ export const CalendarSection = () => {
             return (
               <div 
                 key={index} 
-                className={`border h-[80px] lg:h-[100px] p-1 overflow-hidden ${
+                className={`border h-[80px] lg:h-[100px] p-1 overflow-hidden cursor-pointer hover:bg-gray-50 transition-colors ${
                   !isCurrentMonth ? 'opacity-30 bg-muted' : ''
+                } ${
+                  isCurrentMonth && day.toDateString() === selectedDate.toDateString() ? 'ring-2 ring-green-500 bg-green-50' : ''
                 }`}
+                onClick={() => handleDayClick(day)}
               >
                 <div className={`font-medium mb-1 text-xs ${!isCurrentMonth ? 'text-muted-foreground' : ''}`}>
                   {dayNumber}

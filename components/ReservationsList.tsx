@@ -11,6 +11,7 @@ import { ReservationDetailsModal } from "./ReservationDetailsModal";
 import { cn } from "@/lib/utils";
 import { eventsService, EventData } from "@/services/events.service";
 import toast from "react-hot-toast";
+import { useDate } from "@/contexts/DateContext";
 
 interface Reservation {
   id: number;
@@ -29,7 +30,7 @@ interface Reservation {
 }
 
 export const ReservationsList = () => {
-  const [currentDate, setCurrentDate] = useState(new Date());
+  const { selectedDate: currentDate, setSelectedDate: setCurrentDate } = useDate();
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [events, setEvents] = useState<EventData[]>([]);
