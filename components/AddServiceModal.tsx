@@ -81,9 +81,14 @@ export const AddServiceModal = ({ isOpen, onClose, onSave }: AddServiceModalProp
     
     if (!formData.nom.trim()) {
       newErrors.nom = "Le nom de la prestation est requis";
+    } else if (formData.nom.trim().length < 5) {
+      newErrors.nom = "Le nom de la prestation doit contenir au moins 5 caractères";
     }
+    
     if (!formData.description.trim()) {
       newErrors.description = "La description est requise";
+    } else if (formData.description.trim().length < 20) {
+      newErrors.description = "La description doit contenir au moins 20 caractères";
     }
     if (!formData.nombrePersonnes || parseInt(formData.nombrePersonnes) < 1) {
       newErrors.nombrePersonnes = "Veuillez indiquer un nombre valide";
