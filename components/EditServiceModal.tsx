@@ -120,20 +120,20 @@ export const EditServiceModal = ({ isOpen, onClose, prestation, onSave }: EditSe
   const validateForm = () => {
     const newErrors: {[key: string]: string} = {};
     
-    // Validate service name (min 2, max 100 characters)
+    // Validate service name (min 5, max 100 characters)
     if (!formData.nom.trim()) {
       newErrors.nom = "Le nom de la prestation est requis";
-    } else if (formData.nom.trim().length < 2) {
-      newErrors.nom = "Le nom doit contenir au moins 2 caractères";
+    } else if (formData.nom.trim().length < 5) {
+      newErrors.nom = "Le nom doit contenir au moins 5 caractères";
     } else if (formData.nom.trim().length > 100) {
       newErrors.nom = "Le nom ne doit pas dépasser 100 caractères";
     }
     
-    // Validate description (min 10, max 1000 characters)
+    // Validate description (min 20, max 1000 characters)
     if (!formData.description.trim()) {
       newErrors.description = "La description est requise";
-    } else if (formData.description.trim().length < 10) {
-      newErrors.description = "La description doit contenir au moins 10 caractères";
+    } else if (formData.description.trim().length < 20) {
+      newErrors.description = "La description doit contenir au moins 20 caractères";
     } else if (formData.description.trim().length > 1000) {
       newErrors.description = "La description ne doit pas dépasser 1000 caractères";
     }
