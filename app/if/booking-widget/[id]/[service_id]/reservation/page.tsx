@@ -10,8 +10,8 @@ function ReservationContent({ id, serviceId }: { id: string, serviceId: string }
     const { widgetData, loading, error, colorCode } = useWidget();
     const [showFullText, setShowFullText] = useState(false);
     
-    const fullText = "Une expérience unique avec la visite libre de notre cave troglodytique sculptée, suivie d'une dégustation commentée de 5 vins dans notre caveau à l'ambiance feutré, éclairé à la bougie.";
-    const truncatedText = "Une expérience unique avec la visite libre de notre cave troglodytique sculptée, suivie d'une dégustation commentée...";
+    const fullText = widgetData?.service?.description || "";
+    const truncatedText = fullText.length > 200 ? fullText.substring(0, 200) + "..." : fullText;
 
     if (loading) {
         return (
@@ -58,18 +58,20 @@ function ReservationContent({ id, serviceId }: { id: string, serviceId: string }
                         </h2>
 
                         <p className="text-muted-foreground text-lg mb-6 leading-relaxed">
-                            {showFullText ? (widgetData?.service?.description || fullText) : truncatedText}
+                            {showFullText ? fullText : truncatedText}
                         </p>
 
-                        <div className="mb-6">
-                            <button
-                                onClick={() => setShowFullText(!showFullText)}
-                                className="hover:opacity-75 font-medium"
-                                style={{ color: colorCode }}
-                            >
-                                {showFullText ? "Voir moins ▲" : "En savoir plus ▼"}
-                            </button>
-                        </div>
+                        {fullText.length > 150 && (
+                            <div className="mb-6">
+                                <button
+                                    onClick={() => setShowFullText(!showFullText)}
+                                    className="hover:opacity-75 font-medium"
+                                    style={{ color: colorCode }}
+                                >
+                                    {showFullText ? "Voir moins ▲" : "En savoir plus ▼"}
+                                </button>
+                            </div>
+                        )}
 
                         {/* Details Grid */}
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
