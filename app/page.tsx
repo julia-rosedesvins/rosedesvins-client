@@ -143,7 +143,13 @@ export default function HomePage() {
               effort, grâce à un calendrier interactif directement intégré à votre site internet et synchronisé avec
               votre agenda.
             </p>
-            <Button className="text-white px-6 py-3 hover:opacity-90" style={{ backgroundColor: "#3A7B59" }}>
+            <Button 
+              className="text-white px-6 py-3 hover:opacity-90" 
+              style={{ backgroundColor: "#3A7B59" }}
+              onClick={() => {
+                document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' });
+              }}
+            >
               Essayer gratuitement
             </Button>
           </div>
@@ -263,7 +269,13 @@ export default function HomePage() {
           </div>
 
           <div className="text-center mt-12">
-            <Button className="text-white px-6 py-3 hover:opacity-90" style={{ backgroundColor: "#3A7B59" }}>
+            <Button 
+            className="text-white px-6 py-3 hover:opacity-90" 
+            style={{ backgroundColor: "#3A7B59" }}
+            onClick={() => {
+                document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' });
+              }}
+            >
               Réserver une démo
             </Button>
           </div>
@@ -295,9 +307,9 @@ export default function HomePage() {
                 En quelques clics, ajoutez un calendrier de réservation interactif directement sur votre site internet.
                 Vos visiteurs pourront réserver leurs visites et dégustations en toute autonomie, 24h/24 et 7j/7.
               </p>
-              <Button className="text-white px-6 py-3 hover:opacity-90" style={{ backgroundColor: "#3A7B59" }}>
+              {/* <Button className="text-white px-6 py-3 hover:opacity-90" style={{ backgroundColor: "#3A7B59" }}>
                 Voir les intégrations
-              </Button>
+              </Button> */}
             </div>
           </div>
         </div>
