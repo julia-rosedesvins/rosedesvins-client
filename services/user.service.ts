@@ -96,7 +96,7 @@ export interface UserProfileResponse {
 
 // Types for change password
 export interface ChangePasswordRequest {
-  currentPassword: string;
+  currentPassword?: string;
   newPassword: string;
 }
 

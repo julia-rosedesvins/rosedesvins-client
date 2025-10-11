@@ -29,9 +29,17 @@ export default function ChangePassword({ user, onPasswordChanged }: ChangePasswo
     e.preventDefault();
     setError("");
 
-    if (!currentPassword || !newPassword || !confirmPassword) {
-      setError("Tous les champs sont requis");
-      return;
+    // For first-time password change, current password is not required
+    if (user?.mustChangePassword) {
+      if (!newPassword || !confirmPassword) {
+        setError("Veuillez remplir tous les champs requis");
+        return;
+      }
+    } else {
+      if (!currentPassword || !newPassword || !confirmPassword) {
+        setError("Tous les champs sont requis");
+        return;
+      }
     }
 
     if (newPassword !== confirmPassword) {
@@ -63,10 +71,13 @@ export default function ChangePassword({ user, onPasswordChanged }: ChangePasswo
         newPassword: newPassword ? '***' : 'undefined'
       });
 
-      const response = await userService.changePassword({
-        currentPassword,
-        newPassword
-      });
+      // For first-time password change, don't send currentPassword
+      const passwordData: any = { newPassword };
+      if (!user?.mustChangePassword) {
+        passwordData.currentPassword = currentPassword;
+      }
+
+      const response = await userService.changePassword(passwordData);
 
       console.log('Change password response:', response);
 
@@ -124,16 +135,21 @@ export default function ChangePassword({ user, onPasswordChanged }: ChangePasswo
             />
           </div>
           <h1 className="text-xl lg:text-2xl font-bold text-gray-900 mb-1">Rose des Vins</h1>
-          <p className="text-sm lg:text-base text-gray-600">Changement de mot de passe requis</p>
+          <p className="text-sm lg:text-base text-gray-600">
+            {user?.mustChangePassword ? "Configuration du mot de passe" : "Changement de mot de passe"}
+          </p>
         </div>
 
         <Card className="shadow-lg border-0">
           <CardHeader className="text-center pb-4">
             <CardTitle className="text-xl font-semibold text-gray-900">
-              Modifier votre mot de passe
+              {user?.mustChangePassword ? "Définir votre mot de passe" : "Modifier votre mot de passe"}
             </CardTitle>
             <p className="text-sm text-gray-600 mt-2">
-              Bonjour {user?.firstName}, vous devez changer votre mot de passe pour continuer.
+              {user?.mustChangePassword 
+                ? `Bonjour ${user?.firstName}, veuillez définir votre nouveau mot de passe pour accéder à votre compte.`
+                : `Bonjour ${user?.firstName}, vous pouvez changer votre mot de passe ici.`
+              }
             </p>
           </CardHeader>
           <CardContent>
@@ -144,33 +160,35 @@ export default function ChangePassword({ user, onPasswordChanged }: ChangePasswo
                 </div>
               )}
 
-              {/* Current Password */}
-              <div className="space-y-2">
-                <Label htmlFor="currentPassword" className="text-sm font-medium text-gray-700">
-                  Mot de passe actuel
-                </Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                  <Input
-                    id="currentPassword"
-                    type={showCurrentPassword ? "text" : "password"}
-                    value={currentPassword}
-                    onChange={(e) => setCurrentPassword(e.target.value)}
-                    className="pl-10 pr-10 h-11"
-                    placeholder="Entrez votre mot de passe actuel"
-                    disabled={isLoading}
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                    tabIndex={-1}
-                  >
-                    {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
+              {/* Current Password - Only show if NOT first-time password change */}
+              {!user?.mustChangePassword && (
+                <div className="space-y-2">
+                  <Label htmlFor="currentPassword" className="text-sm font-medium text-gray-700">
+                    Mot de passe actuel
+                  </Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                    <Input
+                      id="currentPassword"
+                      type={showCurrentPassword ? "text" : "password"}
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
+                      className="pl-10 pr-10 h-11"
+                      placeholder="Entrez votre mot de passe actuel"
+                      disabled={isLoading}
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      tabIndex={-1}
+                    >
+                      {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* New Password */}
               <div className="space-y-2">
@@ -244,7 +262,7 @@ export default function ChangePassword({ user, onPasswordChanged }: ChangePasswo
                     Changement en cours...
                   </div>
                 ) : (
-                  "Changer le mot de passe"
+                  user?.mustChangePassword ? "Définir le mot de passe" : "Changer le mot de passe"
                 )}
               </Button>
             </form>
