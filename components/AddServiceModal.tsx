@@ -137,7 +137,7 @@ export const AddServiceModal = ({ isOpen, onClose, onSave }: AddServiceModalProp
     const serviceData = {
       serviceName: formData.nom,
       serviceDescription: formData.description,
-      numberOfPeople: parseInt(formData.nombrePersonnes) || 1,
+      numberOfPeople: formData.nombrePersonnes || '1',
       pricePerPerson: parseFloat(formData.prix) || 0,
       timeOfServiceInMinutes: parseInt(formData.temps) || 30,
       numberOfWinesTasted: parseInt(formData.vinsDesgustes) || 0,
@@ -279,11 +279,10 @@ export const AddServiceModal = ({ isOpen, onClose, onSave }: AddServiceModalProp
                   Nombre de personnes *
                 </Label>
                 <Input
-                  type="number"
-                  min="1"
+                  type="text"
                   value={formData.nombrePersonnes}
                   onChange={(e) => setFormData(prev => ({ ...prev, nombrePersonnes: e.target.value }))}
-                  placeholder="ex: 10"
+                  placeholder="ex: 10-12"
                   className={`w-full text-sm sm:text-base border-2 focus:border-[#3A7B59] rounded-lg h-11 sm:h-auto ${errors.nombrePersonnes ? 'border-red-300 focus:border-red-500' : ''}`}
                 />
                 {errors.nombrePersonnes && <p className="text-red-500 text-xs sm:text-sm">{errors.nombrePersonnes}</p>}

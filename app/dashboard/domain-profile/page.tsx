@@ -216,7 +216,7 @@ export default function UserDomainProfile() {
         const enhancedPrestation = {
             ...prestation,
             originalIndex: serviceIndex,
-            numberOfPeople: service.numberOfPeople.toString(),
+            numberOfPeople: service.numberOfPeople,
             winesTasted: service.numberOfWinesTasted.toString(),
             languages: languagesState,
             otherLanguage: otherLanguage
@@ -233,7 +233,7 @@ export default function UserDomainProfile() {
                 _id: newService._id || '',
                 serviceName: newService.serviceName || '',
                 serviceDescription: newService.serviceDescription || '',
-                numberOfPeople: newService.numberOfPeople || 1,
+                numberOfPeople: newService.numberOfPeople || '1',
                 pricePerPerson: newService.pricePerPerson || 0,
                 timeOfServiceInMinutes: newService.timeOfServiceInMinutes || 60,
                 numberOfWinesTasted: newService.numberOfWinesTasted || 0,
@@ -261,7 +261,7 @@ export default function UserDomainProfile() {
                 const updateData = {
                     serviceName: updatedService.serviceName || '',
                     serviceDescription: updatedService.serviceDescription || '',
-                    numberOfPeople: updatedService.numberOfPeople || 1,
+                    numberOfPeople: updatedService.numberOfPeople || '1',
                     pricePerPerson: updatedService.pricePerPerson || 0,
                     timeOfServiceInMinutes: updatedService.timeOfServiceInMinutes || 60,
                     numberOfWinesTasted: updatedService.numberOfWinesTasted || 0,

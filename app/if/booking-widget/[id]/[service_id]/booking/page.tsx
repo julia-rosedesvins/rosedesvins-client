@@ -536,7 +536,7 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
             </div>
             <div className="flex items-center gap-2">
               <Users className="w-5 h-5" style={{ color: colorCode }} />
-              <span>1 à {widgetData?.service?.numberOfPeople || 10} personnes</span>
+              <span>{widgetData?.service?.numberOfPeople || '1-10'} personnes</span>
             </div>
           </div>
         </div>

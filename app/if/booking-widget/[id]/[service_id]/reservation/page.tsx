@@ -96,7 +96,7 @@ function ReservationContent({ id, serviceId }: { id: string, serviceId: string }
                             <div className="flex items-center gap-3 text-muted-foreground">
                                 <Users className="w-8 h-8" style={{ color: colorCode }} />
                                 <span className="font-medium text-xl">
-                                    {widgetData?.service?.numberOfPeople || '2-10'} personne{(widgetData?.service?.numberOfPeople || 0) > 1 ? 's' : ''}
+                                    {widgetData?.service?.numberOfPeople || '2-10'} personne{(widgetData?.service?.numberOfPeople && !widgetData.service.numberOfPeople.includes('-') && parseInt(widgetData.service.numberOfPeople) === 1) ? '' : 's'}
                                 </span>
                             </div>
                         </div>
