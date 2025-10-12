@@ -201,11 +201,10 @@ export const EditServiceModal = ({ isOpen, onClose, prestation, onSave }: EditSe
       }
       const timeValue = totalMinutes.toString();
       
-      // Extract numeric value from numberOfPeople if it's a string
+      // Use the full numberOfPeople value (could be a range like "10-12")
       let peopleValue = "1";
       if (prestation.numberOfPeople) {
-        const peopleMatch = prestation.numberOfPeople.toString().match(/(\d+)/);
-        peopleValue = peopleMatch ? peopleMatch[1] : "1";
+        peopleValue = prestation.numberOfPeople.toString();
       }
       
       // Map languages from service data if available, otherwise use defaults
@@ -293,7 +292,7 @@ export const EditServiceModal = ({ isOpen, onClose, prestation, onSave }: EditSe
         originalIndex: (prestation as any).originalIndex, // Preserve the index for updating
         serviceName: formData.nom.trim(),
         serviceDescription: formData.description.trim(),
-        numberOfPeople: Math.max(1, parseInt(formData.nombrePersonnes) || 1),
+        numberOfPeople: formData.nombrePersonnes || '1',
         pricePerPerson: Math.max(0, parseFloat(formData.prix) || 0),
         timeOfServiceInMinutes: Math.max(15, parseInt(formData.temps) || 60), // Min 15 minutes as per schema
         numberOfWinesTasted: Math.max(0, parseInt(formData.vinsDesgustes) || 0),
@@ -433,11 +432,10 @@ export const EditServiceModal = ({ isOpen, onClose, prestation, onSave }: EditSe
                   Nombre de personnes *
                 </Label>
                 <Input
-                  type="number"
-                  min="1"
+                  type="text"
                   value={formData.nombrePersonnes}
                   onChange={(e) => setFormData(prev => ({ ...prev, nombrePersonnes: e.target.value }))}
-                  placeholder="ex: 10"
+                  placeholder="ex: 10-12"
                   className={`w-full text-sm sm:text-base border-2 focus:border-[#3A7B59] rounded-lg h-11 sm:h-auto ${errors.nombrePersonnes ? 'border-red-300 focus:border-red-500' : ''}`}
                 />
                 {errors.nombrePersonnes && <p className="text-red-500 text-xs sm:text-sm">{errors.nombrePersonnes}</p>}

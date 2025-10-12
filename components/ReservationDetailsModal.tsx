@@ -1,7 +1,9 @@
 import { Dialog, DialogContent, DialogHeader } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Clock, Users, Grape, Globe, Phone, Mail } from "lucide-react";
+import { Clock, Users, Grape, Globe, Phone, Mail, Edit2, Trash2, Loader2 } from "lucide-react";
 import { parseISO, format } from "date-fns";
+import { useState } from "react";
+import toast from "react-hot-toast";
 
 interface Reservation {
   id: number | string;
@@ -26,6 +28,16 @@ interface ReservationDetailsModalProps {
   reservation: Reservation | null;
   isOpen: boolean;
   onClose: () => void;
+  onEdit?: (reservation: Reservation) => void;
+  onDelete?: (bookingId: string) => void;
+  eventData?: {
+    _id: string;
+    bookingId?: {
+      _id: string;
+      [key: string]: any;
+    } | null;
+    eventType: string;
+  };
 }
 
 // Helper function to format date and time properly
@@ -80,8 +92,51 @@ const formatDateTime = (dateString: string | undefined, timeString: string) => {
   return `${formattedDate} - ${formattedTime}`;
 };
 
-export const ReservationDetailsModal = ({ reservation, isOpen, onClose }: ReservationDetailsModalProps) => {
+export const ReservationDetailsModal = ({ 
+  reservation, 
+  isOpen, 
+  onClose, 
+  onEdit, 
+  onDelete, 
+  eventData 
+}: ReservationDetailsModalProps) => {
+  const [isDeleting, setIsDeleting] = useState(false);
+  
   if (!reservation) return null;
+
+  const handleDelete = async () => {
+    if (!eventData?.bookingId?._id) {
+      toast.error('Unable to delete: Booking ID not found');
+      return;
+    }
+
+    if (!confirm('Êtes-vous sûr de vouloir supprimer cette réservation ? Cette action ne peut pas être annulée.')) {
+      return;
+    }
+
+    setIsDeleting(true);
+    try {
+      if (onDelete) {
+        await onDelete(eventData.bookingId._id);
+      }
+      onClose();
+    } catch (error) {
+      console.error('Error deleting reservation:', error);
+      toast.error('Failed to delete reservation');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleEdit = () => {
+    if (onEdit) {
+      onEdit(reservation);
+    }
+    onClose();
+  };
+
+  const isBooking = eventData?.eventType === 'booking' && eventData?.bookingId;
+  const canModify = isBooking;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -180,15 +235,57 @@ export const ReservationDetailsModal = ({ reservation, isOpen, onClose }: Reserv
             </div>
           )}
 
-          {/* Bouton d'annulation */}
-          <div className="flex justify-center sm:justify-end">
-            <Button 
-              className="text-white hover:opacity-90 w-full sm:w-auto text-sm lg:text-base px-4 lg:px-6 py-2"
-              style={{ backgroundColor: '#3A7B59' }}
-            >
-              Annuler la réservation
-            </Button>
-          </div>
+          {/* Action buttons */}
+          {canModify && (
+            <div className="flex flex-col sm:flex-row gap-3 sm:justify-end">
+              <Button 
+                variant="outline"
+                onClick={handleEdit}
+                className="flex items-center justify-center w-full sm:w-auto text-sm lg:text-base px-4 lg:px-6 py-2 border-2"
+                style={{ 
+                  color: '#3A7B59', 
+                  borderColor: '#3A7B59'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#3A7B59';
+                  e.currentTarget.style.color = 'white';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                  e.currentTarget.style.color = '#3A7B59';
+                }}
+              >
+                <Edit2 className="h-4 w-4 mr-2" />
+                Modifier
+              </Button>
+              
+              <Button 
+                variant="destructive"
+                onClick={handleDelete}
+                disabled={isDeleting}
+                className="flex items-center justify-center w-full sm:w-auto text-sm lg:text-base px-4 lg:px-6 py-2"
+              >
+                {isDeleting ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Trash2 className="h-4 w-4 mr-2" />
+                )}
+                {isDeleting ? 'Suppression...' : 'Supprimer'}
+              </Button>
+            </div>
+          )}
+
+          {!canModify && (
+            <div className="flex justify-center sm:justify-end">
+              <Button 
+                onClick={onClose}
+                className="text-white hover:opacity-90 w-full sm:w-auto text-sm lg:text-base px-4 lg:px-6 py-2"
+                style={{ backgroundColor: '#3A7B59' }}
+              >
+                Fermer
+              </Button>
+            </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>

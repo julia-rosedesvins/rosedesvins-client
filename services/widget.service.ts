@@ -35,7 +35,7 @@ export interface WidgetServiceData {
   id: string;
   name: string;
   description: string;
-  numberOfPeople: number;
+  numberOfPeople: string;
   pricePerPerson: number;
   timeOfServiceInMinutes: number;
   numberOfWinesTasted: number;

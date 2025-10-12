@@ -5,18 +5,20 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ChevronLeft, ChevronRight, Clock, Users, Grape, Globe, MessageCircle, Download, CalendarIcon, Loader2, AlertCircle, RefreshCw } from "lucide-react";
+import { ChevronLeft, ChevronRight, Clock, Users, Grape, Globe, MessageCircle, Download, CalendarIcon, Loader2, AlertCircle, RefreshCw, Edit2, Trash2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { ReservationDetailsModal } from "./ReservationDetailsModal";
 import { cn } from "@/lib/utils";
 import { eventsService, EventData } from "@/services/events.service";
 import toast from "react-hot-toast";
 import { useDate } from "@/contexts/DateContext";
+import { bookingService } from "@/services/booking.service";
+import { EditBookingModal } from "./EditBookingModal";
 
 interface Reservation {
-  id: number;
+  id: number | string;
   time: string;
-  people: number;
+  people: number | string;
   activity: string;
   language: string;
   comments: string;
@@ -24,15 +26,21 @@ interface Reservation {
   customerName?: string;
   customerPhone?: string;
   customerEmail?: string;
+  participantsAdults?: number;
+  participantsChildren?: number;
   eventType?: string;
   eventStatus?: string;
   backgroundColor?: string;
+  bookingId?: string;
 }
 
 export const ReservationsList = () => {
   const { selectedDate: currentDate, setSelectedDate: setCurrentDate } = useDate();
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
+  const [selectedEventData, setSelectedEventData] = useState<EventData | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingBookingData, setEditingBookingData] = useState<any>(null);
   const [events, setEvents] = useState<EventData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -150,12 +158,112 @@ export const ReservationsList = () => {
 
   const handleReservationClick = (reservation: any) => {
     setSelectedReservation(reservation);
+    
+    // Find the corresponding event data
+    const eventData = events.find(event => {
+      const eventDate = new Date(event.eventDate).toDateString();
+      const reservationDate = currentDate.toDateString();
+      return eventDate === reservationDate && event.eventTime === reservation.time;
+    });
+    
+    setSelectedEventData(eventData || null);
     setIsModalOpen(true);
   };
 
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setSelectedReservation(null);
+    setSelectedEventData(null);
+  };
+
+  const handleEditReservation = (reservation: Reservation) => {
+    // Find the corresponding event with booking data
+    const eventData = events.find(event => {
+      const eventDate = new Date(event.eventDate).toDateString();
+      const reservationDate = currentDate.toDateString();
+      return eventDate === reservationDate && 
+             event.eventTime === reservation.time &&
+             event.bookingId;
+    });
+
+    if (eventData?.bookingId) {
+      setEditingBookingData(eventData.bookingId);
+      setIsEditModalOpen(true);
+    } else {
+      toast.error('Cannot edit this reservation: Booking data not available');
+    }
+  };
+
+  const handleDeleteReservation = async (bookingId: string) => {
+    try {
+      const result = await bookingService.deleteBooking(bookingId);
+      
+      if (result.success) {
+        toast.success(result.message || 'Reservation deleted successfully');
+        // Refresh events list
+        await fetchEvents();
+      } else {
+        toast.error(result.message || 'Failed to delete reservation');
+      }
+    } catch (error: any) {
+      console.error('Error deleting reservation:', error);
+      toast.error(error.message || 'Failed to delete reservation');
+    }
+  };
+
+  const handleEditSuccess = async () => {
+    // Refresh events list after successful edit
+    await fetchEvents();
+    toast.success('Reservation updated successfully');
+  };
+
+  // Helper function to check if a reservation can be edited/deleted
+  const getBookingData = (reservation: any) => {
+    const eventData = events.find(event => {
+      const eventDate = new Date(event.eventDate).toDateString();
+      const reservationDate = currentDate.toDateString();
+      return eventDate === reservationDate && 
+             event.eventTime === reservation.time &&
+             event.eventType === 'booking' &&
+             event.bookingId;
+    });
+    return eventData;
+  };
+
+  // Quick edit handler
+  const handleQuickEdit = (reservation: any) => {
+    const eventData = getBookingData(reservation);
+    if (eventData?.bookingId) {
+      setEditingBookingData(eventData.bookingId);
+      setIsEditModalOpen(true);
+    } else {
+      toast.error('Cannot edit this reservation: Booking data not available');
+    }
+  };
+
+  // Quick delete handler
+  const handleQuickDelete = async (reservation: any) => {
+    const eventData = getBookingData(reservation);
+    if (!eventData?.bookingId?._id) {
+      toast.error('Cannot delete this reservation: Booking data not available');
+      return;
+    }
+
+    if (!confirm('Êtes-vous sûr de vouloir supprimer cette réservation ?')) {
+      return;
+    }
+
+    try {
+      const result = await bookingService.deleteBooking(eventData.bookingId._id);
+      if (result.success) {
+        toast.success('Reservation deleted successfully');
+        await fetchEvents();
+      } else {
+        toast.error(result.message || 'Failed to delete reservation');
+      }
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to delete reservation');
+    }
   };
 
   return (
@@ -260,14 +368,36 @@ export const ReservationsList = () => {
                       <Clock className="h-4 w-4 text-gray-500" />
                       <span className="font-semibold text-lg">{reservation.time}</span>
                     </div>
-                    <Button 
-                      size="sm" 
-                      className="text-white hover:opacity-90 text-xs px-3 py-1"
-                      style={{ backgroundColor: '#3A7B59' }}
-                      onClick={() => handleReservationClick(reservation)}
-                    >
-                      Détails
-                    </Button>
+                    <div className="flex gap-2">
+                      {getBookingData(reservation) && (
+                        <>
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            className="text-xs px-2 py-1 border-blue-500 text-blue-500 hover:bg-blue-50"
+                            onClick={() => handleQuickEdit(reservation)}
+                          >
+                            <Edit2 className="h-3 w-3" />
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            className="text-xs px-2 py-1 border-red-500 text-red-500 hover:bg-red-50"
+                            onClick={() => handleQuickDelete(reservation)}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </>
+                      )}
+                      <Button 
+                        size="sm" 
+                        className="text-white hover:opacity-90 text-xs px-3 py-1"
+                        style={{ backgroundColor: '#3A7B59' }}
+                        onClick={() => handleReservationClick(reservation)}
+                      >
+                        Détails
+                      </Button>
+                    </div>
                   </div>
                   
                   <div className="grid grid-cols-2 gap-3 text-sm">
@@ -357,14 +487,36 @@ export const ReservationsList = () => {
                       </div>
                     </TableCell>
                     <TableCell className="text-center px-4 py-4">
-                      <Button 
-                        size="sm" 
-                        className="text-white hover:opacity-90 px-4 py-2"
-                        style={{ backgroundColor: '#3A7B59' }}
-                        onClick={() => handleReservationClick(reservation)}
-                      >
-                        Détails
-                      </Button>
+                      <div className="flex justify-center gap-2">
+                        {getBookingData(reservation) && (
+                          <>
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              className="px-3 py-2 border-blue-500 text-blue-500 hover:bg-blue-50"
+                              onClick={() => handleQuickEdit(reservation)}
+                            >
+                              <Edit2 className="h-4 w-4" />
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              className="px-3 py-2 border-red-500 text-red-500 hover:bg-red-50"
+                              onClick={() => handleQuickDelete(reservation)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </>
+                        )}
+                        <Button 
+                          size="sm" 
+                          className="text-white hover:opacity-90 px-4 py-2"
+                          style={{ backgroundColor: '#3A7B59' }}
+                          onClick={() => handleReservationClick(reservation)}
+                        >
+                          Détails
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -398,6 +550,23 @@ export const ReservationsList = () => {
         reservation={selectedReservation}
         isOpen={isModalOpen}
         onClose={handleCloseModal}
+        onEdit={handleEditReservation}
+        onDelete={handleDeleteReservation}
+        eventData={selectedEventData ? {
+          _id: selectedEventData._id,
+          bookingId: selectedEventData.bookingId,
+          eventType: selectedEventData.eventType
+        } : undefined}
+      />
+      
+      <EditBookingModal
+        bookingData={editingBookingData}
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setEditingBookingData(null);
+        }}
+        onSuccess={handleEditSuccess}
       />
     </Card>
   );

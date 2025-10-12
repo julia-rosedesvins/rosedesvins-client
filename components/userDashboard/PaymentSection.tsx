@@ -21,27 +21,12 @@ export const PaymentSection = () => {
 
   // State for selected payment methods
   const [selectedMethods, setSelectedMethods] = useState<string[]>([]);
-  
-  // Static payment methods - all selected by default (for current implementation)
-  const staticSelectedMethods = [
-    PAYMENT_METHOD_OPTIONS.BANK_CARD,
-    PAYMENT_METHOD_OPTIONS.CHECKS,
-    PAYMENT_METHOD_OPTIONS.CASH
-  ];
 
   // Load payment methods on component mount
-  // NOTE: Keeping dynamic code for future use - currently commented out
   useEffect(() => {
-    // loadPaymentMethods(); // Commented out for static implementation
-    
-    // For static implementation, set all methods as selected
-    setSelectedMethods(staticSelectedMethods);
-    setHasChanges(false);
-    setIsLoading(false);
+    loadPaymentMethods();
   }, []);
 
-  // DYNAMIC CODE - Keeping for future use (currently commented out)
-  /*
   const loadPaymentMethods = async () => {
     setIsLoading(true);
     try {
@@ -62,10 +47,7 @@ export const PaymentSection = () => {
       setIsLoading(false);
     }
   };
-  */
 
-  // DYNAMIC CODE - Keeping for future use (currently commented out)
-  /*
   const savePaymentMethods = async () => {
     setIsSaving(true);
     try {
@@ -84,21 +66,18 @@ export const PaymentSection = () => {
       setIsSaving(false);
     }
   };
-  */
 
-  // DYNAMIC CODE - Keeping for future use (currently commented out)
-  /*
-  const handleMethodToggle = (method: string) => {
+  const handleMethodToggle = (methodId: string) => {
     setSelectedMethods(prev => {
-      const newMethods = prev.includes(method)
-        ? prev.filter(m => m !== method)
-        : [...prev, method];
+      const newMethods = prev.includes(methodId)
+        ? prev.filter(m => m !== methodId)
+        : [...prev, methodId];
       
       setHasChanges(true);
       return newMethods;
     });
   };
-  */
+
   return (
     <Card className="mt-5 relative shadow-sm border-0 bg-white ring-1 ring-gray-200 hover:ring-gray-300 transition-all duration-200">
       <CardHeader className="pb-4">
@@ -109,13 +88,14 @@ export const PaymentSection = () => {
       </CardHeader>
       <CardContent className="pt-2 space-y-6 lg:space-y-8">        
         <div className="space-y-4">
-          {/* Static Implementation - All payment methods selected with disabled checkboxes only */}
+          {/* Dynamic Implementation - Interactive checkboxes */}
           <div className="flex items-center space-x-4 p-3 rounded-lg bg-white border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all">
             <Checkbox 
               id="card" 
-              checked={true}
-              disabled={true}
-              className="data-[state=checked]:bg-[#3A7B59] data-[state=checked]:border-[#3A7B59] disabled:opacity-100"
+              checked={selectedMethods.includes(PAYMENT_METHOD_OPTIONS.BANK_CARD)}
+              onCheckedChange={() => handleMethodToggle(PAYMENT_METHOD_OPTIONS.BANK_CARD)}
+              disabled={isLoading}
+              className="data-[state=checked]:bg-[#3A7B59] data-[state=checked]:border-[#3A7B59]"
             />
             <CreditCard className="h-5 w-5 lg:h-6 lg:w-6 text-[#3A7B59]" />
             <Label htmlFor="card" className="text-sm lg:text-base font-semibold cursor-pointer text-black">
@@ -126,9 +106,10 @@ export const PaymentSection = () => {
           <div className="flex items-center space-x-4 p-3 rounded-lg bg-white border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all">
             <Checkbox 
               id="check" 
-              checked={true}
-              disabled={true}
-              className="data-[state=checked]:bg-[#3A7B59] data-[state=checked]:border-[#3A7B59] disabled:opacity-100"
+              checked={selectedMethods.includes(PAYMENT_METHOD_OPTIONS.CHECKS)}
+              onCheckedChange={() => handleMethodToggle(PAYMENT_METHOD_OPTIONS.CHECKS)}
+              disabled={isLoading}
+              className="data-[state=checked]:bg-[#3A7B59] data-[state=checked]:border-[#3A7B59]"
             />
             <Banknote className="h-5 w-5 lg:h-6 lg:w-6 text-[#3A7B59]" />
             <Label htmlFor="check" className="text-sm lg:text-base font-semibold cursor-pointer text-black">
@@ -139,9 +120,10 @@ export const PaymentSection = () => {
           <div className="flex items-center space-x-4 p-3 rounded-lg bg-white border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all">
             <Checkbox 
               id="cash" 
-              checked={true}
-              disabled={true}
-              className="data-[state=checked]:bg-[#3A7B59] data-[state=checked]:border-[#3A7B59] disabled:opacity-100"
+              checked={selectedMethods.includes(PAYMENT_METHOD_OPTIONS.CASH)}
+              onCheckedChange={() => handleMethodToggle(PAYMENT_METHOD_OPTIONS.CASH)}
+              disabled={isLoading}
+              className="data-[state=checked]:bg-[#3A7B59] data-[state=checked]:border-[#3A7B59]"
             />
             <Coins className="h-5 w-5 lg:h-6 lg:w-6 text-[#3A7B59]" />
             <Label htmlFor="cash" className="text-sm lg:text-base font-semibold cursor-pointer text-black">
@@ -151,7 +133,7 @@ export const PaymentSection = () => {
         </div>
         
         {/* DYNAMIC CODE - Save Button (keeping for future use, currently commented out) */}
-        {/*
+        
         <div className="flex justify-end">
           <Button
             onClick={savePaymentMethods}
@@ -171,7 +153,7 @@ export const PaymentSection = () => {
             )}
           </Button>
         </div>
-        */}
+       
 
         {/* DYNAMIC CODE - Stripe Integration Section (keeping for future use, currently commented out) */}
         {/*
@@ -195,7 +177,7 @@ export const PaymentSection = () => {
         */}
 
         {/* DYNAMIC CODE - Loading Overlay (keeping for future use, currently commented out) */}
-        {/*
+        
         {isLoading && (
           <div className="absolute inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center rounded-lg">
             <div className="flex items-center gap-3 text-[#3A7B59] bg-white px-6 py-3 rounded-lg shadow-lg">
@@ -204,7 +186,7 @@ export const PaymentSection = () => {
             </div>
           </div>
         )}
-        */}
+       
         
       </CardContent>
     </Card>

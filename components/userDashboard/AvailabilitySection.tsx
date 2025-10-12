@@ -217,7 +217,7 @@ export const AvailabilitySection = () => {
 
       await availabilityService.saveAvailability(availabilityData);
       
-      toast.success('✅ Disponibilités sauvegardées avec succès!');
+      toast.success('Disponibilités sauvegardées avec succès!');
       
       // Update original data to reflect the saved state
       setOriginalData({

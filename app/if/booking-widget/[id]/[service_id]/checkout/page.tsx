@@ -51,6 +51,9 @@ function CheckoutContent({ id, serviceId }: { id: string, serviceId: string }) {
   const selectedPaymentMethod = 'cash_on_onsite';
   
   const [isProcessing, setIsProcessing] = useState(false);
+  // Get payment methods from widget data (already loaded)
+  const acceptedPaymentMethods = widgetData?.paymentMethods?.methods || ['cash_on_onsite'];
+  const loadingPaymentMethods = loading;
 
 
 
@@ -109,7 +112,8 @@ function CheckoutContent({ id, serviceId }: { id: string, serviceId: string }) {
     setIsProcessing(true);
     
     try {
-      // Prepare booking data - always use cash_on_onsite payment method
+      // Prepare booking data - ALWAYS use cash_on_onsite payment method regardless of displayed options
+      // The displayed payment methods are for information only, actual payment is always cash_on_onsite
       const bookingPayload = {
         userId: id,
         serviceId: serviceId,
@@ -124,7 +128,7 @@ function CheckoutContent({ id, serviceId }: { id: string, serviceId: string }) {
         phoneNo: bookingData.phone || '',
         additionalNotes: bookingData.additionalInfo || '',
         paymentMethod: {
-          method: 'cash_on_onsite' as const
+          method: 'cash_on_onsite' as const // Fixed payment method - not user selectable
         }
       };
 
@@ -162,21 +166,22 @@ function CheckoutContent({ id, serviceId }: { id: string, serviceId: string }) {
   };
 
   const renderPaymentMethodIcon = (method: string) => {
+    const iconClass = "w-5 h-5 text-gray-600";
     switch (method.toLowerCase()) {
       case 'bank card':
       case 'bank_card':
-        return <Building2 className="w-5 h-5" />;
+        return <Building2 className={iconClass} />;
       case 'checks':
       case 'cheque':
-        return <Receipt className="w-5 h-5" />;
+        return <Receipt className={iconClass} />;
       case 'cash':
-        return <Euro className="w-5 h-5" />;
+        return <Euro className={iconClass} />;
       case 'cash_on_onsite':
-        return <Euro className="w-5 h-5" />;
+        return <Euro className={iconClass} />;
       case 'stripe':
-        return <CreditCard className="w-5 h-5" />;
+        return <CreditCard className={iconClass} />;
       default:
-        return <CreditCard className="w-5 h-5" />;
+        return <CreditCard className={iconClass} />;
     }
   };
 
@@ -236,49 +241,39 @@ function CheckoutContent({ id, serviceId }: { id: string, serviceId: string }) {
               </h2>
               
               <form onSubmit={handleSubmit} className="space-y-6">
-                {/* Payment Methods Display - All Accepted */}
+                {/* Payment Methods Display - Dynamic */}
                 <div>
                   <label className="block text-sm font-medium mb-4">
                     Modes de paiement acceptés
                   </label>
-                  <div className="space-y-3">
-                    {/* Bank Card */}
-                    <div className="flex items-center space-x-2 p-3 border rounded-lg bg-white border-gray-200">
-                      <div className="w-4 h-4 rounded-full bg-gray-500 flex items-center justify-center">
-                        <div className="w-2 h-2 rounded-full bg-white"></div>
-                      </div>
-                      <div className="flex items-center gap-2 flex-1">
-                        <Building2 className="w-5 h-5 text-gray-600" />
-                        <span className="text-gray-800">Virement bancaire</span>
-                      </div>
+                  
+                  {loadingPaymentMethods ? (
+                    <div className="flex items-center justify-center p-8">
+                      <Loader2 className="w-6 h-6 animate-spin" style={{ color: colorCode }} />
+                      <span className="ml-2 text-sm text-gray-600">Chargement des modes de paiement...</span>
                     </div>
-                    
-                    {/* Cheque */}
-                    <div className="flex items-center space-x-2 p-3 border rounded-lg bg-white border-gray-200">
-                      <div className="w-4 h-4 rounded-full bg-gray-500 flex items-center justify-center">
-                        <div className="w-2 h-2 rounded-full bg-white"></div>
-                      </div>
-                      <div className="flex items-center gap-2 flex-1">
-                        <Receipt className="w-5 h-5 text-gray-600" />
-                        <span className="text-gray-800">Paiement par chèque</span>
-                      </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {acceptedPaymentMethods.map((method) => (
+                        <div key={method} className="flex items-center space-x-2 p-3 border rounded-lg bg-white border-gray-200">
+                          <div className="w-4 h-4 rounded-full bg-gray-500 flex items-center justify-center">
+                            <div className="w-2 h-2 rounded-full bg-white"></div>
+                          </div>
+                          <div className="flex items-center gap-2 flex-1">
+                            {renderPaymentMethodIcon(method)}
+                            <span className="text-gray-800">{getPaymentMethodLabel(method)}</span>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                    
-                    {/* Cash on Site */}
-                    <div className="flex items-center space-x-2 p-3 border rounded-lg bg-white border-gray-200">
-                      <div className="w-4 h-4 rounded-full bg-gray-500 flex items-center justify-center">
-                        <div className="w-2 h-2 rounded-full bg-white"></div>
-                      </div>
-                      <div className="flex items-center gap-2 flex-1">
-                        <Euro className="w-5 h-5 text-gray-600" />
-                        <span className="text-gray-800">Paiement sur place</span>
-                      </div>
-                    </div>
-                  </div>
+                  )}
                   
                   <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                     <p className="text-sm text-blue-800">
-                      <strong>Note:</strong> Tous les modes de paiement sont acceptés. Vous pourrez choisir votre méthode de paiement préférée lors de votre visite.
+                      <strong>Note:</strong> {acceptedPaymentMethods.length > 1 
+                        ? 'Tous les modes de paiement sont acceptés. Vous pourrez choisir votre méthode de paiement préférée lors de votre visite.'
+                        : 'Vous pourrez effectuer votre paiement selon la méthode acceptée lors de votre visite.'
+                      }
                     </p>
                   </div>
                 </div>
@@ -320,7 +315,10 @@ function CheckoutContent({ id, serviceId }: { id: string, serviceId: string }) {
                 <div className="flex items-center gap-3">
                   <Euro className="w-5 h-5" style={{ color: colorCode }} />
                   <span className="text-sm" style={{ color: colorCode }}>
-                    Tous modes de paiement acceptés
+                    {acceptedPaymentMethods.length > 1 
+                      ? `${acceptedPaymentMethods.length} modes de paiement acceptés`
+                      : 'Mode de paiement accepté'
+                    }
                   </span>
                 </div>
 
