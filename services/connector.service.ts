@@ -322,6 +322,22 @@ class ConnectorService {
       throw new Error('Network error occurred');
     }
   }
+
+  /**
+   * Get currently connected calendar provider
+   * @returns Promise with connected provider name
+   */
+  async getConnectedProvider(): Promise<{ success: boolean; message: string; data: { provider: string } }> {
+    try {
+      const response = await apiClient.get('/connectors/connected-provider');
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response) {
+        throw error.response.data as ApiError;
+      }
+      throw new Error('Network error occurred');
+    }
+  }
 }
 
 // Export singleton instance

@@ -17,6 +17,7 @@ export const AgendaSection = () => {
   const [isMicrosoftConnecting, setIsMicrosoftConnecting] = useState(false);
   const [orangeConnectionStatus, setOrangeConnectionStatus] = useState<any>(null);
   const [microsoftConnectionStatus, setMicrosoftConnectionStatus] = useState<any>(null);
+  const [connectedProvider, setConnectedProvider] = useState<string>('none');
   const [formErrors, setFormErrors] = useState<{
     username?: string;
     password?: string;
@@ -29,6 +30,7 @@ export const AgendaSection = () => {
 
   // Check connection status on component mount
   useEffect(() => {
+    checkConnectedProvider();
     checkOrangeConnectionStatus();
     checkMicrosoftConnectionStatus();
     
@@ -46,6 +48,7 @@ export const AgendaSection = () => {
       // Show success message and refresh status
       toast.success('🎉 Microsoft Calendar connecté avec succès!');
       setTimeout(() => {
+        checkConnectedProvider();
         checkMicrosoftConnectionStatus();
       }, 1000);
     } else if (microsoftError) {
@@ -111,6 +114,17 @@ export const AgendaSection = () => {
     }
   };
 
+  const checkConnectedProvider = async () => {
+    try {
+      const result = await connectorService.getConnectedProvider();
+      setConnectedProvider(result.data.provider);
+      console.log('🔍 Connected provider:', result.data.provider);
+    } catch (error) {
+      console.error('Error checking connected provider:', error);
+      setConnectedProvider('none');
+    }
+  };
+
   // Clear specific field error when user starts typing
   const clearFieldError = (field: 'username' | 'password') => {
     if (formErrors[field]) {
@@ -123,29 +137,58 @@ export const AgendaSection = () => {
   };
 
   const handleCalendarConnect = (calendarType: string) => {
+    const targetProvider = calendarType.toLowerCase();
+    
     if (calendarType === 'Orange') {
       // If already connected, disconnect instead of connecting
       if (orangeConnectionStatus) {
         handleOrangeDisconnect();
-        setIsCalendarDialogOpen(false); // Close the modal after disconnect action
+        setIsCalendarDialogOpen(false);
       } else {
-        setIsCalendarDialogOpen(false); // Close the calendar connection modal
-        setIsOrangeLoginOpen(true);
-        // Clear any previous errors when opening the modal
-        setFormErrors({});
+        // Check if another provider is connected
+        if (connectedProvider !== 'none' && connectedProvider !== 'orange') {
+          const providerNames = {
+            'microsoft': 'Microsoft Calendar',
+            'ovh': 'Calendrier OVH'
+          };
+          const currentProviderName = providerNames[connectedProvider as keyof typeof providerNames] || connectedProvider;
+          
+          if (window.confirm(`⚠️ Attention: ${currentProviderName} est actuellement connecté. Le connecter à Orange Calendar le déconnectera automatiquement. Voulez-vous continuer ?`)) {
+            setIsCalendarDialogOpen(false);
+            setIsOrangeLoginOpen(true);
+            setFormErrors({});
+          }
+        } else {
+          setIsCalendarDialogOpen(false);
+          setIsOrangeLoginOpen(true);
+          setFormErrors({});
+        }
       }
     } else if (calendarType === 'Microsoft') {
       // If already connected, disconnect instead of connecting
       if (microsoftConnectionStatus) {
         handleMicrosoftDisconnect();
-        setIsCalendarDialogOpen(false); // Close the modal after disconnect action
-      } else {
-        handleMicrosoftConnect();
         setIsCalendarDialogOpen(false);
+      } else {
+        // Check if another provider is connected
+        if (connectedProvider !== 'none' && connectedProvider !== 'microsoft') {
+          const providerNames = {
+            'orange': 'Orange Calendar',
+            'ovh': 'Calendrier OVH'
+          };
+          const currentProviderName = providerNames[connectedProvider as keyof typeof providerNames] || connectedProvider;
+          
+          if (window.confirm(`⚠️ Attention: ${currentProviderName} est actuellement connecté. Le connecter à Microsoft Calendar le déconnectera automatiquement. Voulez-vous continuer ?`)) {
+            handleMicrosoftConnect();
+            setIsCalendarDialogOpen(false);
+          }
+        } else {
+          handleMicrosoftConnect();
+          setIsCalendarDialogOpen(false);
+        }
       }
     } else {
       console.log(`Connecting to ${calendarType} calendar`);
-      // Here you would implement the actual calendar connection logic
       setIsCalendarDialogOpen(false);
     }
   };
@@ -157,6 +200,7 @@ export const AgendaSection = () => {
       
       // Update local state
       setOrangeConnectionStatus(null);
+      checkConnectedProvider(); // Refresh connected provider status
       toast.success('🔌 Calendrier Orange déconnecté avec succès!');
       
     } catch (error) {
@@ -216,6 +260,7 @@ export const AgendaSection = () => {
       
       // Update local state
       setMicrosoftConnectionStatus(null);
+      checkConnectedProvider(); // Refresh connected provider status
       toast.success('🔌 Calendrier Microsoft déconnecté avec succès!');
       
     } catch (error) {
@@ -284,6 +329,7 @@ export const AgendaSection = () => {
       
       // Refresh connection status
       await checkOrangeConnectionStatus();
+      await checkConnectedProvider();
     } catch (error) {
       console.error('❌ Failed to connect Orange calendar:', error);
       console.error('Error type:', typeof error);
@@ -485,7 +531,7 @@ export const AgendaSection = () => {
               </Button>
 
               {/* OVH Calendar */}
-              <Button
+              {/* <Button
                 onClick={() => handleCalendarConnect('OVH')}
                 variant="outline"
                 className="w-full flex items-center justify-start p-4 h-auto border-2 border-gray-200 hover:border-[#3A7B59] hover:bg-gray-50 transition-all duration-200"
@@ -496,7 +542,7 @@ export const AgendaSection = () => {
                   </div>
                   <span className="font-medium text-gray-700">Calendrier OVH</span>
                 </div>
-              </Button>
+              </Button> */}
 
               {/* Microsoft Calendar */}
               <Button
@@ -524,7 +570,7 @@ export const AgendaSection = () => {
                     </div>
                     <div className="flex flex-col items-start">
                       <span className={`font-medium ${microsoftConnectionStatus ? 'text-red-700' : 'text-gray-700'}`}>
-                        Calendrier Microsoft
+                        Calendrier Microsoft / OVH
                       </span>
                       {microsoftConnectionStatus && (
                         <span className="text-xs text-green-600">
