@@ -74,29 +74,29 @@ function ReservationContent({ id, serviceId }: { id: string, serviceId: string }
                         )}
 
                         {/* Details Grid */}
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
-                            <div className="flex items-center gap-3 text-muted-foreground">
-                                <Clock className="w-8 h-8" style={{ color: colorCode }} />
-                                <span className="font-medium text-xl">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                            <div className="flex items-center gap-2 text-muted-foreground min-w-0">
+                                <Clock className="w-6 h-6 flex-shrink-0" style={{ color: colorCode }} />
+                                <span className="font-medium text-sm md:text-base whitespace-nowrap overflow-hidden text-ellipsis">
                                     {widgetData?.service?.timeOfServiceInMinutes || 60} min
                                 </span>
                             </div>
-                            <div className="flex items-center gap-3 text-muted-foreground">
-                                <Wine className="w-8 h-8" style={{ color: colorCode }} />
-                                <span className="font-medium text-xl">
+                            <div className="flex items-center gap-2 text-muted-foreground min-w-0">
+                                <Wine className="w-6 h-6 flex-shrink-0" style={{ color: colorCode }} />
+                                <span className="font-medium text-sm md:text-base whitespace-nowrap overflow-hidden text-ellipsis">
                                     {widgetData?.service?.numberOfWinesTasted || 5} vins
                                 </span>
                             </div>
-                            <div className="flex items-center gap-3 text-muted-foreground">
-                                <Euro className="w-8 h-8" style={{ color: colorCode }} />
-                                <span className="font-medium text-xl">
-                                    {widgetData?.service?.pricePerPerson || 5} € / personne
+                            <div className="flex items-center gap-2 text-muted-foreground min-w-0">
+                                <Euro className="w-6 h-6 flex-shrink-0" style={{ color: colorCode }} />
+                                <span className="font-medium text-sm md:text-base whitespace-nowrap overflow-hidden text-ellipsis">
+                                    {widgetData?.service?.pricePerPerson || 5} € / personnes
                                 </span>
                             </div>
-                            <div className="flex items-center gap-3 text-muted-foreground">
-                                <Users className="w-8 h-8" style={{ color: colorCode }} />
-                                <span className="font-medium text-xl">
-                                    {widgetData?.service?.numberOfPeople || '2-10'} personne{(widgetData?.service?.numberOfPeople && !widgetData.service.numberOfPeople.includes('-') && parseInt(widgetData.service.numberOfPeople) === 1) ? '' : 's'}
+                            <div className="flex items-center gap-2 text-muted-foreground min-w-0">
+                                <Users className="w-6 h-6 flex-shrink-0" style={{ color: colorCode }} />
+                                <span className="font-medium text-sm md:text-base whitespace-nowrap overflow-hidden text-ellipsis">
+                                    {widgetData?.service?.numberOfPeople || '2-10'} personnes
                                 </span>
                             </div>
                         </div>
