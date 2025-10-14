@@ -130,12 +130,12 @@ export default function UserMyAccount() {
 
     const handlePasswordChange = async () => {
         // Validation
-        if (!passwordData.currentPassword.trim()) {
+        if (!passwordData.currentPassword?.trim()) {
             toast.error('Le mot de passe actuel est requis');
             return;
         }
         
-        if (!passwordData.newPassword.trim()) {
+        if (!passwordData.newPassword?.trim()) {
             toast.error('Le nouveau mot de passe est requis');
             return;
         }

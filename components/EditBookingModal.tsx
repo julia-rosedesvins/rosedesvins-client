@@ -59,7 +59,7 @@ export const EditBookingModal = ({ bookingData, isOpen, onClose, onSuccess }: Ed
         phoneNo: bookingData.phoneNo,
         customerEmail: bookingData.customerEmail,
         additionalNotes: bookingData.additionalNotes || '',
-        bookingStatus: bookingData.bookingStatus,
+        bookingStatus: bookingData.bookingStatus as 'pending' | 'confirmed' | 'completed' | 'cancelled',
       });
       
       // Set initial date
@@ -107,7 +107,7 @@ export const EditBookingModal = ({ bookingData, isOpen, onClose, onSuccess }: Ed
 
       // Ensure we have at least one field to update
       if (Object.keys(updatePayload).length === 0) {
-        toast.info('No changes detected');
+        toast('No changes detected');
         onClose();
         return;
       }
