@@ -11,37 +11,44 @@ import { fr } from "date-fns/locale";
 import { startOfMonth, endOfMonth, eachDayOfInterval, format, getDay, startOfWeek, endOfWeek, parseISO } from "date-fns";
 import { ReservationDetailsModal } from "./ReservationDetailsModal";
 import { AddBookingModal } from "./AddBookingModal";
+import { EditBookingModal } from "./EditBookingModal";
 import { cn } from "@/lib/utils";
 import { eventsService, EventData } from "@/services/events.service";
+import { bookingService } from "@/services/booking.service";
 import { useDate } from "@/contexts/DateContext";
+import toast from "react-hot-toast";
 
 export const CalendarSection = () => {
   const { selectedDate, setSelectedDate } = useDate();
   const [date, setDate] = useState<Date | undefined>(selectedDate);
   const [currentMonth, setCurrentMonth] = useState(selectedDate); // Current month
   const [selectedReservation, setSelectedReservation] = useState<any>(null);
+  const [selectedEventData, setSelectedEventData] = useState<EventData | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAddBookingModalOpen, setIsAddBookingModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingBookingData, setEditingBookingData] = useState<any>(null);
   const [events, setEvents] = useState<EventData[]>([]);
   const [eventsLoading, setEventsLoading] = useState(true);
   const [eventsError, setEventsError] = useState<string | null>(null);
 
+  // Fetch events function
+  const fetchEvents = async () => {
+    try {
+      setEventsLoading(true);
+      setEventsError(null);
+      const response = await eventsService.getUserEvents();
+      setEvents(response.data);
+    } catch (error: any) {
+      console.error('Failed to fetch events:', error);
+      setEventsError(error.message || 'Failed to load events');
+    } finally {
+      setEventsLoading(false);
+    }
+  };
+
   // Fetch events on component mount
   useEffect(() => {
-    const fetchEvents = async () => {
-      try {
-        setEventsLoading(true);
-        setEventsError(null);
-        const response = await eventsService.getUserEvents();
-        setEvents(response.data);
-      } catch (error: any) {
-        console.error('Failed to fetch events:', error);
-        setEventsError(error.message || 'Failed to load events');
-      } finally {
-        setEventsLoading(false);
-      }
-    };
-
     fetchEvents();
   }, []);
 
@@ -174,6 +181,16 @@ export const CalendarSection = () => {
       date: `${day.getDate().toString().padStart(2, '0')} / ${(day.getMonth() + 1).toString().padStart(2, '0')} / ${day.getFullYear()}`
     };
     setSelectedReservation(reservationWithDate);
+    
+    // Find the corresponding event data for edit/delete functionality
+    const eventData = events.find(event => {
+      const eventDate = new Date(event.eventDate);
+      return eventDate.toDateString() === day.toDateString() && 
+             event.eventTime === reservation.time &&
+             event._id === reservation.id;
+    });
+    
+    setSelectedEventData(eventData || null);
     setIsModalOpen(true);
   };
 
@@ -187,6 +204,44 @@ export const CalendarSection = () => {
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setSelectedReservation(null);
+    setSelectedEventData(null);
+  };
+
+  const handleEditReservation = (reservation: any) => {
+    // Find the corresponding event with booking data
+    const eventData = events.find(event => {
+      return event._id === reservation.id && event.bookingId;
+    });
+
+    if (eventData?.bookingId) {
+      setEditingBookingData(eventData.bookingId);
+      setIsEditModalOpen(true);
+    } else {
+      toast.error('Cannot edit this reservation: Booking data not available');
+    }
+  };
+
+  const handleDeleteReservation = async (bookingId: string) => {
+    try {
+      const result = await bookingService.deleteBooking(bookingId);
+      
+      if (result.success) {
+        toast.success(result.message || 'Reservation deleted successfully');
+        // Refresh events list
+        await fetchEvents();
+      } else {
+        toast.error(result.message || 'Failed to delete reservation');
+      }
+    } catch (error: any) {
+      console.error('Error deleting reservation:', error);
+      toast.error(error.message || 'Failed to delete reservation');
+    }
+  };
+
+  const handleEditSuccess = async () => {
+    // Refresh events list after successful edit
+    await fetchEvents();
+    toast.success('Reservation updated successfully');
   };
 
   return (
@@ -378,6 +433,23 @@ export const CalendarSection = () => {
         reservation={selectedReservation}
         isOpen={isModalOpen}
         onClose={handleCloseModal}
+        onEdit={handleEditReservation}
+        onDelete={handleDeleteReservation}
+        eventData={selectedEventData ? {
+          _id: selectedEventData._id,
+          bookingId: selectedEventData.bookingId,
+          eventType: selectedEventData.eventType
+        } : undefined}
+      />
+      
+      <EditBookingModal
+        bookingData={editingBookingData}
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setEditingBookingData(null);
+        }}
+        onSuccess={handleEditSuccess}
       />
       
       <AddBookingModal 
