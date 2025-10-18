@@ -270,7 +270,7 @@ function BookingConfirmationContent({ id, serviceId }: { id: string, serviceId: 
 
                 <div className="flex items-center gap-3">
                   <CreditCard className="w-5 h-5" style={{ color: colorCode }} />
-                  <span className="text-sm">Paiement en ligne</span>
+                  <span className="text-sm">Paiement sur place</span>
                 </div>
 
                 <div className="mt-6">

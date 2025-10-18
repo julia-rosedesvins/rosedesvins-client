@@ -189,14 +189,14 @@ function CheckoutContent({ id, serviceId }: { id: string, serviceId: string }) {
     switch (method.toLowerCase()) {
       case 'bank card':
       case 'bank_card':
-        return 'Virement bancaire';
+        return 'Carte bancaire';
       case 'checks':
       case 'cheque':
-        return 'Paiement par chèque';
+        return 'Chèques';
       case 'cash':
-        return 'Paiement en espèces';
+        return 'Espèces (paiement sur place)';
       case 'cash_on_onsite':
-        return 'Paiement sur place';
+        return 'Espèces (paiement sur place)';
       case 'stripe':
         return 'Carte bancaire (Stripe)';
       default:
