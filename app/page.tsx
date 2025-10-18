@@ -154,33 +154,28 @@ export default function HomePage() {
             </Button>
           </div>
           <div className="relative">
-            {/* Video Container with Professional Styling */}
-            <div className="relative bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl shadow-2xl overflow-hidden border border-gray-200">
+            {/* Video Container with Professional Styling - Optimized for video content */}
+            <div className="relative bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl shadow-2xl overflow-hidden border border-gray-200 w-full max-w-3xl mx-auto">
               
-              {/* Video Content */}
-              <div className="relative aspect-video bg-black">
-                {/* Loading Placeholder */}
-                <div className="absolute inset-0 bg-gray-900 flex items-center justify-center">
-                  <div className="text-center">
-                    <div className="w-12 h-12 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                    <p className="text-white text-sm">Chargement de la vidéo...</p>
-                  </div>
-                </div>
-                
-                {/* Iframe */}
-                <iframe
-                  src="https://drive.google.com/file/d/1qk9D1CUH6Mj2tryhv_bL2Qmibncg2pSg/preview"
-                  className="absolute inset-0 w-full h-full border-0"
-                  allow="autoplay; fullscreen"
-                  allowFullScreen
-                  title="Démonstration du système de réservation Rose des Vins"
-                  loading="lazy"
-                  onLoad={(e) => {
-                    // Hide loading indicator when video loads
-                    const loadingDiv = e.currentTarget.previousElementSibling as HTMLElement;
-                    if (loadingDiv) loadingDiv.style.display = 'none';
-                  }}
-                ></iframe>
+              {/* Video Content - Custom height to match video aspect ratio */}
+              <div className="relative w-full h-[380px] md:h-[500px] lg:h-[560px] bg-black">
+                {/* Video Element */}
+                <video
+                  className="absolute inset-0 w-full h-full object-cover"
+                  autoPlay
+                  muted
+                  loop
+                  playsInline
+                  preload="auto"
+                >
+                  <source 
+                    src={`${process.env.NEXT_PUBLIC_API_BASE_URL}/v1/web/video/hero-section`} 
+                    type="video/mp4" 
+                  />
+                  <p className="text-white text-center p-4">
+                    Votre navigateur ne supporte pas la lecture de vidéos HTML5.
+                  </p>
+                </video>
               </div>
               
               {/* Decorative Elements */}
