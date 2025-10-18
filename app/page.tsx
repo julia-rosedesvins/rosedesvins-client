@@ -7,7 +7,7 @@ import { Check, Calendar, Clock, Users } from "lucide-react"
 import LandingPageLayout from "@/components/LandingPageLayout"
 import { useEffect, useState } from "react"
 import { userService, ContactFormData } from "@/services/user.service"
-import toast, { Toaster } from 'react-hot-toast'
+import toast from 'react-hot-toast'
 
 export default function HomePage() {
   const [formData, setFormData] = useState<ContactFormData>({
@@ -346,7 +346,7 @@ export default function HomePage() {
               <div className="flex items-start gap-3">
                 <Check className="w-5 h-5 mt-0.5 flex-shrink-0" style={{ color: "#3A7B59" }} />
                 <span className="text-gray-700">
-                  Notifications automatiques de mail de confirmation, de rappel... 1 jour de demande et le visiteur
+                  E-mail de confirmation et de rappel automatiques et personnalisables
                 </span>
               </div>
               <div className="flex items-start gap-3">
@@ -456,27 +456,6 @@ export default function HomePage() {
           </form>
         </div>
       </section>
-
-      <Toaster 
-        position="top-right"
-        toastOptions={{
-          duration: 4000,
-          style: {
-            background: '#363636',
-            color: '#fff',
-          },
-          success: {
-            style: {
-              background: '#3A7B59',
-            },
-          },
-          error: {
-            style: {
-              background: '#ef4444',
-            },
-          },
-        }}
-      />
 
     </LandingPageLayout>
   )

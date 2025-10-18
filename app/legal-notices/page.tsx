@@ -48,8 +48,8 @@ export default function LegalNoticesPage() {
                 <div className="bg-gray-50 rounded-lg p-4">
                   <p className="font-semibold text-lg text-gray-900 mb-2">Rose des Vins SAS</p>
                   <div className="space-y-2">
-                    <p><span className="font-medium">Siège social :</span> 30, rue de la scellerie - 37000 Tours</p>
-                    <p><span className="font-medium">SIRET :</span> En cours</p>
+                    <p><span className="font-medium">Siège social :</span> Société immatriculée au RCS de Tours sous le numéro 992 709 675</p>
+                    <p><span className="font-medium">SIRET :</span> 992 709 675 00019</p>
                   </div>
                 </div>
               </div>

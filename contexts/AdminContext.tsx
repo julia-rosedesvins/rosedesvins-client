@@ -109,7 +109,7 @@ export const AdminProvider: React.FC<AdminProviderProps> = ({ children }) => {
 
   return (
     <AdminContext.Provider value={value}>
-      <Toaster 
+      {/* <Toaster 
         position="bottom-right"
         toastOptions={{
           duration: 4000,
@@ -128,7 +128,7 @@ export const AdminProvider: React.FC<AdminProviderProps> = ({ children }) => {
             },
           },
         }}
-      />
+      /> */}
       {children}
     </AdminContext.Provider>
   );
