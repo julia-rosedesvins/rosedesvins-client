@@ -136,7 +136,7 @@ export const UserProvider = ({ children }: UserProviderProps) => {
 
   return (
     <UserContext.Provider value={value}>
-      <Toaster 
+      {/* <Toaster 
         position="bottom-right"
         toastOptions={{
           duration: 4000,
@@ -155,7 +155,7 @@ export const UserProvider = ({ children }: UserProviderProps) => {
             },
           },
         }}
-      />
+      /> */}
       {children}
     </UserContext.Provider>
   );
