@@ -28,6 +28,12 @@ export interface EventData {
     createdAt: string;
     updatedAt: string;
   } | null;
+  serviceInfo?: {
+    name: string;
+    description: string;
+    pricePerPerson: number;
+    timeOfServiceInMinutes: number;
+  };
   eventName: string;
   eventDate: string;
   eventTime: string;
