@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { DatePicker } from "@/components/DatePicker";
@@ -13,17 +13,40 @@ import { eventsService, PublicScheduleData } from "@/services/events.service";
 function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
     const { widgetData, loading, error, colorCode } = useWidget();
     const router = useRouter();
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [selectedTime, setSelectedTime] = useState<string | null>(null);
-  const [adults, setAdults] = useState(2);
-  const [children, setChildren] = useState(0);
-  const [selectedLanguage, setSelectedLanguage] = useState("");
-  const [morningStartIndex, setMorningStartIndex] = useState(0);
-  const [afternoonStartIndex, setAfternoonStartIndex] = useState(0);
-  const [bookedSlots, setBookedSlots] = useState<PublicScheduleData[]>([]);
-  const [loadingSchedule, setLoadingSchedule] = useState(false);
-  const [validationErrors, setValidationErrors] = useState<string[]>([]);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+    
+    // State declarations - must come before any useEffect hooks
+    const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+    const [selectedTime, setSelectedTime] = useState<string | null>(null);
+    const [adults, setAdults] = useState(2);
+    const [children, setChildren] = useState(0);
+    const [selectedLanguage, setSelectedLanguage] = useState("");
+    const languageAutoSelected = useRef(false);
+    const [morningStartIndex, setMorningStartIndex] = useState(0);
+    const [afternoonStartIndex, setAfternoonStartIndex] = useState(0);
+    const [bookedSlots, setBookedSlots] = useState<PublicScheduleData[]>([]);
+    const [loadingSchedule, setLoadingSchedule] = useState(false);
+    const [validationErrors, setValidationErrors] = useState<string[]>([]);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    // Function to convert language to French display name
+    const getLanguageInFrench = (language: string) => {
+      const lang = language.toLowerCase();
+      if (lang === 'français' || lang === 'french') return 'Français';
+      if (lang === 'anglais' || lang === 'english') return 'Anglais';
+      if (lang === 'español' || lang === 'spanish') return 'Espagnol';
+      if (lang === 'deutsch' || lang === 'german') return 'Allemand';
+      return language; // Return original if no match
+    };
+    
+    // Debug log to track widget data loading
+    useEffect(() => {
+      console.log('Widget data loading status:', { loading, error, hasWidgetData: !!widgetData, languagesOffered: widgetData?.service?.languagesOffered });
+    }, [loading, error, widgetData]);
+    
+    // Debug log to track language selection
+    useEffect(() => {
+      console.log('Current selectedLanguage:', selectedLanguage, 'Auto-selected:', languageAutoSelected.current);
+    }, [selectedLanguage]);
 
   // Get maximum number of participants from service configuration
   const getMaxParticipants = (): number => {
@@ -62,7 +85,7 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
       errors.push(`Le nombre total de participants ne peut pas dépasser ${maxParticipants} personnes`);
     }
     
-    if (!selectedLanguage) {
+    if (!selectedLanguage || selectedLanguage.trim() === "") {
       errors.push("Veuillez sélectionner une langue");
     }
     
@@ -108,13 +131,19 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
 
   // Auto-select first language when widget data is loaded
   useEffect(() => {
-    if (widgetData?.service?.languagesOffered && widgetData.service.languagesOffered.length > 0 && !selectedLanguage) {
-      setSelectedLanguage(widgetData.service.languagesOffered[0]);
-    } else if (!widgetData?.service?.languagesOffered && !selectedLanguage) {
-      // Fallback to default if no languages are provided
-      setSelectedLanguage("Français");
+    if (!loading && widgetData && !languageAutoSelected.current && selectedLanguage === "") {
+      if (widgetData?.service?.languagesOffered && widgetData.service.languagesOffered.length > 0) {
+        console.log('Auto-selecting language:', widgetData.service.languagesOffered[0]);
+        setSelectedLanguage(widgetData.service.languagesOffered[0]);
+        languageAutoSelected.current = true;
+      } else {
+        // Fallback to default if no languages are provided
+        console.log('Auto-selecting default language: Français');
+        setSelectedLanguage("Français");
+        languageAutoSelected.current = true;
+      }
     }
-  }, [widgetData?.service?.languagesOffered, selectedLanguage]);
+  }, [widgetData, loading]);
 
   // Fetch booked slots for the user on component mount
   useEffect(() => {
@@ -658,7 +687,7 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
                 )}
                 style={selectedLanguage === language ? { backgroundColor: colorCode } : {}}
               >
-                {language}
+                {getLanguageInFrench(language)}
               </Button>
             )) || (
               <>
