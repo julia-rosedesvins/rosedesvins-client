@@ -57,6 +57,10 @@ export interface WidgetPaymentMethods {
   methods: string[];
 }
 
+export interface WidgetNotificationPreferences {
+  bookingAdvanceLimit: string;
+}
+
 export interface WidgetDataResponse {
   success: boolean;
   message: string;
@@ -66,6 +70,7 @@ export interface WidgetDataResponse {
     service: WidgetServiceData;
     availability: WidgetAvailability;
     paymentMethods: WidgetPaymentMethods;
+    notificationPreferences: WidgetNotificationPreferences;
   };
 }
 

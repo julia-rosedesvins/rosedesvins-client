@@ -88,6 +88,76 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
     if (!selectedLanguage || selectedLanguage.trim() === "") {
       errors.push("Veuillez sélectionner une langue");
     }
+
+    // ✅ NEW: Booking advance limit validation
+    if (selectedDate && selectedTime && widgetData?.notificationPreferences?.bookingAdvanceLimit) {
+      const bookingAdvanceLimit = widgetData.notificationPreferences.bookingAdvanceLimit;
+      
+      // Skip validation if advance limit is set to NEVER
+      if (bookingAdvanceLimit !== 'never') {
+        try {
+          // Create booking datetime
+          const dateString = `${selectedDate.getFullYear()}-${(selectedDate.getMonth() + 1).toString().padStart(2, '0')}-${selectedDate.getDate().toString().padStart(2, '0')}`;
+          const bookingDateTime = new Date(`${dateString}T${selectedTime}:00`);
+          
+          // Validate the booking date is valid
+          if (isNaN(bookingDateTime.getTime())) {
+            console.error('Invalid booking datetime created:', `${dateString}T${selectedTime}:00`);
+            return errors.length === 0; // Skip validation if date is invalid
+          }
+          
+          // Get current time
+          const now = new Date();
+          
+          // Calculate time difference in hours (both in local time)
+          const timeDifferenceMs = bookingDateTime.getTime() - now.getTime();
+          const timeDifferenceHours = timeDifferenceMs / (1000 * 60 * 60);
+
+          // Define minimum advance time requirements
+          let minimumAdvanceHours = 0;
+          let limitLabel = '';
+
+          switch (bookingAdvanceLimit) {
+            case '1_hour':
+              minimumAdvanceHours = 1;
+              limitLabel = '1 heure';
+              break;
+            case '2_hours':
+              minimumAdvanceHours = 2;
+              limitLabel = '2 heures';
+              break;
+            case 'day_before':
+              minimumAdvanceHours = 24;
+              limitLabel = '1 jour';
+              break;
+            case 'last_minute':
+              minimumAdvanceHours = 0.5; // 30 minutes
+              limitLabel = '30 minutes';
+              break;
+            default:
+              minimumAdvanceHours = 24; // Default to day before
+              limitLabel = '1 jour';
+          }
+
+          // Check if booking is made with sufficient advance time
+          if (timeDifferenceHours < minimumAdvanceHours) {
+            errors.push(`La réservation doit être effectuée au moins ${limitLabel} à l'avance. Veuillez choisir une date et heure ultérieures.`);
+          }
+
+          console.log('📅 Frontend booking advance validation:', {
+            bookingAdvanceLimit,
+            bookingDateTime: bookingDateTime.toISOString(),
+            currentTime: now.toISOString(),
+            timeDifferenceHours: Math.round(timeDifferenceHours * 100) / 100,
+            minimumAdvanceHours,
+            isValid: timeDifferenceHours >= minimumAdvanceHours
+          });
+        } catch (error) {
+          console.error('Error in booking advance validation:', error);
+          // Skip validation if there's an error, don't block the booking
+        }
+      }
+    }
     
     setValidationErrors(errors);
     return errors.length === 0;
