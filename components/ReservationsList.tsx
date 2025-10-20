@@ -22,6 +22,7 @@ interface Reservation {
   activity: string;
   language: string;
   comments: string;
+  serviceName?: string | null;
   date?: string;
   customerName?: string;
   customerPhone?: string;
@@ -105,9 +106,10 @@ export const ReservationsList = () => {
       id: index + 1, // Use index as numeric ID
       time: event.eventTime,
       people: totalPeople,
-      activity: event.eventName || event.eventType,
+      activity: event.eventName,
       language: getLanguageDisplay(event.bookingId?.selectedLanguage),
       comments: event.bookingId?.additionalNotes || event.eventDescription || 'Aucun commentaire',
+      serviceName: event.serviceInfo?.name || null,
       date: event.eventDate,
       customerName: event.bookingId ? 
         `${event.bookingId.userContactFirstname} ${event.bookingId.userContactLastname}` : 
@@ -475,7 +477,7 @@ export const ReservationsList = () => {
                     </TableCell>
                     <TableCell className="text-center text-sm px-4 py-4">
                       <div className="max-w-[200px] mx-auto">
-                        {reservation.activity}
+                        {reservation.serviceName}
                       </div>
                     </TableCell>
                     <TableCell className="text-center font-medium text-base px-4 py-4">
@@ -483,7 +485,7 @@ export const ReservationsList = () => {
                     </TableCell>
                     <TableCell className="text-center text-sm px-4 py-4">
                       <div className="max-w-[150px] mx-auto">
-                        {reservation.comments}
+                        {reservation.activity}
                       </div>
                     </TableCell>
                     <TableCell className="text-center px-4 py-4">

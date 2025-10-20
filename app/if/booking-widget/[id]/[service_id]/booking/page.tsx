@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { DatePicker } from "@/components/DatePicker";
@@ -13,17 +13,40 @@ import { eventsService, PublicScheduleData } from "@/services/events.service";
 function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
     const { widgetData, loading, error, colorCode } = useWidget();
     const router = useRouter();
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [selectedTime, setSelectedTime] = useState<string | null>(null);
-  const [adults, setAdults] = useState(2);
-  const [children, setChildren] = useState(0);
-  const [selectedLanguage, setSelectedLanguage] = useState("");
-  const [morningStartIndex, setMorningStartIndex] = useState(0);
-  const [afternoonStartIndex, setAfternoonStartIndex] = useState(0);
-  const [bookedSlots, setBookedSlots] = useState<PublicScheduleData[]>([]);
-  const [loadingSchedule, setLoadingSchedule] = useState(false);
-  const [validationErrors, setValidationErrors] = useState<string[]>([]);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+    
+    // State declarations - must come before any useEffect hooks
+    const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+    const [selectedTime, setSelectedTime] = useState<string | null>(null);
+    const [adults, setAdults] = useState(2);
+    const [children, setChildren] = useState(0);
+    const [selectedLanguage, setSelectedLanguage] = useState("");
+    const languageAutoSelected = useRef(false);
+    const [morningStartIndex, setMorningStartIndex] = useState(0);
+    const [afternoonStartIndex, setAfternoonStartIndex] = useState(0);
+    const [bookedSlots, setBookedSlots] = useState<PublicScheduleData[]>([]);
+    const [loadingSchedule, setLoadingSchedule] = useState(false);
+    const [validationErrors, setValidationErrors] = useState<string[]>([]);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    // Function to convert language to French display name
+    const getLanguageInFrench = (language: string) => {
+      const lang = language.toLowerCase();
+      if (lang === 'français' || lang === 'french') return 'Français';
+      if (lang === 'anglais' || lang === 'english') return 'Anglais';
+      if (lang === 'español' || lang === 'spanish') return 'Espagnol';
+      if (lang === 'deutsch' || lang === 'german') return 'Allemand';
+      return language; // Return original if no match
+    };
+    
+    // Debug log to track widget data loading
+    useEffect(() => {
+      console.log('Widget data loading status:', { loading, error, hasWidgetData: !!widgetData, languagesOffered: widgetData?.service?.languagesOffered });
+    }, [loading, error, widgetData]);
+    
+    // Debug log to track language selection
+    useEffect(() => {
+      console.log('Current selectedLanguage:', selectedLanguage, 'Auto-selected:', languageAutoSelected.current);
+    }, [selectedLanguage]);
 
   // Get maximum number of participants from service configuration
   const getMaxParticipants = (): number => {
@@ -62,8 +85,78 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
       errors.push(`Le nombre total de participants ne peut pas dépasser ${maxParticipants} personnes`);
     }
     
-    if (!selectedLanguage) {
+    if (!selectedLanguage || selectedLanguage.trim() === "") {
       errors.push("Veuillez sélectionner une langue");
+    }
+
+    // ✅ NEW: Booking advance limit validation
+    if (selectedDate && selectedTime && widgetData?.notificationPreferences?.bookingAdvanceLimit) {
+      const bookingAdvanceLimit = widgetData.notificationPreferences.bookingAdvanceLimit;
+      
+      // Skip validation if advance limit is set to NEVER
+      if (bookingAdvanceLimit !== 'never') {
+        try {
+          // Create booking datetime
+          const dateString = `${selectedDate.getFullYear()}-${(selectedDate.getMonth() + 1).toString().padStart(2, '0')}-${selectedDate.getDate().toString().padStart(2, '0')}`;
+          const bookingDateTime = new Date(`${dateString}T${selectedTime}:00`);
+          
+          // Validate the booking date is valid
+          if (isNaN(bookingDateTime.getTime())) {
+            console.error('Invalid booking datetime created:', `${dateString}T${selectedTime}:00`);
+            return errors.length === 0; // Skip validation if date is invalid
+          }
+          
+          // Get current time
+          const now = new Date();
+          
+          // Calculate time difference in hours (both in local time)
+          const timeDifferenceMs = bookingDateTime.getTime() - now.getTime();
+          const timeDifferenceHours = timeDifferenceMs / (1000 * 60 * 60);
+
+          // Define minimum advance time requirements
+          let minimumAdvanceHours = 0;
+          let limitLabel = '';
+
+          switch (bookingAdvanceLimit) {
+            case '1_hour':
+              minimumAdvanceHours = 1;
+              limitLabel = '1 heure';
+              break;
+            case '2_hours':
+              minimumAdvanceHours = 2;
+              limitLabel = '2 heures';
+              break;
+            case 'day_before':
+              minimumAdvanceHours = 24;
+              limitLabel = '1 jour';
+              break;
+            case 'last_minute':
+              minimumAdvanceHours = 0.5; // 30 minutes
+              limitLabel = '30 minutes';
+              break;
+            default:
+              minimumAdvanceHours = 24; // Default to day before
+              limitLabel = '1 jour';
+          }
+
+          // Check if booking is made with sufficient advance time
+          if (timeDifferenceHours < minimumAdvanceHours) {
+            errors.push(`La réservation doit être effectuée au moins ${limitLabel} à l'avance. Veuillez choisir une date et heure ultérieures.`);
+          }
+
+          console.log('📅 Frontend booking advance validation:', {
+            bookingAdvanceLimit,
+            bookingDateTime: bookingDateTime.toISOString(),
+            currentTime: now.toISOString(),
+            timeDifferenceHours: Math.round(timeDifferenceHours * 100) / 100,
+            minimumAdvanceHours,
+            isValid: timeDifferenceHours >= minimumAdvanceHours
+          });
+        } catch (error) {
+          console.error('Error in booking advance validation:', error);
+          // Skip validation if there's an error, don't block the booking
+        }
+      }
     }
     
     setValidationErrors(errors);
@@ -108,13 +201,19 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
 
   // Auto-select first language when widget data is loaded
   useEffect(() => {
-    if (widgetData?.service?.languagesOffered && widgetData.service.languagesOffered.length > 0 && !selectedLanguage) {
-      setSelectedLanguage(widgetData.service.languagesOffered[0]);
-    } else if (!widgetData?.service?.languagesOffered && !selectedLanguage) {
-      // Fallback to default if no languages are provided
-      setSelectedLanguage("Français");
+    if (!loading && widgetData && !languageAutoSelected.current && selectedLanguage === "") {
+      if (widgetData?.service?.languagesOffered && widgetData.service.languagesOffered.length > 0) {
+        console.log('Auto-selecting language:', widgetData.service.languagesOffered[0]);
+        setSelectedLanguage(widgetData.service.languagesOffered[0]);
+        languageAutoSelected.current = true;
+      } else {
+        // Fallback to default if no languages are provided
+        console.log('Auto-selecting default language: Français');
+        setSelectedLanguage("Français");
+        languageAutoSelected.current = true;
+      }
     }
-  }, [widgetData?.service?.languagesOffered, selectedLanguage]);
+  }, [widgetData, loading]);
 
   // Fetch booked slots for the user on component mount
   useEffect(() => {
@@ -658,7 +757,7 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
                 )}
                 style={selectedLanguage === language ? { backgroundColor: colorCode } : {}}
               >
-                {language}
+                {getLanguageInFrench(language)}
               </Button>
             )) || (
               <>

@@ -95,6 +95,7 @@ export const CalendarSection = () => {
           activity: event.eventName,
           language: event.bookingId?.selectedLanguage || 'FR',
           comments: event.bookingId?.additionalNotes || event.eventDescription || 'Aucun',
+          serviceName: event.serviceInfo?.name || null,
           customerName: event.bookingId ? 
             `${event.bookingId.userContactFirstname} ${event.bookingId.userContactLastname}` : 
             'Événement',

@@ -13,6 +13,16 @@ function ReservationContent({ id, serviceId }: { id: string, serviceId: string }
     const fullText = widgetData?.service?.description || "";
     const truncatedText = fullText.length > 200 ? fullText.substring(0, 200) + "..." : fullText;
 
+    // Function to convert language to French display name
+    const getLanguageInFrench = (language: string) => {
+        const lang = language.toLowerCase();
+        if (lang === 'français' || lang === 'french') return 'Français';
+        if (lang === 'anglais' || lang === 'english') return 'Anglais';
+        if (lang === 'español' || lang === 'spanish') return 'Espagnol';
+        if (lang === 'deutsch' || lang === 'german') return 'Allemand';
+        return language; // Return original if no match
+    };
+
     if (loading) {
         return (
             <div className="min-h-screen bg-white flex items-center justify-center">
@@ -90,13 +100,13 @@ function ReservationContent({ id, serviceId }: { id: string, serviceId: string }
                             <div className="flex items-center gap-2 text-muted-foreground min-w-0">
                                 <Euro className="w-6 h-6 flex-shrink-0" style={{ color: colorCode }} />
                                 <span className="font-medium text-sm md:text-base whitespace-nowrap overflow-hidden text-ellipsis">
-                                    {widgetData?.service?.pricePerPerson || 5} € / personnes
+                                    {widgetData?.service?.pricePerPerson || 5} € / personne
                                 </span>
                             </div>
                             <div className="flex items-center gap-2 text-muted-foreground min-w-0">
                                 <Users className="w-6 h-6 flex-shrink-0" style={{ color: colorCode }} />
                                 <span className="font-medium text-sm md:text-base whitespace-nowrap overflow-hidden text-ellipsis">
-                                    {widgetData?.service?.numberOfPeople || '2-10'} personnes
+                                    {widgetData?.service?.numberOfPeople || '2-10'} personne
                                 </span>
                             </div>
                         </div>
@@ -111,7 +121,7 @@ function ReservationContent({ id, serviceId }: { id: string, serviceId: string }
                                          language.toLowerCase() === 'español' || language.toLowerCase() === 'spanish' ? '🇪🇸' : 
                                          language.toLowerCase() === 'deutsch' || language.toLowerCase() === 'german' ? '🇩🇪' : '🌐'}
                                     </span>
-                                    <span className="text-muted-foreground text-xl font-medium">{language}</span>
+                                    <span className="text-muted-foreground text-xl font-medium">{getLanguageInFrench(language)}</span>
                                 </div>
                             )) || (
                                 <>

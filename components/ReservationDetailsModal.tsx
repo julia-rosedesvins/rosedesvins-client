@@ -12,6 +12,7 @@ interface Reservation {
   activity: string;
   language: string;
   comments: string;
+  serviceName?: string | null;
   date?: string;
   customerName?: string;
   customerPhone?: string;
@@ -202,11 +203,11 @@ export const ReservationDetailsModal = ({
           </div>
 
           {/* Information complémentaire */}
-          {(reservation.comments && reservation.comments !== "Aucun") && (
+          {(reservation.serviceName) && (
             <div>
               <h3 className="text-lg lg:text-xl font-semibold mb-3 lg:mb-4">Information complémentaire :</h3>
               <p className="text-muted-foreground text-sm lg:text-base">
-                {reservation.comments}
+                {reservation.serviceName}
               </p>
             </div>
           )}
