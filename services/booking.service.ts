@@ -85,6 +85,38 @@ export interface DeleteBookingResponse {
   message: string;
 }
 
+export interface BookingDetailsResponse {
+  success: boolean;
+  message: string;
+  data?: {
+    bookingId: string;
+    bookingDate: string;
+    bookingTime: string;
+    participantsAdults: number;
+    participantsEnfants: number;
+    selectedLanguage: string;
+    customerName: string;
+    customerEmail: string;
+    phoneNo: string;
+    additionalNotes?: string;
+    bookingStatus: string;
+    service: {
+      name: string;
+      description: string;
+      pricePerPerson: number;
+      timeOfServiceInMinutes: number;
+      numberOfWinesTasted: number;
+      languagesOffered: string[];
+    };
+    domainInfo: {
+      domainName: string;
+      domainAddress: string;
+      logoUrl: string;
+    };
+    createdAt: string;
+  };
+}
+
 export interface ApiError {
   success: boolean;
   message: string;
@@ -148,7 +180,43 @@ class BookingService {
     }
   }
 
+  /**
+   * Cancel a booking as a guest (public endpoint)
+   * @param bookingId - ID of the booking to cancel
+   * @returns Promise with cancellation result
+   */
+  async cancelBookingAsGuest(bookingId: string): Promise<UpdateBookingResponse> {
+    try {
+      const response = await apiClient.post<UpdateBookingResponse>(
+        `/bookings/${bookingId}/cancel-guest`
+      );
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response) {
+        throw error.response.data as ApiError;
+      }
+      throw new Error('Network error occurred');
+    }
+  }
 
+  /**
+   * Get basic booking details with service name (public endpoint)
+   * @param bookingId - ID of the booking to retrieve details for
+   * @returns Promise with booking details
+   */
+  async getBookingDetails(bookingId: string): Promise<BookingDetailsResponse> {
+    try {
+      const response = await apiClient.get<BookingDetailsResponse>(
+        `/bookings/${bookingId}/details`
+      );
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response) {
+        throw error.response.data as ApiError;
+      }
+      throw new Error('Network error occurred');
+    }
+  }
 }
 
 // Export singleton instance
