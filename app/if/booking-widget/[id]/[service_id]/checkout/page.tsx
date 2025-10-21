@@ -227,7 +227,7 @@ function CheckoutContent({ id, serviceId }: { id: string, serviceId: string }) {
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         <div className="rounded-lg p-6">
           <h1 className="text-2xl font-bold text-center mb-8" style={{ color: colorCode }}>
-            Paiement sécurisé
+            Confirmation de votre réservation
           </h1>
 
 
