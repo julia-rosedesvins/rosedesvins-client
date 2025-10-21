@@ -81,7 +81,11 @@ export default function HomePage() {
     e.preventDefault();
     
     if (!validateForm()) {
-      toast.error('Veuillez corriger les erreurs dans le formulaire');
+      // Scroll to first error
+      const firstErrorField = Object.keys(errors)[0];
+      if (firstErrorField) {
+        document.getElementById(firstErrorField)?.focus();
+      }
       return;
     }
 
@@ -114,11 +118,17 @@ export default function HomePage() {
           }
         });
         setErrors(backendErrors);
-        toast.error('Veuillez corriger les erreurs dans le formulaire');
+        
+        // Scroll to first error field
+        const firstErrorField = Object.keys(backendErrors)[0];
+        if (firstErrorField) {
+          document.getElementById(firstErrorField)?.focus();
+        }
       } else if (error.message) {
-        toast.error(error.message);
+        // Show general error inline
+        setErrors({ submit: error.message });
       } else {
-        toast.error('Une erreur est survenue lors de l\'envoi. Veuillez réessayer.');
+        setErrors({ submit: 'Une erreur est survenue lors de l\'envoi. Veuillez réessayer.' });
       }
     } finally {
       setIsSubmitting(false);
@@ -376,10 +386,18 @@ export default function HomePage() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
+            {/* General error message */}
+            {errors.submit && (
+              <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg">
+                <p className="text-sm font-medium">{errors.submit}</p>
+              </div>
+            )}
+
             <div className="grid md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Prénom *</label>
-                <Input 
+                <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-2">Prénom *</label>
+                <Input
+                  id="firstName"
                   className={`w-full ${errors.firstName ? 'border-red-500 focus:border-red-500' : ''}`}
                   value={formData.firstName}
                   onChange={(e) => handleInputChange('firstName', e.target.value)}
@@ -391,10 +409,11 @@ export default function HomePage() {
                 )}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-2">
                   Nom de famille *
                 </label>
-                <Input 
+                <Input
+                  id="lastName"
                   className={`w-full ${errors.lastName ? 'border-red-500 focus:border-red-500' : ''}`}
                   value={formData.lastName}
                   onChange={(e) => handleInputChange('lastName', e.target.value)}
@@ -408,8 +427,9 @@ export default function HomePage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">E-mail *</label>
-              <Input 
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">E-mail *</label>
+              <Input
+                id="email"
                 type="email" 
                 className={`w-full ${errors.email ? 'border-red-500 focus:border-red-500' : ''}`}
                 value={formData.email}
@@ -423,8 +443,9 @@ export default function HomePage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Nom du domaine *</label>
-              <Input 
+              <label htmlFor="domainName" className="block text-sm font-medium text-gray-700 mb-2">Nom du domaine *</label>
+              <Input
+                id="domainName"
                 className={`w-full ${errors.domainName ? 'border-red-500 focus:border-red-500' : ''}`}
                 value={formData.domainName}
                 onChange={(e) => handleInputChange('domainName', e.target.value)}
