@@ -20,6 +20,9 @@ function ConfirmationSuccessContent({ id, serviceId }: { id: string, serviceId: 
   const { widgetData, loading, error, colorCode } = useWidget();
   const searchParams = useSearchParams();
   
+  // Get payment methods from widget data
+  const acceptedPaymentMethods = widgetData?.paymentMethods?.methods || ['cash_on_onsite'];
+  
   // Extract booking data from URL parameters
   const bookingData: BookingData = {
     date: searchParams.get('date') || '',
@@ -46,6 +49,42 @@ function ConfirmationSuccessContent({ id, serviceId }: { id: string, serviceId: 
       return `${totalParticipants} personnes (${adults} adultes, ${children} enfants)`;
     }
     return `${adults} personnes (adultes)`;
+  };
+
+  const getPaymentMethodLabel = (method: string) => {
+    switch (method.toLowerCase()) {
+      case 'bank card':
+      case 'bank_card':
+        return 'Carte bancaire';
+      case 'checks':
+      case 'cheque':
+        return 'Chèques';
+      case 'cash':
+        return 'Espèces';
+      case 'cash_on_onsite':
+        return 'Espèces';
+      case 'stripe':
+        return 'Carte bancaire (Stripe)';
+      default:
+        return method;
+    }
+  };
+
+  const formatPaymentMethods = () => {
+    if (acceptedPaymentMethods.length === 0) {
+      return 'Paiement sur place';
+    }
+    
+    const labels = acceptedPaymentMethods.map(method => getPaymentMethodLabel(method));
+    
+    if (labels.length === 1) {
+      return `Paiement sur place (${labels[0].toLowerCase()})`;
+    } else if (labels.length === 2) {
+      return `Paiement sur place (${labels.join(', ').toLowerCase()})`;
+    } else {
+      const lastLabel = labels.pop();
+      return `Paiement sur place (${labels.join(', ').toLowerCase()} ou ${lastLabel?.toLowerCase()})`;
+    }
   };
 
   return (
@@ -98,7 +137,7 @@ function ConfirmationSuccessContent({ id, serviceId }: { id: string, serviceId: 
 
               <div className="flex items-center gap-3">
                 <CreditCard className="w-5 h-5" style={{ color: colorCode }} />
-                <span>Paiement sur place (cartes, chèques, espèces)</span>
+                <span>{formatPaymentMethods()}</span>
               </div>
             </div>
           </div>

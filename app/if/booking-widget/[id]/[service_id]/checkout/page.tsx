@@ -102,6 +102,16 @@ function CheckoutContent({ id, serviceId }: { id: string, serviceId: string }) {
     return `${adults} personnes (adultes)`;
   };
 
+  // Function to convert language to French display name
+  const getLanguageInFrench = (language: string) => {
+    const lang = language.toLowerCase();
+    if (lang === 'français' || lang === 'french') return 'Français';
+    if (lang === 'anglais' || lang === 'english') return 'Anglais';
+    if (lang === 'español' || lang === 'spanish') return 'Espagnol';
+    if (lang === 'deutsch' || lang === 'german') return 'Allemand';
+    return language; // Return original if no match
+  };
+
 
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -227,7 +237,7 @@ function CheckoutContent({ id, serviceId }: { id: string, serviceId: string }) {
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         <div className="rounded-lg p-6">
           <h1 className="text-2xl font-bold text-center mb-8" style={{ color: colorCode }}>
-            Paiement sécurisé
+            Confirmation de votre réservation
           </h1>
 
 
@@ -309,7 +319,7 @@ function CheckoutContent({ id, serviceId }: { id: string, serviceId: string }) {
 
                 <div className="flex items-center gap-3">
                   <Globe className="w-5 h-5" style={{ color: colorCode }} />
-                  <span className="text-sm">{bookingData?.language || "Français"}</span>
+                  <span className="text-sm">{getLanguageInFrench(bookingData?.language || "Français")}</span>
                 </div>
 
                 <div className="flex items-center gap-3">

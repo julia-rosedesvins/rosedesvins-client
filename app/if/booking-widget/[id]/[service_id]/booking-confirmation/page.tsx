@@ -173,6 +173,16 @@ function BookingConfirmationContent({ id, serviceId }: { id: string, serviceId: 
     return `${adults} personnes (adultes)`;
   };
 
+  // Function to convert language to French display name
+  const getLanguageInFrench = (language: string) => {
+    const lang = language.toLowerCase();
+    if (lang === 'français' || lang === 'french') return 'Français';
+    if (lang === 'anglais' || lang === 'english') return 'Anglais';
+    if (lang === 'español' || lang === 'spanish') return 'Espagnol';
+    if (lang === 'deutsch' || lang === 'german') return 'Allemand';
+    return language; // Return original if no match
+  };
+
   return (
     <div className="min-h-screen bg-white">
       <div className="container mx-auto px-4 py-8 max-w-4xl">
@@ -260,7 +270,7 @@ function BookingConfirmationContent({ id, serviceId }: { id: string, serviceId: 
 
                 <div className="flex items-center gap-3">
                   <Globe className="w-5 h-5" style={{ color: colorCode }} />
-                  <span>{bookingData?.language || "Français"}</span>
+                  <span>{getLanguageInFrench(bookingData?.language || "Français")}</span>
                 </div>
 
                 <div className="flex items-center gap-3">
