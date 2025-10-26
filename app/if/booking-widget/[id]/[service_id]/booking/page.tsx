@@ -131,8 +131,8 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
               limitLabel = '1 jour';
               break;
             case 'last_minute':
-              minimumAdvanceHours = 0.5; // 30 minutes
-              limitLabel = '30 minutes';
+              minimumAdvanceHours = 0.0833; // 5 minutes
+              limitLabel = '5 minutes';
               break;
             default:
               minimumAdvanceHours = 24; // Default to day before

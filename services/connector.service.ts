@@ -36,6 +36,7 @@ export interface OrangeConnectorStatusResponse {
       } | null;
       ovh: any | null;
       microsoft: any | null;
+      google: any | null;
     };
     createdAt: string;
     updatedAt: string;
@@ -330,6 +331,112 @@ class ConnectorService {
   async getConnectedProvider(): Promise<{ success: boolean; message: string; data: { provider: string } }> {
     try {
       const response = await apiClient.get('/connectors/connected-provider');
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response) {
+        throw error.response.data as ApiError;
+      }
+      throw new Error('Network error occurred');
+    }
+  }
+
+  /**
+   * Get Google OAuth URL for calendar permissions
+   * @returns Promise with OAuth URL and state
+   */
+  async getGoogleOAuthUrl(): Promise<MicrosoftOAuthUrlResponse> {
+    try {
+      const response = await apiClient.get('/connectors/google/oauth-url');
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response) {
+        throw error.response.data as ApiError;
+      }
+      throw new Error('Network error occurred');
+    }
+  }
+
+  /**
+   * Get Google calendar connection status
+   * @returns Promise with connection status
+   */
+  async getGoogleCalendarStatus(): Promise<OrangeConnectorStatusResponse> {
+    try {
+      const response = await apiClient.get('/connectors/google/status');
+      return response.data;
+    } catch (error) {
+      // Handle different types of errors from axios
+      if (axios.isAxiosError(error)) {
+        if (error.response) {
+          // Server responded with error status
+          const errorData = error.response.data;
+          
+          if (errorData && typeof errorData === 'object' && 'message' in errorData) {
+            // Extract message from various possible structures
+            let extractedMessage = errorData.message || 'Server error occurred';
+            
+            // If message is an array, join it
+            if (Array.isArray(extractedMessage)) {
+              extractedMessage = extractedMessage.join(', ');
+            }
+            
+            throw {
+              success: false,
+              message: extractedMessage,
+              errors: errorData.errors || [],
+              statusCode: error.response.status
+            } as ApiError;
+          } else if (typeof errorData === 'string') {
+            throw {
+              success: false,
+              message: errorData,
+              errors: [],
+              statusCode: error.response.status
+            } as ApiError;
+          } else {
+            // Generic server error message
+            let extractedMessage = 'Server error occurred';
+            if (error.response.status === 404) {
+              extractedMessage = 'Google calendar not connected';
+            } else if (error.response.status === 500) {
+              extractedMessage = `Server error: ${error.response.status}`;
+            }
+            
+            throw {
+              success: false,
+              message: extractedMessage,
+              errors: errorData.errors || [],
+              statusCode: error.response.status
+            } as ApiError;
+          }
+        } else if (error.request) {
+          // Request was made but no response received
+          throw {
+            success: false,
+            message: 'Impossible de se connecter au serveur',
+            errors: [],
+            statusCode: 0
+          } as ApiError;
+        }
+      }
+      
+      // Fallback for other errors
+      throw {
+        success: false,
+        message: error instanceof Error ? error.message : 'Erreur lors de la vérification du statut Google',
+        errors: [],
+        statusCode: 0
+      } as ApiError;
+    }
+  }
+
+  /**
+   * Disconnect Google calendar
+   * @returns Promise with disconnection result
+   */
+  async disconnectGoogleCalendar(): Promise<{ success: boolean; message: string }> {
+    try {
+      const response = await apiClient.delete('/connectors/google/disconnect');
       return response.data;
     } catch (error) {
       if (axios.isAxiosError(error) && error.response) {

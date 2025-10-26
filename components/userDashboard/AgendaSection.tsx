@@ -15,8 +15,10 @@ export const AgendaSection = () => {
   const [isOrangeLoginOpen, setIsOrangeLoginOpen] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [isMicrosoftConnecting, setIsMicrosoftConnecting] = useState(false);
+  const [isGoogleConnecting, setIsGoogleConnecting] = useState(false);
   const [orangeConnectionStatus, setOrangeConnectionStatus] = useState<any>(null);
   const [microsoftConnectionStatus, setMicrosoftConnectionStatus] = useState<any>(null);
+  const [googleConnectionStatus, setGoogleConnectionStatus] = useState<any>(null);
   const [connectedProvider, setConnectedProvider] = useState<string>('none');
   const [formErrors, setFormErrors] = useState<{
     username?: string;
@@ -33,11 +35,14 @@ export const AgendaSection = () => {
     checkConnectedProvider();
     checkOrangeConnectionStatus();
     checkMicrosoftConnectionStatus();
+    checkGoogleConnectionStatus();
     
     // Check for Microsoft OAuth callback success or error
     const urlParams = new URLSearchParams(window.location.search);
     const microsoftConnected = urlParams.get('microsoft_connected');
     const microsoftError = urlParams.get('microsoft_error');
+    const googleConnected = urlParams.get('google_connected');
+    const googleError = urlParams.get('google_error');
     
     if (microsoftConnected === 'true') {
       // Remove the parameter from URL
@@ -59,6 +64,28 @@ export const AgendaSection = () => {
       
       // Show error message
       toast.error(`❌ Erreur Microsoft: ${decodeURIComponent(microsoftError)}`);
+    }
+
+    if (googleConnected === 'true') {
+      // Remove the parameter from URL
+      const newUrl = new URL(window.location.href);
+      newUrl.searchParams.delete('google_connected');
+      window.history.replaceState({}, '', newUrl.toString());
+      
+      // Show success message and refresh status
+      toast.success('🎉 Google Calendar connecté avec succès!');
+      setTimeout(() => {
+        checkConnectedProvider();
+        checkGoogleConnectionStatus();
+      }, 1000);
+    } else if (googleError) {
+      // Remove the parameter from URL
+      const newUrl = new URL(window.location.href);
+      newUrl.searchParams.delete('google_error');
+      window.history.replaceState({}, '', newUrl.toString());
+      
+      // Show error message
+      toast.error(`❌ Erreur Google: ${decodeURIComponent(googleError)}`);
     }
   }, []);
 
@@ -114,6 +141,32 @@ export const AgendaSection = () => {
     }
   };
 
+  const checkGoogleConnectionStatus = async () => {
+    try {
+      const result = await connectorService.getGoogleCalendarStatus();
+      
+      // Check if google credentials exist and are not null
+      const isConnected = result.data && 
+                         result.data.connector_creds && 
+                         result.data.connector_creds.google !== null;
+      
+      if (isConnected && result.data && result.data.connector_creds.google) {
+        // Set the google credentials data for display
+        setGoogleConnectionStatus(result.data.connector_creds.google);
+      } else {
+        // No connection
+        setGoogleConnectionStatus(null);
+      }
+      
+      console.log('🔍 Google connection status:', isConnected ? '✅ Connected' : '❌ Not connected');
+      console.log('📋 Full connector data:', result.data);
+    } catch (error) {
+      console.error('Error checking Google connection status:', error);
+      // Don't show error to user for status check - just log it
+      setGoogleConnectionStatus(null);
+    }
+  };
+
   const checkConnectedProvider = async () => {
     try {
       const result = await connectorService.getConnectedProvider();
@@ -149,6 +202,7 @@ export const AgendaSection = () => {
         if (connectedProvider !== 'none' && connectedProvider !== 'orange') {
           const providerNames = {
             'microsoft': 'Microsoft Calendar',
+            'google': 'Google Calendar',
             'ovh': 'Calendrier OVH'
           };
           const currentProviderName = providerNames[connectedProvider as keyof typeof providerNames] || connectedProvider;
@@ -174,6 +228,7 @@ export const AgendaSection = () => {
         if (connectedProvider !== 'none' && connectedProvider !== 'microsoft') {
           const providerNames = {
             'orange': 'Orange Calendar',
+            'google': 'Google Calendar',
             'ovh': 'Calendrier OVH'
           };
           const currentProviderName = providerNames[connectedProvider as keyof typeof providerNames] || connectedProvider;
@@ -184,6 +239,30 @@ export const AgendaSection = () => {
           }
         } else {
           handleMicrosoftConnect();
+          setIsCalendarDialogOpen(false);
+        }
+      }
+    } else if (calendarType === 'Google') {
+      // If already connected, disconnect instead of connecting
+      if (googleConnectionStatus) {
+        handleGoogleDisconnect();
+        setIsCalendarDialogOpen(false);
+      } else {
+        // Check if another provider is connected
+        if (connectedProvider !== 'none' && connectedProvider !== 'google') {
+          const providerNames = {
+            'orange': 'Orange Calendar',
+            'microsoft': 'Microsoft Calendar',
+            'ovh': 'Calendrier OVH'
+          };
+          const currentProviderName = providerNames[connectedProvider as keyof typeof providerNames] || connectedProvider;
+          
+          if (window.confirm(`⚠️ Attention: ${currentProviderName} est actuellement connecté. Le connecter à Google Calendar le déconnectera automatiquement. Voulez-vous continuer ?`)) {
+            handleGoogleConnect();
+            setIsCalendarDialogOpen(false);
+          }
+        } else {
+          handleGoogleConnect();
           setIsCalendarDialogOpen(false);
         }
       }
@@ -276,6 +355,66 @@ export const AgendaSection = () => {
       }
     } finally {
       setIsMicrosoftConnecting(false);
+    }
+  };
+
+  const handleGoogleConnect = async () => {
+    setIsGoogleConnecting(true);
+    try {
+      console.log('🔗 Initiating Google OAuth flow...');
+      
+      // Get OAuth URL from backend
+      const oauthResult = await connectorService.getGoogleOAuthUrl();
+      
+      if (oauthResult.success && oauthResult.data.authUrl) {
+        console.log('✅ OAuth URL generated, redirecting to Google...');
+        toast.success('🔗 Redirection vers Google...');
+        
+        // Redirect to Google OAuth
+        window.location.href = oauthResult.data.authUrl;
+      } else {
+        throw new Error('Failed to generate OAuth URL');
+      }
+      
+    } catch (error) {
+      console.error('❌ Failed to connect Google calendar:', error);
+      
+      // Handle API errors from service
+      if (error && typeof error === 'object' && 'success' in error && error.success === false) {
+        const apiError = error as ApiError;
+        const errorMessage = apiError.message || 'Erreur lors de la connexion à Google';
+        toast.error(errorMessage);
+      } else {
+        toast.error('Erreur lors de la connexion à Google');
+      }
+    } finally {
+      setIsGoogleConnecting(false);
+    }
+  };
+
+  const handleGoogleDisconnect = async () => {
+    setIsGoogleConnecting(true);
+    try {
+      await connectorService.disconnectGoogleCalendar();
+      
+      // Update local state
+      setGoogleConnectionStatus(null);
+      checkConnectedProvider(); // Refresh connected provider status
+      toast.success('🔌 Calendrier Google déconnecté avec succès!');
+      
+    } catch (error) {
+      console.error('❌ Failed to disconnect Google calendar:', error);
+      
+      // Handle API errors from service
+      if (error && typeof error === 'object' && 'success' in error && error.success === false) {
+        const apiError = error as ApiError;
+        const errorMessage = apiError.message || 'Erreur lors de la déconnexion du calendrier Google';
+        toast.error(errorMessage);
+      } else {
+        toast.error('Erreur lors de la déconnexion du calendrier Google');
+      }
+    } finally {
+      setIsGoogleConnecting(false);
     }
   };
 
@@ -391,10 +530,10 @@ export const AgendaSection = () => {
           </p>
           <Button 
             className="text-white hover:opacity-90 w-full sm:w-auto text-sm lg:text-base px-4 lg:px-6 py-3 lg:py-2"
-            style={{ backgroundColor: (orangeConnectionStatus || microsoftConnectionStatus) ? '#16a34a' : '#3A7B59' }}
+            style={{ backgroundColor: (orangeConnectionStatus || microsoftConnectionStatus || googleConnectionStatus) ? '#16a34a' : '#3A7B59' }}
             onClick={() => setIsCalendarDialogOpen(true)}
           >
-            {(orangeConnectionStatus || microsoftConnectionStatus) ? (
+            {(orangeConnectionStatus || microsoftConnectionStatus || googleConnectionStatus) ? (
               <>
                 <CalendarCheck size={16} className="mr-2" />
                 Agenda connecté
@@ -453,6 +592,36 @@ export const AgendaSection = () => {
                   className="text-red-600 border-red-300 hover:bg-red-50 hover:border-red-400 text-xs px-3 py-1"
                 >
                   {isMicrosoftConnecting ? (
+                    <>
+                      <div className="animate-spin rounded-full h-3 w-3 border-b border-red-600 mr-1"></div>
+                      Déconnexion...
+                    </>
+                  ) : (
+                    <>
+                      <Unplug size={12} className="mr-1" />
+                      Déconnecter
+                    </>
+                  )}
+                </Button>
+              </div>
+            )}
+
+            {googleConnectionStatus && (
+              <div className="flex items-center justify-between gap-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg mt-2">
+                <div className="flex items-center gap-2">
+                  <CalendarCheck size={16} className="text-yellow-600" />
+                  <p className="text-sm text-yellow-700">
+                    Google Calendar connecté ({googleConnectionStatus.name || googleConnectionStatus.email})
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleGoogleDisconnect}
+                  disabled={isGoogleConnecting}
+                  className="text-red-600 border-red-300 hover:bg-red-50 hover:border-red-400 text-xs px-3 py-1"
+                >
+                  {isGoogleConnecting ? (
                     <>
                       <div className="animate-spin rounded-full h-3 w-3 border-b border-red-600 mr-1"></div>
                       Déconnexion...
@@ -580,6 +749,47 @@ export const AgendaSection = () => {
                     </div>
                   </div>
                   {isMicrosoftConnecting && (
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>
+                  )}
+                </div>
+              </Button>
+
+              {/* Google Calendar */}
+              <Button
+                onClick={() => handleCalendarConnect('Google')}
+                variant="outline"
+                disabled={isGoogleConnecting}
+                className={`w-full flex items-center justify-start p-4 h-auto border-2 transition-all duration-200 ${
+                  googleConnectionStatus 
+                    ? 'border-red-300 hover:border-red-500 hover:bg-red-50' 
+                    : 'border-gray-200 hover:border-[#3A7B59] hover:bg-gray-50'
+                }`}
+              >
+                <div className="flex items-center justify-between w-full">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-lg border flex items-center justify-center ${
+                      googleConnectionStatus 
+                        ? 'bg-red-50 border-red-200' 
+                        : 'bg-yellow-50 border-yellow-200'
+                    }`}>
+                      {googleConnectionStatus ? (
+                        <Unplug className="w-5 h-5 text-red-600" />
+                      ) : (
+                        <CalendarCheck className="w-5 h-5 text-yellow-600" />
+                      )}
+                    </div>
+                    <div className="flex flex-col items-start">
+                      <span className={`font-medium ${googleConnectionStatus ? 'text-red-700' : 'text-gray-700'}`}>
+                        Google Calendar
+                      </span>
+                      {googleConnectionStatus && (
+                        <span className="text-xs text-green-600">
+                          Connecté ({googleConnectionStatus.name || googleConnectionStatus.email})
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  {isGoogleConnecting && (
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>
                   )}
                 </div>
