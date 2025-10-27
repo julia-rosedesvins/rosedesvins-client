@@ -204,9 +204,9 @@ function CheckoutContent({ id, serviceId }: { id: string, serviceId: string }) {
       case 'cheque':
         return 'Chèques';
       case 'cash':
-        return 'Espèces (paiement sur place)';
+        return 'Espèces';
       case 'cash_on_onsite':
-        return 'Espèces (paiement sur place)';
+        return 'Espèces';
       case 'stripe':
         return 'Carte bancaire (Stripe)';
       default:

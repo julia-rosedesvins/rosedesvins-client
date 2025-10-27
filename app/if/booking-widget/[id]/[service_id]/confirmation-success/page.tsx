@@ -87,6 +87,15 @@ function ConfirmationSuccessContent({ id, serviceId }: { id: string, serviceId: 
     }
   };
 
+  const getLanguageInFrench = (language: string) => {
+    const lang = language.toLowerCase();
+    if (lang === 'français' || lang === 'french') return 'Français';
+    if (lang === 'anglais' || lang === 'english') return 'Anglais';
+    if (lang === 'español' || lang === 'spanish') return 'Espagnol';
+    if (lang === 'deutsch' || lang === 'german') return 'Allemand';
+    return language; // Return original if no match
+  };
+
   return (
     <div className="min-h-screen bg-white">
       <div className="container mx-auto px-4 py-8 max-w-2xl">
@@ -127,7 +136,7 @@ function ConfirmationSuccessContent({ id, serviceId }: { id: string, serviceId: 
 
               <div className="flex items-center gap-3">
                 <Globe className="w-5 h-5" style={{ color: colorCode }} />
-                <span>{bookingData?.language || "Français"}</span>
+                <span>{getLanguageInFrench(bookingData?.language || "Français")}</span>
               </div>
 
               <div className="flex items-center gap-3">

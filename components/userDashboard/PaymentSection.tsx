@@ -127,7 +127,7 @@ export const PaymentSection = () => {
             />
             <Coins className="h-5 w-5 lg:h-6 lg:w-6 text-[#3A7B59]" />
             <Label htmlFor="cash" className="text-sm lg:text-base font-semibold cursor-pointer text-black">
-              Espèces (paiement sur place)
+              Espèces
             </Label>
           </div>
         </div>
