@@ -39,7 +39,9 @@ function ConfirmationSuccessContent({ id, serviceId }: { id: string, serviceId: 
   };
 
   const totalParticipants = (bookingData?.adults || 2) + (bookingData?.children || 0);
-  const totalPrice = totalParticipants * 5; // 5€ per person
+  // Calculate total price based on actual service price
+  const pricePerPerson = widgetData?.service?.pricePerPerson || 0;
+  const totalPrice = totalParticipants * pricePerPerson;
 
   const formatParticipants = () => {
     const adults = bookingData?.adults || 2;
