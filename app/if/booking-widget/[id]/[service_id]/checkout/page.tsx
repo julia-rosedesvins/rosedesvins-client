@@ -88,14 +88,14 @@ function CheckoutContent({ id, serviceId }: { id: string, serviceId: string }) {
   };
 
   const displayTime = bookingData?.selectedTime || "Aucun horaire sélectionné";
-  const totalParticipants = (bookingData?.adults || 2) + (bookingData?.children || 0);
-  const pricePerPerson = widgetData?.service?.pricePerPerson || 5;
+  const totalParticipants = (bookingData?.adults ?? 0) + (bookingData?.children ?? 0);
+  const pricePerPerson = widgetData?.service?.pricePerPerson ?? 0;
   const totalPrice = totalParticipants * pricePerPerson;
 
   const formatParticipants = () => {
-    const adults = bookingData?.adults || 2;
-    const children = bookingData?.children || 0;
-    
+    const adults = bookingData?.adults ?? 0;
+    const children = bookingData?.children ?? 0;
+
     if (children > 0) {
       return `${totalParticipants} personnes (${adults} adultes, ${children} enfants)`;
     }

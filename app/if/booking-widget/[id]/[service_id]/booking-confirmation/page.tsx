@@ -26,7 +26,7 @@ function BookingConfirmationContent({ id, serviceId }: { id: string, serviceId: 
   const { widgetData, loading, error, colorCode } = useWidget();
   const searchParams = useSearchParams();
   const router = useRouter();
-  
+
   // Extract booking data from URL parameters
   const bookingData: BookingData = {
     date: searchParams.get('date') || '',
@@ -35,7 +35,7 @@ function BookingConfirmationContent({ id, serviceId }: { id: string, serviceId: 
     children: parseInt(searchParams.get('children') || '0'),
     language: searchParams.get('language') || 'Français',
   };
-  
+
   const [email, setEmail] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -43,7 +43,7 @@ function BookingConfirmationContent({ id, serviceId }: { id: string, serviceId: 
   const [additionalInfo, setAdditionalInfo] = useState("");
   const [selectedCountry, setSelectedCountry] = useState({
     code: "FR",
-    name: "France", 
+    name: "France",
     flag: "🇫🇷",
     dialCode: "+33"
   });
@@ -65,27 +65,27 @@ function BookingConfirmationContent({ id, serviceId }: { id: string, serviceId: 
   // Validation function
   const validateBookingConfirmation = (): boolean => {
     const errors: string[] = [];
-    
+
     if (!email.trim()) {
       errors.push("L'adresse e-mail est requise");
     } else if (!isValidEmail(email)) {
       errors.push("Veuillez saisir une adresse e-mail valide");
     }
-    
+
     if (!firstName.trim()) {
       errors.push("Le prénom est requis");
     }
-    
+
     if (!lastName.trim()) {
       errors.push("Le nom est requis");
     }
-    
+
     if (!phone.trim()) {
       errors.push("Le numéro de téléphone est requis");
     } else if (!isValidPhone(phone)) {
       errors.push("Veuillez saisir un numéro de téléphone valide");
     }
-    
+
     setValidationErrors(errors);
     return errors.length === 0;
   };
@@ -93,22 +93,22 @@ function BookingConfirmationContent({ id, serviceId }: { id: string, serviceId: 
   // Handle booking confirmation
   const handleBookingConfirmation = async (e: React.MouseEvent) => {
     e.preventDefault();
-    
+
     if (isSubmitting) return; // Prevent double clicks
-    
+
     if (!validateBookingConfirmation()) {
       // Scroll to top to show errors
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
-    
+
     // Set loading state
     setIsSubmitting(true);
-    
+
     try {
       // Add a small delay for better UX
       await new Promise(resolve => setTimeout(resolve, 500));
-      
+
       // If validation passes, navigate to checkout using Next.js router
       const query = new URLSearchParams({
         date: bookingData.date,
@@ -122,7 +122,7 @@ function BookingConfirmationContent({ id, serviceId }: { id: string, serviceId: 
         phone: phone,
         additionalInfo: additionalInfo,
       });
-      
+
       router.push(`/if/booking-widget/${id}/${serviceId}/checkout?${query.toString()}`);
     } catch (error) {
       // Reset loading state if something goes wrong
@@ -159,14 +159,14 @@ function BookingConfirmationContent({ id, serviceId }: { id: string, serviceId: 
   };
 
   const displayTime = bookingData?.selectedTime || "Aucun horaire sélectionné";
-  const totalParticipants = (bookingData?.adults || 2) + (bookingData?.children || 0);
-  const pricePerPerson = widgetData?.service?.pricePerPerson || 5;
+  const totalParticipants = (bookingData?.adults ?? 2) + (bookingData?.children ?? 0);
+  const pricePerPerson = widgetData?.service?.pricePerPerson ?? 0;
   const totalPrice = totalParticipants * pricePerPerson;
 
   const formatParticipants = () => {
-    const adults = bookingData?.adults || 2;
-    const children = bookingData?.children || 0;
-    
+    const adults = bookingData?.adults ?? 2;
+    const children = bookingData?.children ?? 0;
+
     if (children > 0) {
       return `${totalParticipants} personnes (${adults} adultes, ${children} enfants)`;
     }
@@ -210,7 +210,7 @@ function BookingConfirmationContent({ id, serviceId }: { id: string, serviceId: 
             {/* Informations de contact */}
             <div>
               <h2 className="text-xl font-semibold mb-6">Informations de contact</h2>
-              
+
               <div className="space-y-4">
                 <Input
                   placeholder="Adresse e-mail"
@@ -219,7 +219,7 @@ function BookingConfirmationContent({ id, serviceId }: { id: string, serviceId: 
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full"
                 />
-                
+
                 <div className="grid grid-cols-2 gap-4">
                   <Input
                     placeholder="Nom"
@@ -251,7 +251,7 @@ function BookingConfirmationContent({ id, serviceId }: { id: string, serviceId: 
             {/* Récapitulatif de la demande */}
             <div>
               <h2 className="text-xl font-semibold mb-6">Récapitulatif de la demande</h2>
-              
+
               <div className="space-y-4">
                 <div className="flex items-center gap-3">
                   <Clock className="w-5 h-5" style={{ color: colorCode }} />
@@ -305,7 +305,7 @@ function BookingConfirmationContent({ id, serviceId }: { id: string, serviceId: 
           {/* Information supplémentaire */}
           <div className="mt-8">
             <h3 className="text-lg font-medium mb-2">
-              Une information supplémentaire à nous partager ? 
+              Une information supplémentaire à nous partager ?
               <span className="text-muted-foreground font-normal italic"> (facultatif)</span>
             </h3>
             <Textarea
@@ -318,13 +318,13 @@ function BookingConfirmationContent({ id, serviceId }: { id: string, serviceId: 
 
           {/* Bouton Confirmer */}
           <div className="flex justify-end mt-6">
-            <Button 
+            <Button
               onClick={handleBookingConfirmation}
               disabled={isSubmitting}
               className={cn(
                 "text-white px-8 py-2",
-                isSubmitting 
-                  ? "opacity-70 cursor-not-allowed" 
+                isSubmitting
+                  ? "opacity-70 cursor-not-allowed"
                   : "hover:opacity-90"
               )}
               style={{ backgroundColor: colorCode }}
