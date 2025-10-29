@@ -88,25 +88,25 @@ function ReservationContent({ id, serviceId }: { id: string, serviceId: string }
                             <div className="flex items-center gap-2 text-muted-foreground min-w-0">
                                 <Clock className="w-6 h-6 flex-shrink-0" style={{ color: colorCode }} />
                                 <span className="font-medium text-sm md:text-base whitespace-nowrap overflow-hidden text-ellipsis">
-                                    {widgetData?.service?.timeOfServiceInMinutes || 60} min
+                                    {widgetData?.service?.timeOfServiceInMinutes ?? 60} min
                                 </span>
                             </div>
                             <div className="flex items-center gap-2 text-muted-foreground min-w-0">
                                 <Wine className="w-6 h-6 flex-shrink-0" style={{ color: colorCode }} />
                                 <span className="font-medium text-sm md:text-base whitespace-nowrap overflow-hidden text-ellipsis">
-                                    {widgetData?.service?.numberOfWinesTasted || 5} vins
+                                    {widgetData?.service?.numberOfWinesTasted ?? '-'} vins
                                 </span>
                             </div>
                             <div className="flex items-center gap-2 text-muted-foreground min-w-0">
                                 <Euro className="w-6 h-6 flex-shrink-0" style={{ color: colorCode }} />
                                 <span className="font-medium text-sm md:text-base whitespace-nowrap overflow-hidden text-ellipsis">
-                                    {widgetData?.service?.pricePerPerson || 5} € / personne
+                                    {widgetData?.service?.pricePerPerson ?? '-'} € / personne
                                 </span>
                             </div>
                             <div className="flex items-center gap-2 text-muted-foreground min-w-0">
                                 <Users className="w-6 h-6 flex-shrink-0" style={{ color: colorCode }} />
                                 <span className="font-medium text-sm md:text-base whitespace-nowrap overflow-hidden text-ellipsis">
-                                    {widgetData?.service?.numberOfPeople || '2-10'} personne
+                                    {widgetData?.service?.numberOfPeople ?? '2-10'} personne
                                 </span>
                             </div>
                         </div>
