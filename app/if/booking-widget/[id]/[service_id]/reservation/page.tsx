@@ -106,7 +106,7 @@ function ReservationContent({ id, serviceId }: { id: string, serviceId: string }
                             <div className="flex items-center gap-2 text-muted-foreground min-w-0">
                                 <Users className="w-6 h-6 flex-shrink-0" style={{ color: colorCode }} />
                                 <span className="font-medium text-sm md:text-base whitespace-nowrap overflow-hidden text-ellipsis">
-                                    {widgetData?.service?.numberOfPeople ?? '2-10'} personne
+                                    {widgetData?.service?.numberOfPeople ?? '2-10'} personnes
                                 </span>
                             </div>
                         </div>
