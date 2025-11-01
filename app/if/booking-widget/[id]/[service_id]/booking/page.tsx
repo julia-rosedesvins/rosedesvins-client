@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { WidgetProvider, useWidget } from "@/contexts/WidgetContext";
+import { eventsService, PublicScheduleData } from "@/services/events.service";
 
 function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
     const { widgetData, loading, error, colorCode } = useWidget();
@@ -22,6 +23,8 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
     const languageAutoSelected = useRef(false);
     const [morningStartIndex, setMorningStartIndex] = useState(0);
     const [afternoonStartIndex, setAfternoonStartIndex] = useState(0);
+    const [bookedSlots, setBookedSlots] = useState<PublicScheduleData[]>([]);
+    const [loadingSchedule, setLoadingSchedule] = useState(false);
     const [validationErrors, setValidationErrors] = useState<string[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -212,9 +215,30 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
     }
   }, [widgetData, loading]);
 
+  // Fetch booked slots for the user on component mount
+  useEffect(() => {
+    const fetchBookedSlots = async () => {
+      try {
+        setLoadingSchedule(true);
+        const response = await eventsService.getPublicUserSchedule(id);
+        setBookedSlots(response.data);
+      } catch (error) {
+        console.error('Failed to fetch booked slots:', error);
+        // Continue without booked slots data - don't block the user
+        setBookedSlots([]);
+      } finally {
+        setLoadingSchedule(false);
+      }
+    };
+
+    if (id) {
+      fetchBookedSlots();
+    }
+  }, [id]);
+
   // Auto-select today's date if available and has time slots
   useEffect(() => {
-    if (widgetData?.availability && !selectedDate) {
+    if (widgetData?.availability && bookedSlots && !loadingSchedule && !selectedDate) {
       const today = new Date();
       if (isDateAvailable(today)) {
         const availableSlots = getAvailableTimeSlots(today);
@@ -223,7 +247,7 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
         }
       }
     }
-  }, [widgetData, selectedDate]);
+  }, [widgetData, bookedSlots, loadingSchedule, selectedDate]);
 
   // Reset selected time when date changes
   useEffect(() => {
@@ -273,6 +297,21 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
     return slotTime <= bufferTime;
   };
 
+  // Check if a time slot is already booked by another user
+  const isTimeSlotBooked = (date: Date, time: string): boolean => {
+    if (!bookedSlots.length) return false;
+    
+    const dateString = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
+    
+    return bookedSlots.some(slot => {
+      const slotDate = new Date(slot.eventDate);
+      const slotDateString = `${slotDate.getFullYear()}-${(slotDate.getMonth() + 1).toString().padStart(2, '0')}-${slotDate.getDate().toString().padStart(2, '0')}`;
+      
+      // Check if same date and same time
+      return slotDateString === dateString && slot.eventTime === time;
+    });
+  };
+
   // Get available time slots for the selected date
   const getAvailableTimeSlots = (date: Date | null) => {
     if (!date || !widgetData?.availability?.weeklyAvailability) {
@@ -312,8 +351,8 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
           const minutes = currentMinutes % 60;
           const timeSlot = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
           
-          // Skip if time slot has passed (for today) - Allow multiple bookings at same time
-          if (!isTimeSlotPast(date, timeSlot)) {
+          // Skip if time slot has passed (for today) or is already booked
+          if (!isTimeSlotPast(date, timeSlot) && !isTimeSlotBooked(date, timeSlot)) {
             if (hours < 12) {
               morningSlots.push(timeSlot);
             } else {
@@ -441,6 +480,13 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
                   <p className="text-red-600 mb-2 font-medium">Calendrier indisponible</p>
                   <p className="text-sm text-red-500">{error}</p>
                 </div>
+              </div>
+            </div>
+          ) : loadingSchedule ? (
+            <div className="flex justify-center items-center py-8">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 mx-auto mb-2" style={{ borderColor: colorCode }}></div>
+                <p className="text-sm text-gray-600">Chargement des créneaux disponibles...</p>
               </div>
             </div>
           ) : (
