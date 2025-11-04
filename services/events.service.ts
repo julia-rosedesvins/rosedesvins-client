@@ -67,6 +67,7 @@ export interface ApiError {
 export interface PublicScheduleData {
   eventDate: string;
   eventTime: string;
+  eventEndTime?: string; // Optional end time for blocking time ranges
 }
 
 export interface GetPublicScheduleResponse {
