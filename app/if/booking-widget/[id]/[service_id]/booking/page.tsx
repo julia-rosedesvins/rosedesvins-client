@@ -298,17 +298,48 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
   };
 
   // Check if a time slot is already booked by another user
+  // This now checks if the time slot overlaps with any existing event
   const isTimeSlotBooked = (date: Date, time: string): boolean => {
     if (!bookedSlots.length) return false;
     
     const dateString = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
     
+    // Get service duration to calculate slot end time
+    const serviceDuration = widgetData?.service?.timeOfServiceInMinutes || 60;
+    
+    // Parse the time slot start time
+    const [slotHours, slotMinutes] = time.split(':').map(Number);
+    const slotStartMinutes = slotHours * 60 + slotMinutes;
+    const slotEndMinutes = slotStartMinutes + serviceDuration;
+    
     return bookedSlots.some(slot => {
       const slotDate = new Date(slot.eventDate);
       const slotDateString = `${slotDate.getFullYear()}-${(slotDate.getMonth() + 1).toString().padStart(2, '0')}-${slotDate.getDate().toString().padStart(2, '0')}`;
       
-      // Check if same date and same time
-      return slotDateString === dateString && slot.eventTime === time;
+      // Check if it's the same date
+      if (slotDateString !== dateString) return false;
+      
+      // Parse existing event start time
+      const [eventHours, eventMinutes] = slot.eventTime.split(':').map(Number);
+      const eventStartMinutes = eventHours * 60 + eventMinutes;
+      
+      // Parse existing event end time (if available)
+      let eventEndMinutes = eventStartMinutes + serviceDuration; // Default: assume same duration
+      if (slot.eventEndTime) {
+        const [endHours, endMinutes] = slot.eventEndTime.split(':').map(Number);
+        eventEndMinutes = endHours * 60 + endMinutes;
+      }
+      
+      // Check for overlap:
+      // New slot overlaps if:
+      // - New slot starts before existing event ends AND
+      // - New slot ends after existing event starts
+      const overlaps = (
+        slotStartMinutes < eventEndMinutes && 
+        slotEndMinutes > eventStartMinutes
+      );
+      
+      return overlaps;
     });
   };
 
