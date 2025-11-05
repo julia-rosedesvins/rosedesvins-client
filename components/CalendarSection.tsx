@@ -379,7 +379,9 @@ export const CalendarSection = () => {
             if (isCurrentMonth) {
               rawEvents = allEvents[dayNumber as keyof typeof allEvents] || [];
             }
-            const dayEvents = isSunday(day) ? [] : rawEvents;
+            // Previously Sundays were hidden; this caused real events (e.g., 2 Nov) to not display.
+            // Always show events, including Sundays.
+            const dayEvents = rawEvents;
             
             return (
               <div 
