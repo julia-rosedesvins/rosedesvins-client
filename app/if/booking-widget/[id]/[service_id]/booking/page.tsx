@@ -673,19 +673,19 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
           <div className="flex justify-center gap-8 mb-8 text-muted-foreground">
             <div className="flex items-center gap-2">
               <Clock className="w-5 h-5" style={{ color: colorCode }} />
-              <span>{widgetData?.service?.timeOfServiceInMinutes || 60} min</span>
+              <span>{widgetData?.service?.timeOfServiceInMinutes ?? 60} min</span>
             </div>
             <div className="flex items-center gap-2">
               <Euro className="w-5 h-5" style={{ color: colorCode }} />
-              <span>{widgetData?.service?.pricePerPerson || 5} € / personne</span>
+              <span>{widgetData?.service?.pricePerPerson ?? 5} € / personne</span>
             </div>
             <div className="flex items-center gap-2">
               <Wine className="w-5 h-5" style={{ color: colorCode }} />
-              <span>{widgetData?.service?.numberOfWinesTasted || 5} vins</span>
+              <span>{widgetData?.service?.numberOfWinesTasted ?? 5} vins</span>
             </div>
             <div className="flex items-center gap-2">
               <Users className="w-5 h-5" style={{ color: colorCode }} />
-              <span>{widgetData?.service?.numberOfPeople || '1-10'} personnes</span>
+              <span>{widgetData?.service?.numberOfPeople ?? '1-10'} personnes</span>
             </div>
           </div>
         </div>
