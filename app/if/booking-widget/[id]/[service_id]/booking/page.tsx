@@ -474,24 +474,24 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
 
   return (
     <div className="min-h-screen bg-white">
-      <div className="container mx-auto px-4 py-8 max-w-2xl">
+      <div className="container mx-auto px-3 md:px-4 py-4 md:py-8 max-w-2xl">
         {/* Header */}
-        <div className="flex items-center mb-6 lg:mb-8">
+        <div className="flex items-center mb-4 md:mb-6 lg:mb-8">
           <Link href={`/if/booking-widget/${id}/${serviceId}/reservation`} className="flex items-center text-muted-foreground hover:opacity-75" style={{ color: colorCode }}>
             <ChevronLeft className="w-5 h-5 mr-1" />
-            Retour
+            <span className="text-sm md:text-base">Retour</span>
           </Link>
         </div>
 
-        <h1 className="text-2xl lg:text-3xl font-bold mb-8 lg:mb-12 text-center" style={{ color: colorCode }}>
+        <h1 className="text-xl md:text-2xl lg:text-3xl font-bold mb-6 md:mb-8 lg:mb-12 text-center px-2" style={{ color: colorCode }}>
           {widgetData?.service?.name || 'Visite libre & dégustation des cuvées Tradition'}
         </h1>
 
         {/* Validation Errors */}
         {validationErrors.length > 0 && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-            <h3 className="text-red-800 font-medium mb-2">Veuillez corriger les erreurs suivantes :</h3>
-            <ul className="text-red-700 space-y-1">
+          <div className="mb-4 md:mb-6 p-3 md:p-4 bg-red-50 border border-red-200 rounded-lg">
+            <h3 className="text-red-800 font-medium mb-2 text-sm md:text-base">Veuillez corriger les erreurs suivantes :</h3>
+            <ul className="text-red-700 space-y-1 text-sm md:text-base">
               {validationErrors.map((error, index) => (
                 <li key={index} className="flex items-start">
                   <span className="text-red-500 mr-2">•</span>
@@ -503,21 +503,21 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
         )}
 
         {/* Calendar */}
-        <div className="mb-6">
+        <div className="mb-4 md:mb-6">
           {error ? (
-            <div className="flex justify-center items-center py-8">
+            <div className="flex justify-center items-center py-6 md:py-8">
               <div className="text-center">
-                <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-                  <p className="text-red-600 mb-2 font-medium">Calendrier indisponible</p>
-                  <p className="text-sm text-red-500">{error}</p>
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4 md:p-6">
+                  <p className="text-red-600 mb-2 font-medium text-sm md:text-base">Calendrier indisponible</p>
+                  <p className="text-xs md:text-sm text-red-500">{error}</p>
                 </div>
               </div>
             </div>
           ) : loadingSchedule ? (
-            <div className="flex justify-center items-center py-8">
+            <div className="flex justify-center items-center py-6 md:py-8">
               <div className="text-center">
                 <div className="animate-spin rounded-full h-6 w-6 border-b-2 mx-auto mb-2" style={{ borderColor: colorCode }}></div>
-                <p className="text-sm text-gray-600">Chargement des créneaux disponibles...</p>
+                <p className="text-xs md:text-sm text-gray-600">Chargement des créneaux disponibles...</p>
               </div>
             </div>
           ) : (
@@ -531,53 +531,53 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
         </div>
 
         {/* Horaires */}
-        <div className="mb-8 mt-4">
-          <h2 className="text-2xl font-semibold mb-6 text-center" style={{ color: colorCode }}>Horaires</h2>
+        <div className="mb-6 md:mb-8 mt-4">
+          <h2 className="text-xl md:text-2xl font-semibold mb-4 md:mb-6 text-center" style={{ color: colorCode }}>Horaires</h2>
           
           {error ? (
-            <div className="text-center text-gray-500 py-8">
-              <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-md mx-auto">
-                <p className="text-red-600 mb-2 font-medium">Horaires indisponibles</p>
-                <p className="text-sm text-red-500">Impossible de charger les créneaux horaires en raison d'une erreur.</p>
+            <div className="text-center text-gray-500 py-6 md:py-8">
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 md:p-6 max-w-md mx-auto">
+                <p className="text-red-600 mb-2 font-medium text-sm md:text-base">Horaires indisponibles</p>
+                <p className="text-xs md:text-sm text-red-500">Impossible de charger les créneaux horaires en raison d'une erreur.</p>
               </div>
             </div>
           ) : !selectedDate ? (
-            <div className="text-center text-gray-500 py-8">
+            <div className="text-center text-gray-500 py-6 md:py-8 text-sm md:text-base">
               Veuillez sélectionner une date pour voir les créneaux disponibles
             </div>
           ) : allMorningTimes.length === 0 && allAfternoonTimes.length === 0 ? (
-            <div className="text-center text-gray-500 py-8">
-              <p className="mb-2">Aucun créneau disponible pour cette date.</p>
-              <p className="text-sm">
+            <div className="text-center text-gray-500 py-6 md:py-8">
+              <p className="mb-2 text-sm md:text-base">Aucun créneau disponible pour cette date.</p>
+              <p className="text-xs md:text-sm">
                 {selectedDate && selectedDate.toDateString() === new Date().toDateString() 
                   ? "Les créneaux passés ne sont plus disponibles aujourd'hui."
                   : "Tous les créneaux sont déjà réservés."}
               </p>
-              <p className="text-sm mt-1">Veuillez choisir une autre date.</p>
+              <p className="text-xs md:text-sm mt-1">Veuillez choisir une autre date.</p>
             </div>
           ) : (
             <>
               {/* Matin */}
-          <div className="mb-8">
-            <h3 className="text-lg font-medium mb-4 text-center">Matin</h3>
+          <div className="mb-6 md:mb-8">
+            <h3 className="text-base md:text-lg font-medium mb-3 md:mb-4 text-center">Matin</h3>
             {allMorningTimes.length === 0 ? (
-              <div className="text-center text-gray-500 py-4">
+              <div className="text-center text-gray-500 py-4 text-sm md:text-base">
                 Aucun créneau disponible le matin
               </div>
             ) : (
-              <div className="flex justify-center gap-3 mb-6">
+              <div className="flex justify-center gap-2 md:gap-3 mb-6 overflow-x-auto px-2">
                 <button
                   onClick={handleMorningPrevious}
                   disabled={morningStartIndex === 0}
                   className={cn(
-                    "flex items-center justify-center w-10 h-10 rounded-full bg-gray-100",
+                    "flex items-center justify-center w-8 h-8 md:w-10 md:h-10 rounded-full bg-gray-100 flex-shrink-0",
                     morningStartIndex === 0 
                       ? "text-gray-300 cursor-not-allowed" 
                       : "text-muted-foreground hover:opacity-75 cursor-pointer hover:bg-gray-200"
                   )}
                   style={morningStartIndex === 0 ? {} : { color: colorCode }}
                 >
-                  <ChevronLeft className="w-5 h-5" />
+                  <ChevronLeft className="w-4 h-4 md:w-5 md:h-5" />
                 </button>
                 {morningTimes.map((time) => (
                   <Button
@@ -585,7 +585,7 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
                     variant={selectedTime === time ? "default" : "outline"}
                     onClick={() => setSelectedTime(selectedTime === time ? null : time)}
                     className={cn(
-                      "px-6 py-3 text-base min-w-[80px]",
+                      "px-3 md:px-6 py-2 md:py-3 text-sm md:text-base min-w-[60px] md:min-w-[80px]",
                       selectedTime === time 
                         ? "text-white hover:opacity-90" 
                         : "hover:bg-gray-100"
@@ -599,40 +599,40 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
                   onClick={handleMorningNext}
                   disabled={morningStartIndex + visibleSlotsCount >= allMorningTimes.length}
                   className={cn(
-                    "flex items-center justify-center w-10 h-10 rounded-full bg-gray-100",
+                    "flex items-center justify-center w-8 h-8 md:w-10 md:h-10 rounded-full bg-gray-100 flex-shrink-0",
                     morningStartIndex + visibleSlotsCount >= allMorningTimes.length
                       ? "text-gray-300 cursor-not-allowed" 
                       : "text-muted-foreground hover:opacity-75 cursor-pointer hover:bg-gray-200"
                   )}
                   style={morningStartIndex + visibleSlotsCount >= allMorningTimes.length ? {} : { color: colorCode }}
                 >
-                  <ChevronRight className="w-5 h-5" />
+                  <ChevronRight className="w-4 h-4 md:w-5 md:h-5" />
                 </button>
               </div>
             )}
           </div>
 
           {/* Après-midi */}
-          <div className="mb-8">
-            <h3 className="text-lg font-medium mb-4 text-center">Après-midi</h3>
+          <div className="mb-6 md:mb-8">
+            <h3 className="text-base md:text-lg font-medium mb-3 md:mb-4 text-center">Après-midi</h3>
             {allAfternoonTimes.length === 0 ? (
-              <div className="text-center text-gray-500 py-4">
+              <div className="text-center text-gray-500 py-4 text-sm md:text-base">
                 Aucun créneau disponible l'après-midi
               </div>
             ) : (
-              <div className="flex justify-center gap-3">
+              <div className="flex justify-center gap-2 md:gap-3 overflow-x-auto px-2">
                 <button
                   onClick={handleAfternoonPrevious}
                   disabled={afternoonStartIndex === 0}
                   className={cn(
-                    "flex items-center justify-center w-10 h-10 rounded-full bg-gray-100",
+                    "flex items-center justify-center w-8 h-8 md:w-10 md:h-10 rounded-full bg-gray-100 flex-shrink-0",
                     afternoonStartIndex === 0 
                       ? "text-gray-300 cursor-not-allowed" 
                       : "text-muted-foreground hover:opacity-75 cursor-pointer hover:bg-gray-200"
                   )}
                   style={afternoonStartIndex === 0 ? {} : { color: colorCode }}
                 >
-                  <ChevronLeft className="w-5 h-5" />
+                  <ChevronLeft className="w-4 h-4 md:w-5 md:h-5" />
                 </button>
                 {afternoonTimes.map((time) => (
                   <Button
@@ -640,7 +640,7 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
                     variant={selectedTime === time ? "default" : "outline"}
                     onClick={() => setSelectedTime(selectedTime === time ? null : time)}
                     className={cn(
-                      "px-6 py-3 text-base min-w-[80px]",
+                      "px-3 md:px-6 py-2 md:py-3 text-sm md:text-base min-w-[60px] md:min-w-[80px]",
                       selectedTime === time 
                         ? "text-white hover:opacity-90" 
                         : "hover:bg-gray-100"
@@ -654,14 +654,14 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
                   onClick={handleAfternoonNext}
                   disabled={afternoonStartIndex + visibleSlotsCount >= allAfternoonTimes.length}
                   className={cn(
-                    "flex items-center justify-center w-10 h-10 rounded-full bg-gray-100",
+                    "flex items-center justify-center w-8 h-8 md:w-10 md:h-10 rounded-full bg-gray-100 flex-shrink-0",
                     afternoonStartIndex + visibleSlotsCount >= allAfternoonTimes.length
                       ? "text-gray-300 cursor-not-allowed" 
                       : "text-muted-foreground hover:opacity-75 cursor-pointer hover:bg-gray-200"
                   )}
                   style={afternoonStartIndex + visibleSlotsCount >= allAfternoonTimes.length ? {} : { color: colorCode }}
                 >
-                  <ChevronRight className="w-5 h-5" />
+                  <ChevronRight className="w-4 h-4 md:w-5 md:h-5" />
                 </button>
               </div>
             )}
@@ -670,60 +670,60 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
           )}
 
           {/* Informations sur l'expérience */}
-          <div className="flex justify-center gap-8 mb-8 text-muted-foreground">
-            <div className="flex items-center gap-2">
-              <Clock className="w-5 h-5" style={{ color: colorCode }} />
-              <span>{widgetData?.service?.timeOfServiceInMinutes ?? 60} min</span>
+          <div className="grid grid-cols-2 md:flex md:justify-center gap-3 md:gap-8 mb-6 md:mb-8 text-muted-foreground">
+            <div className="flex items-center gap-2 justify-center">
+              <Clock className="w-4 h-4 md:w-5 md:h-5 flex-shrink-0" style={{ color: colorCode }} />
+              <span className="text-xs md:text-base">{widgetData?.service?.timeOfServiceInMinutes ?? 60} min</span>
             </div>
-            <div className="flex items-center gap-2">
-              <Euro className="w-5 h-5" style={{ color: colorCode }} />
-              <span>{widgetData?.service?.pricePerPerson ?? 5} € / personne</span>
+            <div className="flex items-center gap-2 justify-center">
+              <Euro className="w-4 h-4 md:w-5 md:h-5 flex-shrink-0" style={{ color: colorCode }} />
+              <span className="text-xs md:text-base">{widgetData?.service?.pricePerPerson ?? 5} € / pers.</span>
             </div>
-            <div className="flex items-center gap-2">
-              <Wine className="w-5 h-5" style={{ color: colorCode }} />
-              <span>{widgetData?.service?.numberOfWinesTasted ?? 5} vins</span>
+            <div className="flex items-center gap-2 justify-center">
+              <Wine className="w-4 h-4 md:w-5 md:h-5 flex-shrink-0" style={{ color: colorCode }} />
+              <span className="text-xs md:text-base">{widgetData?.service?.numberOfWinesTasted ?? 5} vins</span>
             </div>
-            <div className="flex items-center gap-2">
-              <Users className="w-5 h-5" style={{ color: colorCode }} />
-              <span>{widgetData?.service?.numberOfPeople ?? '1-10'} personnes</span>
+            <div className="flex items-center gap-2 justify-center">
+              <Users className="w-4 h-4 md:w-5 md:h-5 flex-shrink-0" style={{ color: colorCode }} />
+              <span className="text-xs md:text-base">{widgetData?.service?.numberOfPeople ?? '1-10'} pers.</span>
             </div>
           </div>
         </div>
 
         {/* Participants */}
-        <div className="mb-8">
-          <h2 className="text-2xl font-semibold mb-6 text-center" style={{ color: colorCode }}>Participants</h2>
+        <div className="mb-6 md:mb-8">
+          <h2 className="text-xl md:text-2xl font-semibold mb-4 md:mb-6 text-center" style={{ color: colorCode }}>Participants</h2>
           
           {/* Show max participants info */}
-          <div className="text-center mb-4">
-            <span className="text-sm text-muted-foreground">
+          <div className="text-center mb-3 md:mb-4">
+            <span className="text-xs md:text-sm text-muted-foreground">
               Maximum {getMaxParticipants()} personnes • Total actuel: {adults + children}
             </span>
           </div>
           
-          <div className="space-y-6 max-w-md mx-auto">
+          <div className="space-y-4 md:space-y-6 max-w-md mx-auto px-2">
             {/* Adultes */}
             <div className="flex items-center justify-between">
-              <span className="font-medium text-lg">Adultes</span>
-              <div className="flex items-center gap-4">
+              <span className="font-medium text-base md:text-lg">Adultes</span>
+              <div className="flex items-center gap-3 md:gap-4">
                 <Button
                   variant="outline"
                   size="icon"
-                  className="w-10 h-10 rounded-full"
+                  className="w-8 h-8 md:w-10 md:h-10 rounded-full"
                   onClick={() => handleAdultsChange(false)}
                   disabled={adults <= 1} // Minimum 1 adult required
                 >
-                  <Minus className="w-5 h-5" />
+                  <Minus className="w-4 h-4 md:w-5 md:h-5" />
                 </Button>
-                <span className="w-10 text-center font-medium text-lg">{adults}</span>
+                <span className="w-8 md:w-10 text-center font-medium text-base md:text-lg">{adults}</span>
                 <Button
                   variant="outline"
                   size="icon"
-                  className="w-10 h-10 rounded-full"
+                  className="w-8 h-8 md:w-10 md:h-10 rounded-full"
                   onClick={() => handleAdultsChange(true)}
                   disabled={adults + children >= getMaxParticipants()}
                 >
-                  <Plus className="w-5 h-5" />
+                  <Plus className="w-4 h-4 md:w-5 md:h-5" />
                 </Button>
               </div>
             </div>
@@ -731,28 +731,28 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
             {/* Enfants */}
             <div className="flex items-center justify-between">
               <div>
-                <span className="font-medium text-lg">Enfants</span>
-                <div className="text-base text-muted-foreground">-18 ans</div>
+                <span className="font-medium text-base md:text-lg">Enfants</span>
+                <div className="text-sm md:text-base text-muted-foreground">-18 ans</div>
               </div>
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3 md:gap-4">
                 <Button
                   variant="outline"
                   size="icon"
-                  className="w-10 h-10 rounded-full"
+                  className="w-8 h-8 md:w-10 md:h-10 rounded-full"
                   onClick={() => handleChildrenChange(false)}
                   disabled={children <= 0}
                 >
-                  <Minus className="w-5 h-5" />
+                  <Minus className="w-4 h-4 md:w-5 md:h-5" />
                 </Button>
-                <span className="w-10 text-center font-medium text-lg">{children}</span>
+                <span className="w-8 md:w-10 text-center font-medium text-base md:text-lg">{children}</span>
                 <Button
                   variant="outline"
                   size="icon"
-                  className="w-10 h-10 rounded-full"
+                  className="w-8 h-8 md:w-10 md:h-10 rounded-full"
                   onClick={() => handleChildrenChange(true)}
                   disabled={adults + children >= getMaxParticipants()}
                 >
-                  <Plus className="w-5 h-5" />
+                  <Plus className="w-4 h-4 md:w-5 md:h-5" />
                 </Button>
               </div>
             </div>
@@ -760,16 +760,16 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
         </div>
 
         {/* Langues */}
-        <div className="mb-12">
-          <h2 className="text-2xl font-semibold mb-6 text-center" style={{ color: colorCode }}>Langues</h2>
-          <div className="flex justify-center gap-4">
+        <div className="mb-8 md:mb-12">
+          <h2 className="text-xl md:text-2xl font-semibold mb-4 md:mb-6 text-center" style={{ color: colorCode }}>Langues</h2>
+          <div className="flex flex-wrap justify-center gap-3 md:gap-4 px-2">
             {widgetData?.service?.languagesOffered?.map((language, index) => (
               <Button
                 key={index}
                 variant={selectedLanguage === language ? "default" : "outline"}
                 onClick={() => setSelectedLanguage(language)}
                 className={cn(
-                  "px-8 py-3 text-base",
+                  "px-4 md:px-8 py-2 md:py-3 text-sm md:text-base",
                   selectedLanguage === language 
                     ? "text-white hover:opacity-90" 
                     : "hover:bg-gray-100"
@@ -784,7 +784,7 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
                   variant={selectedLanguage === "Français" ? "default" : "outline"}
                   onClick={() => setSelectedLanguage("Français")}
                   className={cn(
-                    "px-8 py-3 text-base",
+                    "px-4 md:px-8 py-2 md:py-3 text-sm md:text-base",
                     selectedLanguage === "Français" 
                       ? "text-white hover:opacity-90" 
                       : "hover:bg-gray-100"
@@ -797,7 +797,7 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
                   variant={selectedLanguage === "English" ? "default" : "outline"}
                   onClick={() => setSelectedLanguage("English")}
                   className={cn(
-                    "px-8 py-3 text-base",
+                    "px-4 md:px-8 py-2 md:py-3 text-sm md:text-base",
                     selectedLanguage === "English" 
                       ? "text-white hover:opacity-90" 
                       : "hover:bg-gray-100"
@@ -812,12 +812,12 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
         </div>
 
         {/* Button Sélectionner */}
-        <div className="flex justify-center">
+        <div className="flex justify-center px-2">
           <Button 
             onClick={handleBookingSelect}
             disabled={isSubmitting || !!error}
             className={cn(
-              "text-white px-12 py-4 text-xl font-semibold",
+              "text-white px-8 md:px-12 py-3 md:py-4 text-lg md:text-xl font-semibold w-full md:w-auto",
               (isSubmitting || !!error)
                 ? "opacity-70 cursor-not-allowed" 
                 : "hover:opacity-90"
@@ -827,7 +827,7 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
           >
             {isSubmitting ? (
               <>
-                <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                <Loader2 className="w-4 h-4 md:w-5 md:h-5 animate-spin mr-2" />
                 Traitement...
               </>
             ) : error ? (

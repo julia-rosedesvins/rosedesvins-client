@@ -33,6 +33,7 @@ interface Reservation {
   eventStatus?: string;
   backgroundColor?: string;
   bookingId?: string;
+  additionalNotes?: string;
 }
 
 export const ReservationsList = () => {
@@ -117,7 +118,8 @@ export const ReservationsList = () => {
       customerPhone: event.bookingId?.phoneNo || 'Non disponible',
       customerEmail: event.bookingId?.customerEmail || 'Non disponible',
       eventType: event.eventType,
-      eventStatus: event.eventStatus
+      eventStatus: event.eventStatus,
+      additionalNotes: event.bookingId?.additionalNotes || undefined
     };
   };
 

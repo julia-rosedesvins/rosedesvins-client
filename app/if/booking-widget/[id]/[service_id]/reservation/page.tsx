@@ -38,10 +38,10 @@ function ReservationContent({ id, serviceId }: { id: string, serviceId: string }
 
     return (
         <div className="min-h-screen bg-white">
-            <div className="container mx-auto px-4 py-8 max-w-4xl">
+            <div className="container mx-auto px-3 md:px-4 py-4 md:py-8 max-w-4xl">
                 {/* Header */}
-                <div className="text-center mb-8">
-                    <h1 className="text-3xl md:text-4xl font-bold mb-2" style={{ color: colorCode }}>
+                <div className="text-center mb-4 md:mb-8">
+                    <h1 className="text-2xl md:text-4xl font-bold mb-2" style={{ color: colorCode }}>
                         Réserver son expérience
                     </h1>
                 </div>
@@ -50,7 +50,7 @@ function ReservationContent({ id, serviceId }: { id: string, serviceId: string }
                 <Card className="overflow-hidden shadow-lg bg-card">
                     {/* Hero Image */}
                     {widgetData?.domainProfile?.domainProfilePictureUrl && (
-                        <div className="relative h-64 md:h-80 overflow-hidden">
+                        <div className="relative h-48 md:h-80 overflow-hidden">
                             <img
                                 src={`${process.env.NEXT_PUBLIC_API_BASE_URL}${widgetData.domainProfile.domainProfilePictureUrl}`}
                                 alt="Cave troglodyte avec dégustation de vins"
@@ -62,20 +62,20 @@ function ReservationContent({ id, serviceId }: { id: string, serviceId: string }
                     )}
 
                     {/* Content */}
-                    <div className="p-6 md:p-8">
-                        <h2 className="text-2xl md:text-3xl font-bold mb-4" style={{ color: colorCode }}>
+                    <div className="p-4 md:p-8">
+                        <h2 className="text-xl md:text-3xl font-bold mb-3 md:mb-4" style={{ color: colorCode }}>
                             {widgetData?.service?.name || 'Visite libre & dégustation des cuvées Tradition'}
                         </h2>
 
-                        <p className="text-muted-foreground text-lg mb-6 leading-relaxed">
+                        <p className="text-muted-foreground text-base md:text-lg mb-4 md:mb-6 leading-relaxed">
                             {showFullText ? fullText : truncatedText}
                         </p>
 
                         {fullText.length > 150 && (
-                            <div className="mb-6">
+                            <div className="mb-4 md:mb-6">
                                 <button
                                     onClick={() => setShowFullText(!showFullText)}
-                                    className="hover:opacity-75 font-medium"
+                                    className="hover:opacity-75 font-medium text-sm md:text-base"
                                     style={{ color: colorCode }}
                                 >
                                     {showFullText ? "Voir moins ▲" : "En savoir plus ▼"}
@@ -84,54 +84,54 @@ function ReservationContent({ id, serviceId }: { id: string, serviceId: string }
                         )}
 
                         {/* Details Grid */}
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6 md:mb-8">
                             <div className="flex items-center gap-2 text-muted-foreground min-w-0">
-                                <Clock className="w-6 h-6 flex-shrink-0" style={{ color: colorCode }} />
-                                <span className="font-medium text-sm md:text-base whitespace-nowrap overflow-hidden text-ellipsis">
+                                <Clock className="w-5 h-5 md:w-6 md:h-6 flex-shrink-0" style={{ color: colorCode }} />
+                                <span className="font-medium text-xs md:text-base whitespace-nowrap overflow-hidden text-ellipsis">
                                     {widgetData?.service?.timeOfServiceInMinutes ?? 60} min
                                 </span>
                             </div>
                             <div className="flex items-center gap-2 text-muted-foreground min-w-0">
-                                <Wine className="w-6 h-6 flex-shrink-0" style={{ color: colorCode }} />
-                                <span className="font-medium text-sm md:text-base whitespace-nowrap overflow-hidden text-ellipsis">
+                                <Wine className="w-5 h-5 md:w-6 md:h-6 flex-shrink-0" style={{ color: colorCode }} />
+                                <span className="font-medium text-xs md:text-base whitespace-nowrap overflow-hidden text-ellipsis">
                                     {widgetData?.service?.numberOfWinesTasted ?? '-'} vins
                                 </span>
                             </div>
                             <div className="flex items-center gap-2 text-muted-foreground min-w-0">
-                                <Euro className="w-6 h-6 flex-shrink-0" style={{ color: colorCode }} />
-                                <span className="font-medium text-sm md:text-base whitespace-nowrap overflow-hidden text-ellipsis">
+                                <Euro className="w-5 h-5 md:w-6 md:h-6 flex-shrink-0" style={{ color: colorCode }} />
+                                <span className="font-medium text-xs md:text-base whitespace-nowrap overflow-hidden text-ellipsis">
                                     {widgetData?.service?.pricePerPerson ?? '-'} € / personne
                                 </span>
                             </div>
                             <div className="flex items-center gap-2 text-muted-foreground min-w-0">
-                                <Users className="w-6 h-6 flex-shrink-0" style={{ color: colorCode }} />
-                                <span className="font-medium text-sm md:text-base whitespace-nowrap overflow-hidden text-ellipsis">
+                                <Users className="w-5 h-5 md:w-6 md:h-6 flex-shrink-0" style={{ color: colorCode }} />
+                                <span className="font-medium text-xs md:text-base whitespace-nowrap overflow-hidden text-ellipsis">
                                     {widgetData?.service?.numberOfPeople ?? '2-10'} personnes
                                 </span>
                             </div>
                         </div>
 
                         {/* Languages */}
-                        <div className="flex items-center justify-center gap-8 mb-10">
+                        <div className="flex flex-wrap items-center justify-center gap-4 md:gap-8 mb-8 md:mb-10">
                             {widgetData?.service?.languagesOffered?.map((language, index) => (
-                                <div key={index} className="flex items-center gap-3">
-                                    <span className="text-4xl">
+                                <div key={index} className="flex items-center gap-2 md:gap-3">
+                                    <span className="text-2xl md:text-4xl">
                                         {language.toLowerCase() === 'français' || language.toLowerCase() === 'french' ? '🇫🇷' : 
                                          language.toLowerCase() === 'anglais' || language.toLowerCase() === 'english' ? '🇬🇧' : 
                                          language.toLowerCase() === 'español' || language.toLowerCase() === 'spanish' ? '🇪🇸' : 
                                          language.toLowerCase() === 'deutsch' || language.toLowerCase() === 'german' ? '🇩🇪' : '🌐'}
                                     </span>
-                                    <span className="text-muted-foreground text-xl font-medium">{getLanguageInFrench(language)}</span>
+                                    <span className="text-muted-foreground text-base md:text-xl font-medium">{getLanguageInFrench(language)}</span>
                                 </div>
                             )) || (
                                 <>
-                                    <div className="flex items-center gap-3">
-                                        <span className="text-4xl">🇫🇷</span>
-                                        <span className="text-muted-foreground text-xl font-medium">Français</span>
+                                    <div className="flex items-center gap-2 md:gap-3">
+                                        <span className="text-2xl md:text-4xl">🇫🇷</span>
+                                        <span className="text-muted-foreground text-base md:text-xl font-medium">Français</span>
                                     </div>
-                                    <div className="flex items-center gap-3">
-                                        <span className="text-4xl">🇬🇧</span>
-                                        <span className="text-muted-foreground text-xl font-medium">Anglais</span>
+                                    <div className="flex items-center gap-2 md:gap-3">
+                                        <span className="text-2xl md:text-4xl">🇬🇧</span>
+                                        <span className="text-muted-foreground text-base md:text-xl font-medium">Anglais</span>
                                     </div>
                                 </>
                             )}
@@ -142,7 +142,7 @@ function ReservationContent({ id, serviceId }: { id: string, serviceId: string }
                             <Link href={`/if/booking-widget/${id}/${serviceId}/booking`}>
                                 <Button
                                     size="lg"
-                                    className="hover:opacity-90 text-white px-12 py-3 text-lg font-semibold rounded-md transition-colors"
+                                    className="hover:opacity-90 text-white px-8 md:px-12 py-3 text-base md:text-lg font-semibold rounded-md transition-colors w-full md:w-auto"
                                     style={{ backgroundColor: colorCode }}
                                 >
                                     Réserver
