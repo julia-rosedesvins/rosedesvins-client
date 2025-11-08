@@ -107,6 +107,7 @@ export const CalendarSection = () => {
           eventStatus: event.eventStatus,
           isAllDay: event.isAllDay,
           bookingId: event.bookingId?._id,
+          additionalNotes: event.bookingId?.additionalNotes || undefined,
           originalEvent: event, // Keep reference to original event data
           backgroundColor: getEventColor(event.eventType) // Add color based on type
         };

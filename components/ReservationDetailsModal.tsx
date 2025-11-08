@@ -23,6 +23,7 @@ interface Reservation {
   eventStatus?: string;
   backgroundColor?: string;
   bookingId?: string;
+  additionalNotes?: string;
 }
 
 interface ReservationDetailsModalProps {
@@ -209,6 +210,18 @@ export const ReservationDetailsModal = ({
               <p className="text-muted-foreground text-sm lg:text-base">
                 {reservation.serviceName}
               </p>
+            </div>
+          )}
+
+          {/* Notes/Commentaires */}
+          {reservation.additionalNotes && reservation.additionalNotes.trim() !== '' && (
+            <div>
+              <h3 className="text-lg lg:text-xl font-semibold mb-3 lg:mb-4">Notes :</h3>
+              <div className="bg-gray-50 rounded-lg p-3 lg:p-4">
+                <p className="text-muted-foreground text-sm lg:text-base whitespace-pre-wrap">
+                  {reservation.additionalNotes}
+                </p>
+              </div>
             </div>
           )}
 
