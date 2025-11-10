@@ -6,13 +6,30 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Upload, Image, Camera, Plus, Edit, Trash2, Loader2, Code } from "lucide-react";
+import { Upload, Image, Camera, Plus, Edit, Trash2, Loader2, Code, CalendarIcon, X } from "lucide-react";
 import { AddServiceModal } from "@/components/AddServiceModal";
 import { EditServiceModal } from "@/components/EditServiceModal";
 import { Switch } from "@/components/ui/switch";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState, useEffect } from "react";
 import { userService, DomainProfile, DomainService } from "@/services/user.service";
 import toast from "react-hot-toast";
+import { format } from "date-fns";
+import { fr } from "date-fns/locale";
+import { cn } from "@/lib/utils";
+
+// Extended interface for enhanced booking features
+interface EnhancedDomainService extends DomainService {
+    id?: number;
+    active?: boolean;
+    periodActive?: boolean;
+    multipleBookings?: boolean;
+    bookingRestrictionActive?: boolean;
+    bookingRestrictionTime?: string;
+    selectedDates?: Date[];
+}
 
 export default function UserDomainProfile() {
     const [isAddServiceModalOpen, setIsAddServiceModalOpen] = useState(false);
@@ -23,6 +40,10 @@ export default function UserDomainProfile() {
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    
+    // New state variables for enhanced functionality
+    const [lastClickedDate, setLastClickedDate] = useState<{ [key: number]: Date | null }>({});
+    const [isShiftPressed, setIsShiftPressed] = useState(false);
 
     // Form states
     const [formData, setFormData] = useState({
@@ -36,11 +57,29 @@ export default function UserDomainProfile() {
     const [domainLogo, setDomainLogo] = useState<File | null>(null);
     const [profilePicturePreview, setProfilePicturePreview] = useState<string | null>(null);
     const [logoPreview, setLogoPreview] = useState<string | null>(null);
-    const [services, setServices] = useState<DomainService[]>([]);
+    const [services, setServices] = useState<EnhancedDomainService[]>([]);
 
     // Load domain profile data on mount
     useEffect(() => {
         loadDomainProfile();
+    }, []);
+
+    // Keyboard event handler for Shift key detection
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Shift') setIsShiftPressed(true);
+        };
+        const handleKeyUp = (e: KeyboardEvent) => {
+            if (e.key === 'Shift') setIsShiftPressed(false);
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        window.addEventListener('keyup', handleKeyUp);
+
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+            window.removeEventListener('keyup', handleKeyUp);
+        };
     }, []);
 
     const loadDomainProfile = async () => {
@@ -171,7 +210,13 @@ export default function UserDomainProfile() {
         price: `${service.pricePerPerson}€`,
         duration: `${Math.floor(service.timeOfServiceInMinutes / 60)}h${service.timeOfServiceInMinutes % 60 > 0 ? (service.timeOfServiceInMinutes % 60) + 'min' : ''}`,
         active: service.isActive,
-        serviceBannerUrl: service.serviceBannerUrl
+        serviceBannerUrl: service.serviceBannerUrl,
+        // New properties for enhanced functionality
+        periodActive: false,
+        multipleBookings: false,
+        bookingRestrictionActive: false,
+        bookingRestrictionTime: "24h",
+        selectedDates: [] as Date[]
     }));
 
     const handleEditPrestation = (prestation: any) => {
@@ -348,6 +393,128 @@ export default function UserDomainProfile() {
             console.error('Error copying iframe code:', error);
             toast.error('Erreur lors de la copie du code iframe');
         }
+    };
+
+    // New handlers for enhanced functionality
+    const handleTogglePeriod = (prestationId: number) => {
+        setServices(prevServices =>
+            prevServices.map(service =>
+                service.id === prestationId
+                    ? { ...service, periodActive: !service.periodActive }
+                    : service
+            )
+        );
+        toast.success('Période de disponibilité mise à jour');
+    };
+
+    const handleToggleMultipleBookings = (prestationId: number) => {
+        setServices(prevServices =>
+            prevServices.map(service =>
+                service.id === prestationId
+                    ? { ...service, multipleBookings: !service.multipleBookings }
+                    : service
+            )
+        );
+        toast.success('Réservations multiples mise à jour');
+    };
+
+    const handleToggleBookingRestriction = (prestationId: number) => {
+        setServices(prevServices =>
+            prevServices.map(service =>
+                service.id === prestationId
+                    ? { ...service, bookingRestrictionActive: !service.bookingRestrictionActive }
+                    : service
+            )
+        );
+        toast.success('Restrictions de réservation mise à jour');
+    };
+
+    const handleBookingRestrictionTimeChange = (prestationId: number, time: string) => {
+        setServices(prevServices =>
+            prevServices.map(service =>
+                service.id === prestationId
+                    ? { ...service, bookingRestrictionTime: time }
+                    : service
+            )
+        );
+        toast.success(`Temps de restriction mis à jour: ${time}`);
+    };
+
+    const handleDateSelect = (prestationId: number, date: Date, e: React.MouseEvent) => {
+        const service = services.find(s => s.id === prestationId);
+        if (!service) return;
+
+        const existingDates = service.selectedDates || [];
+        let newDates: Date[];
+
+        if (e.shiftKey && lastClickedDate[prestationId]) {
+            // Range selection
+            const startDate = lastClickedDate[prestationId]!;
+            const endDate = date;
+            const range: Date[] = [];
+            for (let d = new Date(Math.min(startDate.getTime(), endDate.getTime()));
+                d <= new Date(Math.max(startDate.getTime(), endDate.getTime()));
+                d.setDate(d.getDate() + 1)) {
+                range.push(new Date(d));
+            }
+
+            // Check if we're removing (if all dates in range are selected) or adding
+            const isRemoving = existingDates.some((d: Date) =>
+                range.some(rangeDate => rangeDate.toDateString() === d.toDateString())
+            );
+
+            if (isRemoving) {
+                // Remove all dates in range
+                newDates = existingDates.filter((d: Date) =>
+                    !range.some(rangeDate => rangeDate.toDateString() === d.toDateString())
+                );
+            } else {
+                // Add all dates in range that aren't already selected
+                newDates = [...existingDates, ...range.filter(rangeDate =>
+                    !existingDates.some((d: Date) => d.toDateString() === rangeDate.toDateString())
+                )];
+            }
+
+            setServices(prevServices =>
+                prevServices.map(s =>
+                    s.id === prestationId
+                        ? { ...s, selectedDates: newDates }
+                        : s
+                )
+            );
+        } else {
+            // Single date selection
+            const dateExists = existingDates.some((d: Date) => d.toDateString() === date.toDateString());
+            newDates = dateExists
+                ? existingDates.filter((d: Date) => d.toDateString() !== date.toDateString())
+                : [...existingDates, date];
+
+            setServices(prevServices =>
+                prevServices.map(s =>
+                    s.id === prestationId
+                        ? { ...s, selectedDates: newDates }
+                        : s
+                )
+            );
+        }
+
+        setLastClickedDate(prev => ({ ...prev, [prestationId]: date }));
+    };
+
+    const handleRemoveDate = (prestationId: number, dateToRemove: Date) => {
+        setServices(prevServices =>
+            prevServices.map(service =>
+                service.id === prestationId
+                    ? {
+                        ...service,
+                        selectedDates: service.selectedDates?.filter(
+                            date => date.getTime() !== dateToRemove.getTime()
+                        ) || []
+                    }
+                    : service
+            )
+        );
+        toast.success('Date supprimée');
     };
     return (
         <UserDashboardLayout title="Profil Domaine">
@@ -588,53 +755,208 @@ export default function UserDomainProfile() {
                                         {/* Liste des prestations */}
                                         <div className="space-y-3">
                                             {prestations.map((prestation) => (
-                                                <div
-                                                    key={prestation.id}
-                                                    className={`flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 border rounded-lg cursor-pointer transition-colors ${selectedPrestation === prestation.id.toString()
-                                                        ? 'bg-green-50'
-                                                        : 'border-gray-200 bg-white hover:bg-gray-50'
-                                                        }`}
-                                                    style={
-                                                        selectedPrestation === prestation.id.toString()
-                                                            ? { borderColor: '#3A7B59' }
-                                                            : {}
-                                                    }
-                                                    onClick={() => setSelectedPrestation(
-                                                        selectedPrestation === prestation.id.toString() ? null : prestation.id.toString()
-                                                    )}
-                                                >
-                                                    <span className="text-gray-700 font-medium mb-2 sm:mb-0">{prestation.name}</span>
-                                                    <div className="flex flex-wrap items-center gap-2 sm:space-x-3">
-                                                        <Button variant="ghost" size="sm" className="text-gray-600 hover:text-gray-800 text-xs sm:text-sm p-1 sm:p-2" onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            handleEditPrestation(prestation);
-                                                        }}>
-                                                            <Edit className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" />
-                                                            <span className="hidden sm:inline">Editer</span>
-                                                        </Button>
-                                                        <Button variant="ghost" size="sm" className="text-gray-600 hover:text-gray-800 text-xs sm:text-sm p-1 sm:p-2" onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            handleCopyIframeCode(prestation.id);
-                                                        }}>
-                                                            <Code className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" />
-                                                            <span className="hidden sm:inline">Code</span>
-                                                        </Button>
-                                                        <div className="flex items-center space-x-2" onClick={(e) => e.stopPropagation()}>
-                                                            <Switch
-                                                                checked={prestation.active}
-                                                                onCheckedChange={() => handleToggleActive(prestation.id)}
-                                                            />
-                                                            <span className="text-xs sm:text-sm text-gray-600">Activer</span>
+                                                <div key={prestation.id} className="border rounded-lg bg-white">
+                                                    <div
+                                                        className={`flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 cursor-pointer transition-colors ${selectedPrestation === prestation.id.toString()
+                                                            ? 'bg-green-50'
+                                                            : 'hover:bg-gray-50'
+                                                            }`}
+                                                        style={
+                                                            selectedPrestation === prestation.id.toString()
+                                                                ? { borderColor: '#3A7B59' }
+                                                                : {}
+                                                        }
+                                                        onClick={() => setSelectedPrestation(
+                                                            selectedPrestation === prestation.id.toString() ? null : prestation.id.toString()
+                                                        )}
+                                                    >
+                                                        <span className="text-gray-700 font-medium mb-2 sm:mb-0">{prestation.name}</span>
+                                                        <div className="flex flex-wrap items-center gap-2 sm:space-x-3">
+                                                            <Button variant="ghost" size="sm" className="text-gray-600 hover:text-gray-800 text-xs sm:text-sm p-1 sm:p-2" onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleEditPrestation(prestation);
+                                                            }}>
+                                                                <Edit className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" />
+                                                                <span className="hidden sm:inline">Editer</span>
+                                                            </Button>
+                                                            <Button variant="ghost" size="sm" className="text-gray-600 hover:text-gray-800 text-xs sm:text-sm p-1 sm:p-2" onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleCopyIframeCode(prestation.id);
+                                                            }}>
+                                                                <Code className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" />
+                                                                <span className="hidden sm:inline">Code</span>
+                                                            </Button>
+                                                            <div className="flex items-center space-x-2" onClick={(e) => e.stopPropagation()}>
+                                                                <Switch
+                                                                    checked={prestation.active}
+                                                                    onCheckedChange={() => handleToggleActive(prestation.id)}
+                                                                />
+                                                                <span className="text-xs sm:text-sm text-gray-600">Activer</span>
+                                                            </div>
+                                                            <Button variant="ghost" size="sm" className="text-gray-600 hover:text-gray-800 text-xs sm:text-sm p-1 sm:p-2" onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                if (confirm('Are you sure you want to delete this service?')) {
+                                                                    handleDeleteService(prestation.id - 1);
+                                                                }
+                                                            }}>
+                                                                <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" />
+                                                                <span className="hidden sm:inline">Supprimer</span>
+                                                            </Button>
                                                         </div>
-                                                        <Button variant="ghost" size="sm" className="text-gray-600 hover:text-gray-800 text-xs sm:text-sm p-1 sm:p-2" onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            if (confirm('Are you sure you want to delete this service?')) {
-                                                                handleDeleteService(prestation.id - 1);
-                                                            }
-                                                        }}>
-                                                            <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" />
-                                                            <span className="hidden sm:inline">Supprimer</span>
-                                                        </Button>
+                                                    </div>
+                                                    
+                                                    {/* NEW: Enhanced Settings Section */}
+                                                    <div className="p-3 border-t border-gray-100" onClick={(e) => e.stopPropagation()}>
+                                                        <div className="space-y-3 mb-3">
+                                                            {/* Booking Restrictions */}
+                                                            <div className="flex items-center justify-between">
+                                                                <span className="text-sm font-medium text-gray-700">Restrictions de réservations</span>
+                                                                <div className="flex items-center space-x-2">
+                                                                    <Switch
+                                                                        checked={prestation.bookingRestrictionActive}
+                                                                        onCheckedChange={() => handleToggleBookingRestriction(prestation.id)}
+                                                                    />
+                                                                    <span className="text-sm text-gray-600">Activer</span>
+                                                                </div>
+                                                            </div>
+                                                            {prestation.bookingRestrictionActive && (
+                                                                <div className="ml-4 mt-2">
+                                                                    <Select
+                                                                        value={prestation.bookingRestrictionTime}
+                                                                        onValueChange={(value) => handleBookingRestrictionTimeChange(prestation.id, value)}
+                                                                    >
+                                                                        <SelectTrigger className="w-[180px]">
+                                                                            <SelectValue placeholder="Sélectionner" />
+                                                                        </SelectTrigger>
+                                                                        <SelectContent>
+                                                                            <SelectItem value="24h">24h</SelectItem>
+                                                                            <SelectItem value="48h">48h</SelectItem>
+                                                                        </SelectContent>
+                                                                    </Select>
+                                                                </div>
+                                                            )}
+                                                            
+                                                            {/* Multiple Bookings */}
+                                                            <div className="flex items-center justify-between">
+                                                                <span className="text-sm font-medium text-gray-700">Réservations multiples par créneau</span>
+                                                                <div className="flex items-center space-x-2">
+                                                                    <Switch
+                                                                        checked={prestation.multipleBookings}
+                                                                        onCheckedChange={() => handleToggleMultipleBookings(prestation.id)}
+                                                                    />
+                                                                    <span className="text-sm text-gray-600">Activer</span>
+                                                                </div>
+                                                            </div>
+                                                            
+                                                            {/* Period Availability */}
+                                                            <div className="flex items-center justify-between">
+                                                                <span className="text-sm font-medium text-gray-700">Période de disponibilité</span>
+                                                                <div className="flex items-center space-x-2">
+                                                                    <Switch
+                                                                        checked={prestation.periodActive}
+                                                                        onCheckedChange={() => handleTogglePeriod(prestation.id)}
+                                                                    />
+                                                                    <span className="text-sm text-gray-600">Activer</span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        {/* NEW: Date Selection Section */}
+                                                        {prestation.periodActive && (
+                                                            <div className="space-y-3">
+                                                                <div className="space-y-2">
+                                                                    <Label className="text-xs text-gray-600">
+                                                                        Sélectionnez les dates disponibles
+                                                                    </Label>
+                                                                    <p className="text-xs text-muted-foreground">
+                                                                        Cliquez pour sélectionner des dates individuelles. Maintenez Shift et cliquez pour sélectionner une plage.
+                                                                    </p>
+                                                                    <Popover>
+                                                                        <PopoverTrigger asChild>
+                                                                            <Button
+                                                                                variant="outline"
+                                                                                className={cn(
+                                                                                    "w-full justify-start text-left font-normal",
+                                                                                    !prestation.selectedDates.length && "text-muted-foreground"
+                                                                                )}
+                                                                            >
+                                                                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                                                                {prestation.selectedDates.length > 0 
+                                                                                    ? `${prestation.selectedDates.length} date${prestation.selectedDates.length > 1 ? 's' : ''} sélectionnée${prestation.selectedDates.length > 1 ? 's' : ''}`
+                                                                                    : <span>Sélectionner des dates</span>
+                                                                                }
+                                                                            </Button>
+                                                                        </PopoverTrigger>
+                                                                        <PopoverContent className="w-auto p-0" align="start">
+                                                                            <Calendar
+                                                                                mode="multiple"
+                                                                                selected={prestation.selectedDates}
+                                                                                onSelect={(dates) => {
+                                                                                    if (dates) {
+                                                                                        const updatedServices = services.map(service => {
+                                                                                            if (service.id === prestation.id) {
+                                                                                                return {
+                                                                                                    ...service,
+                                                                                                    selectedDates: Array.isArray(dates) ? dates : [dates]
+                                                                                                };
+                                                                                            }
+                                                                                            return service;
+                                                                                        });
+                                                                                        setServices(updatedServices);
+                                                                                    }
+                                                                                }}
+                                                                                initialFocus
+                                                                                className="pointer-events-auto"
+                                                                            />
+                                                                        </PopoverContent>
+                                                                    </Popover>
+                                                                </div>
+                                                                {prestation.selectedDates.length > 0 && (
+                                                                    <div className="flex flex-wrap gap-1 max-h-20 overflow-y-auto">
+                                                                        {prestation.selectedDates
+                                                                            .sort((a, b) => a.getTime() - b.getTime())
+                                                                            .slice(0, 10)
+                                                                            .map((date, idx) => (
+                                                                                <span 
+                                                                                    key={idx} 
+                                                                                    className="inline-flex items-center gap-1 text-xs bg-green-100 text-green-800 px-2 py-1 rounded group hover:bg-green-200 transition-colors"
+                                                                                >
+                                                                                    {format(date, "dd/MM/yy", { locale: fr })}
+                                                                                    <button
+                                                                                        onClick={(e) => {
+                                                                                            e.stopPropagation();
+                                                                                            handleRemoveDate(prestation.id, date);
+                                                                                        }}
+                                                                                        className="hover:bg-green-300 rounded-full p-0.5 transition-colors"
+                                                                                        aria-label="Supprimer cette date"
+                                                                                    >
+                                                                                        <X className="h-3 w-3" />
+                                                                                    </button>
+                                                                                </span>
+                                                                            ))}
+                                                                        {prestation.selectedDates.length > 10 && (
+                                                                            <span className="text-xs text-muted-foreground px-2 py-1">
+                                                                                +{prestation.selectedDates.length - 10} autres
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                )}
+                                                                
+                                                                {/* Placeholder for PrestationScheduleConfig */}
+                                                                {prestation.selectedDates.length > 0 && (
+                                                                    <div className="border-t pt-4 mt-4">
+                                                                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                                                                            <p className="text-sm text-blue-800">
+                                                                                📅 Configuration des horaires pour {prestation.selectedDates.length} date{prestation.selectedDates.length > 1 ? 's' : ''}
+                                                                            </p>
+                                                                            <p className="text-xs text-blue-600 mt-1">
+                                                                                Le composant PrestationScheduleConfig sera intégré ici pour configurer les créneaux horaires par date.
+                                                                            </p>
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 </div>
                                             ))}
