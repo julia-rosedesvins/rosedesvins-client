@@ -313,6 +313,7 @@ export default function UserDomainProfile() {
 
     // Save service booking settings
     const saveServiceBookingSettings = async (service: EnhancedDomainService) => {
+        console.log('saveServiceBookingSettings called for service:', service._id, service.serviceName);
         if (!service.hasChanges || savingServices[service._id!]) return;
 
         setSavingServices(prev => ({ ...prev, [service._id!]: true }));
@@ -1063,7 +1064,9 @@ export default function UserDomainProfile() {
                                                                 <Button
                                                                     size="sm"
                                                                     onClick={() => {
+                                                                        console.log('Save button clicked for prestation:', prestation.id, prestation.name);
                                                                         const service = services.find(s => s._id === prestation.id);
+                                                                        console.log('Found service:', service?._id, service?.serviceName);
                                                                         if (service) {
                                                                             saveServiceBookingSettings(service);
                                                                         }
