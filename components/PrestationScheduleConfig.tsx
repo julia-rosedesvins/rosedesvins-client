@@ -23,10 +23,52 @@ interface ScheduleConfig {
 interface PrestationScheduleConfigProps {
   selectedDates: Date[];
   onChange?: (schedules: { [dateKey: string]: ScheduleConfig }) => void;
+  existingAvailability?: any[]; // Array of dateAvailability from API
 }
 
-export const PrestationScheduleConfig = ({ selectedDates, onChange }: PrestationScheduleConfigProps) => {
+export const PrestationScheduleConfig = ({ selectedDates, onChange, existingAvailability }: PrestationScheduleConfigProps) => {
   const [schedules, setSchedules] = useState<{ [dateKey: string]: ScheduleConfig }>({});
+
+  // Initialize schedules from existing availability data
+  useEffect(() => {
+    if (existingAvailability && existingAvailability.length > 0) {
+      console.log('PrestationScheduleConfig existingAvailability:', existingAvailability);
+      const initialSchedules: { [dateKey: string]: ScheduleConfig } = {};
+      
+      existingAvailability.forEach((availability: any) => {
+        // Validate and parse the date
+        if (!availability.date) {
+          console.warn('Availability item missing date:', availability);
+          return;
+        }
+        
+        const date = new Date(availability.date);
+        
+        // Check if date is valid
+        if (isNaN(date.getTime())) {
+          console.warn('Invalid date in availability:', availability.date, availability);
+          return;
+        }
+        
+        const dayName = format(date, "EEEE", { locale: fr });
+        
+        // Check if this day of week already has configuration
+        if (!initialSchedules[dayName]) {
+          initialSchedules[dayName] = {
+            enabled: availability.enabled ?? true,
+            morningEnabled: availability.morningEnabled ?? false,
+            morningFrom: availability.morningFrom || '09:00',
+            morningTo: availability.morningTo || '12:00',
+            afternoonEnabled: availability.afternoonEnabled ?? false,
+            afternoonFrom: availability.afternoonFrom || '14:00',
+            afternoonTo: availability.afternoonTo || '18:00'
+          };
+        }
+      });
+      
+      setSchedules(initialSchedules);
+    }
+  }, [existingAvailability]);
 
   // Group dates by day of week
   const groupedDates = selectedDates.reduce((acc, date) => {
@@ -42,6 +84,31 @@ export const PrestationScheduleConfig = ({ selectedDates, onChange }: Prestation
     const daysOrder = ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"];
     return daysOrder.indexOf(a.toLowerCase()) - daysOrder.indexOf(b.toLowerCase());
   });
+
+  // Initialize schedules for new days that don't have existing data
+  useEffect(() => {
+    const newSchedules = { ...schedules };
+    let hasChanges = false;
+
+    uniqueDays.forEach(dayName => {
+      if (!newSchedules[dayName]) {
+        newSchedules[dayName] = {
+          enabled: true,
+          morningEnabled: false,
+          morningFrom: '09:00',
+          morningTo: '12:00',
+          afternoonEnabled: false,
+          afternoonFrom: '14:00',
+          afternoonTo: '18:00'
+        };
+        hasChanges = true;
+      }
+    });
+
+    if (hasChanges) {
+      setSchedules(newSchedules);
+    }
+  }, [uniqueDays]);
 
   useEffect(() => {
     if (onChange) {
@@ -99,9 +166,17 @@ export const PrestationScheduleConfig = ({ selectedDates, onChange }: Prestation
     );
   }
 
+  if (selectedDates.length === 0) {
+    return (
+      <div className="space-y-4 mt-4">
+        <div className="text-sm text-muted-foreground">Sélectionnez des dates pour configurer les horaires de disponibilité</div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4 mt-4">
-      <div className="text-sm font-medium mb-3">Configuration des horaires</div>
+      <div className="text-sm font-medium mb-3">Configuration des horaires ({selectedDates.length} dates sélectionnées)</div>
       
       <div className="grid grid-cols-7 gap-4 mb-2 text-center font-medium text-xs">
         <div></div>

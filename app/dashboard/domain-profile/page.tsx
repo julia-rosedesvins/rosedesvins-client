@@ -26,10 +26,15 @@ interface EnhancedDomainService extends DomainService {
     id?: number;
     active?: boolean;
     periodActive?: boolean;
-    multipleBookings?: boolean;
-    bookingRestrictionActive?: boolean;
-    bookingRestrictionTime?: string;
     selectedDates?: Date[];
+    hasChanges?: boolean;
+    originalBookingSettings?: {
+        bookingRestrictionActive: boolean;
+        bookingRestrictionTime: string;
+        multipleBookings: boolean;
+        hasCustomAvailability: boolean;
+        dateAvailability: any[];
+    };
 }
 
 export default function UserDomainProfile() {
@@ -45,6 +50,8 @@ export default function UserDomainProfile() {
     // New state variables for enhanced functionality
     const [lastClickedDate, setLastClickedDate] = useState<{ [key: string]: Date | null }>({});
     const [isShiftPressed, setIsShiftPressed] = useState(false);
+    const [serviceSchedules, setServiceSchedules] = useState<{ [serviceId: string]: any }>({});
+    const [savingServices, setSavingServices] = useState<{ [serviceId: string]: boolean }>({});
 
     // Form states
     const [formData, setFormData] = useState({
@@ -109,9 +116,20 @@ export default function UserDomainProfile() {
                 }
             }
 
-            // Load services separately
+            // Load services separately and initialize original settings
             const servicesResponse = await userService.getServices();
-            setServices(servicesResponse.data || []);
+            const servicesWithOriginalSettings = (servicesResponse.data || []).map((service: DomainService) => ({
+                ...service,
+                hasChanges: false,
+                originalBookingSettings: {
+                    bookingRestrictionActive: service.bookingRestrictionActive ?? false,
+                    bookingRestrictionTime: service.bookingRestrictionTime ?? "24h",
+                    multipleBookings: service.multipleBookings ?? false,
+                    hasCustomAvailability: service.hasCustomAvailability ?? false,
+                    dateAvailability: service.dateAvailability ?? []
+                }
+            }));
+            setServices(servicesWithOriginalSettings);
 
         } catch (error: any) {
             console.error('Error loading domain profile:', error);
@@ -204,21 +222,185 @@ export default function UserDomainProfile() {
         }
     };
 
-    const prestations = services.map((service, index) => ({
-        id: service._id,
-        name: service.serviceName,
-        description: service.serviceDescription,
-        price: `${service.pricePerPerson}€`,
-        duration: `${Math.floor(service.timeOfServiceInMinutes / 60)}h${service.timeOfServiceInMinutes % 60 > 0 ? (service.timeOfServiceInMinutes % 60) + 'min' : ''}`,
-        active: service.isActive,
-        serviceBannerUrl: service.serviceBannerUrl,
-        // New properties for enhanced functionality
-        periodActive: service.periodActive || false,
-        multipleBookings: service.multipleBookings || false,
-        bookingRestrictionActive: service.bookingRestrictionActive || false,
-        bookingRestrictionTime: service.bookingRestrictionTime || "24h",
-        selectedDates: service.selectedDates || [] as Date[]
-    }));
+    // Track changes in booking settings
+    const updateServiceBookingSettings = (serviceId: string, field: keyof EnhancedDomainService, value: any) => {
+        // Skip change detection for selectedDates as it's not a booking setting
+        if (field === 'selectedDates') {
+            updateSelectedDates(serviceId, value);
+            return;
+        }
+
+        setServices(prevServices => 
+            prevServices.map(service => {
+                if (service._id === serviceId) {
+                    const originalSettings = service.originalBookingSettings || {
+                        bookingRestrictionActive: service.bookingRestrictionActive ?? false,
+                        bookingRestrictionTime: service.bookingRestrictionTime ?? "24h",
+                        multipleBookings: service.multipleBookings ?? false,
+                        hasCustomAvailability: service.hasCustomAvailability ?? false,
+                        dateAvailability: service.dateAvailability ?? []
+                    };
+
+                    const updatedService = {
+                        ...service,
+                        [field]: value,
+                        originalBookingSettings: originalSettings
+                    };
+
+                    // Check if any changes were made
+                    const currentDateAvailability = updatedService.dateAvailability || {};
+                    const originalDateAvailability = originalSettings.dateAvailability || {};
+                    
+                    const hasChanges = (
+                        updatedService.bookingRestrictionActive !== originalSettings.bookingRestrictionActive ||
+                        updatedService.bookingRestrictionTime !== originalSettings.bookingRestrictionTime ||
+                        updatedService.multipleBookings !== originalSettings.multipleBookings ||
+                        updatedService.hasCustomAvailability !== originalSettings.hasCustomAvailability ||
+                        JSON.stringify(currentDateAvailability) !== JSON.stringify(originalDateAvailability)
+                    );
+
+                    updatedService.hasChanges = hasChanges;
+                    return updatedService;
+                }
+                return service;
+            })
+        );
+    };
+
+    // Update selected dates without triggering change detection for booking settings
+    const updateSelectedDates = (serviceId: string, selectedDates: Date[]) => {
+        setServices(prevServices => 
+            prevServices.map(service => {
+                if (service._id === serviceId) {
+                    return {
+                        ...service,
+                        selectedDates: selectedDates
+                    };
+                }
+                return service;
+            })
+        );
+    };
+
+    // Save service booking settings
+    const saveServiceBookingSettings = async (service: EnhancedDomainService) => {
+        if (!service.hasChanges || savingServices[service._id!]) return;
+
+        setSavingServices(prev => ({ ...prev, [service._id!]: true }));
+
+        try {
+            // Convert day-based schedules to actual date-based availability for API
+            let dateAvailability = [];
+            if (service.dateAvailability && service.selectedDates) {
+                if (Array.isArray(service.dateAvailability)) {
+                    // Already in correct format, just ensure dates are strings
+                    dateAvailability = service.dateAvailability.map((item: any) => ({
+                        ...item,
+                        date: item.date instanceof Date ? item.date.toISOString().split('T')[0] : item.date
+                    }));
+                } else if (typeof service.dateAvailability === 'object') {
+                    // Convert day-based schedules to date-based schedules
+                    const daySchedules = service.dateAvailability;
+                    dateAvailability = [];
+                    
+                    // Map each selected date to its corresponding day schedule
+                    service.selectedDates.forEach((date: Date) => {
+                        const dayName = format(date, "EEEE", { locale: fr });
+                        const daySchedule = daySchedules[dayName] as any;
+                        
+                        if (daySchedule) {
+                            dateAvailability.push({
+                                date: date.toISOString().split('T')[0], // Convert to YYYY-MM-DD format
+                                enabled: daySchedule.enabled ?? true,
+                                morningEnabled: daySchedule.morningEnabled ?? false,
+                                morningFrom: daySchedule.morningFrom ?? "09:00",
+                                morningTo: daySchedule.morningTo ?? "12:00",
+                                afternoonEnabled: daySchedule.afternoonEnabled ?? false,
+                                afternoonFrom: daySchedule.afternoonFrom ?? "14:00",
+                                afternoonTo: daySchedule.afternoonTo ?? "18:00"
+                            });
+                        }
+                    });
+                }
+            }
+
+            const bookingSettings = {
+                bookingRestrictionActive: service.bookingRestrictionActive ?? false,
+                bookingRestrictionTime: service.bookingRestrictionTime ?? "24h",
+                multipleBookings: service.multipleBookings ?? false,
+                hasCustomAvailability: service.hasCustomAvailability ?? false,
+                dateAvailability
+            };
+
+            console.log('Sending booking settings to API:', bookingSettings);
+
+            await userService.updateServiceBookingSettings(service._id!, bookingSettings);
+            
+            // Update the original settings and clear changes flag
+            setServices(prevServices =>
+                prevServices.map(s => {
+                    if (s._id === service._id) {
+                        return {
+                            ...s,
+                            hasChanges: false,
+                            originalBookingSettings: {
+                                bookingRestrictionActive: s.bookingRestrictionActive ?? false,
+                                bookingRestrictionTime: s.bookingRestrictionTime ?? "24h",
+                                multipleBookings: s.multipleBookings ?? false,
+                                hasCustomAvailability: s.hasCustomAvailability ?? false,
+                                dateAvailability: s.dateAvailability ?? []
+                            }
+                        };
+                    }
+                    return s;
+                })
+            );
+
+            toast.success(`Booking settings saved for ${service.serviceName}`);
+        } catch (error) {
+            console.error('Error saving booking settings:', error);
+            toast.error(`Failed to save booking settings for ${service.serviceName}`);
+        } finally {
+            setSavingServices(prev => ({ ...prev, [service._id!]: false }));
+        }
+    };
+
+        const prestations = services.map((service, index) => {
+        // Extract dates from dateAvailability if selectedDates is not set
+        let selectedDates = service.selectedDates || [];
+        
+
+        
+        if ((!selectedDates || selectedDates.length === 0) && service.dateAvailability) {
+            if (Array.isArray(service.dateAvailability)) {
+                selectedDates = service.dateAvailability
+                    .filter((avail: any) => avail.date && !isNaN(new Date(avail.date).getTime()))
+                    .map((avail: any) => new Date(avail.date));
+            } else if (typeof service.dateAvailability === 'object') {
+                // Handle object format: convert keys to dates
+                selectedDates = Object.keys(service.dateAvailability)
+                    .filter(dateKey => dateKey && !isNaN(new Date(dateKey).getTime()))
+                    .map(dateKey => new Date(dateKey));
+            }
+        }
+
+        return {
+            id: service._id,
+            name: service.serviceName,
+            description: service.serviceDescription,
+            price: `${service.pricePerPerson}€`,
+            duration: `${Math.floor(service.timeOfServiceInMinutes / 60)}h${service.timeOfServiceInMinutes % 60 > 0 ? (service.timeOfServiceInMinutes % 60) + 'min' : ''}`,
+            active: service.isActive,
+            serviceBannerUrl: service.serviceBannerUrl,
+            // New properties for enhanced functionality
+            periodActive: service.hasCustomAvailability || selectedDates.length > 0,
+            hasCustomAvailability: service.hasCustomAvailability || false,
+            multipleBookings: service.multipleBookings || false,
+            bookingRestrictionActive: service.bookingRestrictionActive || false,
+            bookingRestrictionTime: service.bookingRestrictionTime || "24h",
+            selectedDates: selectedDates
+        };
+    });
 
     const handleEditPrestation = (prestation: any) => {
         const serviceIndex = prestation.id - 1;
@@ -398,47 +580,28 @@ export default function UserDomainProfile() {
 
     // New handlers for enhanced functionality
     const handleTogglePeriod = (prestationId: string) => {
-        setServices(prevServices =>
-            prevServices.map(service =>
-                service._id === prestationId
-                    ? { ...service, periodActive: !service.periodActive }
-                    : service
-            )
-        );
-        toast.success('Période de disponibilité mise à jour');
+        const service = services.find(s => s._id === prestationId);
+        if (service) {
+            updateServiceBookingSettings(prestationId, 'hasCustomAvailability', !service.hasCustomAvailability);
+        }
     };
 
     const handleToggleMultipleBookings = (prestationId: string) => {
-        setServices(prevServices =>
-            prevServices.map(service =>
-                service._id === prestationId
-                    ? { ...service, multipleBookings: !service.multipleBookings }
-                    : service
-            )
-        );
-        toast.success('Réservations multiples mise à jour');
+        const service = services.find(s => s._id === prestationId);
+        if (service) {
+            updateServiceBookingSettings(prestationId, 'multipleBookings', !service.multipleBookings);
+        }
     };
 
     const handleToggleBookingRestriction = (prestationId: string) => {
-        setServices(prevServices =>
-            prevServices.map(service =>
-                service._id === prestationId
-                    ? { ...service, bookingRestrictionActive: !service.bookingRestrictionActive }
-                    : service
-            )
-        );
-        toast.success('Restrictions de réservation mise à jour');
+        const service = services.find(s => s._id === prestationId);
+        if (service) {
+            updateServiceBookingSettings(prestationId, 'bookingRestrictionActive', !service.bookingRestrictionActive);
+        }
     };
 
     const handleBookingRestrictionTimeChange = (prestationId: string, time: string) => {
-        setServices(prevServices =>
-            prevServices.map(service =>
-                service._id === prestationId
-                    ? { ...service, bookingRestrictionTime: time }
-                    : service
-            )
-        );
-        toast.success(`Temps de restriction mis à jour: ${time}`);
+        updateServiceBookingSettings(prestationId, 'bookingRestrictionTime', time);
     };
 
     const handleDateSelect = (prestationId: string, date: Date, e: React.MouseEvent) => {
@@ -857,16 +1020,42 @@ export default function UserDomainProfile() {
                                                                 <span className="text-sm font-medium text-gray-700">Période de disponibilité</span>
                                                                 <div className="flex items-center space-x-2">
                                                                     <Switch
-                                                                        checked={prestation.periodActive}
+                                                                        checked={services.find(s => s._id === prestation.id)?.hasCustomAvailability || false}
                                                                         onCheckedChange={() => handleTogglePeriod(prestation.id)}
                                                                     />
                                                                     <span className="text-sm text-gray-600">Activer</span>
                                                                 </div>
                                                             </div>
                                                         </div>
+
+                                                        {/* Save Button - Show when changes are detected */}
+                                                        {services.find(s => s._id === prestation.id)?.hasChanges && (
+                                                            <div className="flex justify-end pt-3 border-t border-gray-100">
+                                                                <Button
+                                                                    size="sm"
+                                                                    onClick={() => {
+                                                                        const service = services.find(s => s._id === prestation.id);
+                                                                        if (service) {
+                                                                            saveServiceBookingSettings(service);
+                                                                        }
+                                                                    }}
+                                                                    disabled={savingServices[prestation.id]}
+                                                                    className="bg-green-600 hover:bg-green-700 text-white"
+                                                                >
+                                                                    {savingServices[prestation.id] ? (
+                                                                        <>
+                                                                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                                                            Sauvegarde...
+                                                                        </>
+                                                                    ) : (
+                                                                        'Sauvegarder les paramètres'
+                                                                    )}
+                                                                </Button>
+                                                            </div>
+                                                        )}
                                                         
                                                         {/* NEW: Date Selection Section */}
-                                                        {prestation.periodActive && (
+                                                        {services.find(s => s._id === prestation.id)?.hasCustomAvailability && (
                                                             <div className="space-y-3">
                                                                 <div className="space-y-2">
                                                                     <Label className="text-xs text-gray-600">
@@ -897,16 +1086,8 @@ export default function UserDomainProfile() {
                                                                                 selected={prestation.selectedDates}
                                                                                 onSelect={(dates) => {
                                                                                     if (dates) {
-                                                                                        const updatedServices = services.map(service => {
-                                                                                            if (service._id === prestation.id) {
-                                                                                                return {
-                                                                                                    ...service,
-                                                                                                    selectedDates: Array.isArray(dates) ? dates : [dates]
-                                                                                                };
-                                                                                            }
-                                                                                            return service;
-                                                                                        });
-                                                                                        setServices(updatedServices);
+                                                                                        const selectedDates = Array.isArray(dates) ? dates : [dates];
+                                                                                        updateSelectedDates(prestation.id, selectedDates);
                                                                                     }
                                                                                 }}
                                                                                 initialFocus
@@ -950,9 +1131,36 @@ export default function UserDomainProfile() {
                                                                     <div className="border-t pt-4 mt-4">
                                                                         <PrestationScheduleConfig 
                                                                             selectedDates={prestation.selectedDates}
+                                                                            existingAvailability={(() => {
+                                                                                const service = services.find(s => s._id === prestation.id);
+                                                                                const availability = service?.dateAvailability || [];
+
+                                                                                if (Array.isArray(availability)) {
+                                                                                    // Validate array items have valid dates
+                                                                                    return availability.filter(item => 
+                                                                                        item && item.date && !isNaN(new Date(item.date).getTime())
+                                                                                    );
+                                                                                }
+                                                                                if (availability && typeof availability === 'object') {
+                                                                                    return Object.entries(availability)
+                                                                                        .filter(([date, config]) => date && !isNaN(new Date(date).getTime()))
+                                                                                        .map(([date, config]) => ({ 
+                                                                                            date, 
+                                                                                            ...(config && typeof config === 'object' ? config as any : {})
+                                                                                        }));
+                                                                                }
+                                                                                return [];
+                                                                            })()}
                                                                             onChange={(schedules) => {
-                                                                                // Store schedules for this prestation
-                                                                                console.log('Schedules for prestation', prestation.id, schedules);
+                                                                                // Update service with new schedule data
+                                                                                updateServiceBookingSettings(prestation.id, 'dateAvailability', schedules);
+                                                                                // Only update hasCustomAvailability if there are actual enabled schedules
+                                                                                const hasEnabledSchedules = Object.values(schedules).some((schedule: any) => 
+                                                                                    schedule.enabled && (schedule.morningEnabled || schedule.afternoonEnabled)
+                                                                                );
+                                                                                if (hasEnabledSchedules) {
+                                                                                    updateServiceBookingSettings(prestation.id, 'hasCustomAvailability', true);
+                                                                                }
                                                                             }}
                                                                         />
                                                                     </div>
