@@ -966,6 +966,32 @@ export default function UserDomainProfile() {
                                                     >
                                                         <span className="text-gray-700 font-medium mb-2 sm:mb-0">{prestation.name}</span>
                                                         <div className="flex flex-wrap items-center gap-2 sm:space-x-3">
+                                                            {/* Save Button - Show when changes are detected */}
+                                                            {services.find(s => s._id === prestation.id)?.hasChanges && (
+                                                                <Button 
+                                                                    size="sm" 
+                                                                    className="text-white text-xs sm:text-sm p-1 sm:p-2"
+                                                                    style={{ backgroundColor: '#3A7B59' }}
+                                                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#2d5f43'}
+                                                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#3A7B59'}
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        console.log('Save button clicked for prestation:', prestation.id, prestation.name);
+                                                                        const service = services.find(s => s._id === prestation.id);
+                                                                        console.log('Found service:', service?._id, service?.serviceName);
+                                                                        if (service) {
+                                                                            saveServiceBookingSettings(service);
+                                                                        }
+                                                                    }}
+                                                                    disabled={savingServices[prestation.id]}
+                                                                >
+                                                                    {savingServices[prestation.id] ? (
+                                                                        <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
+                                                                    ) : (
+                                                                        <span className="hidden sm:inline">Sauvegarder</span>
+                                                                    )}
+                                                                </Button>
+                                                            )}
                                                             <Button variant="ghost" size="sm" className="text-gray-600 hover:text-gray-800 text-xs sm:text-sm p-1 sm:p-2" onClick={(e) => {
                                                                 e.stopPropagation();
                                                                 handleEditPrestation(prestation);
@@ -1058,33 +1084,7 @@ export default function UserDomainProfile() {
                                                             </div>
                                                         </div>
 
-                                                        {/* Save Button - Show when changes are detected */}
-                                                        {services.find(s => s._id === prestation.id)?.hasChanges && (
-                                                            <div className="flex justify-end pt-3 border-t border-gray-100">
-                                                                <Button
-                                                                    size="sm"
-                                                                    onClick={() => {
-                                                                        console.log('Save button clicked for prestation:', prestation.id, prestation.name);
-                                                                        const service = services.find(s => s._id === prestation.id);
-                                                                        console.log('Found service:', service?._id, service?.serviceName);
-                                                                        if (service) {
-                                                                            saveServiceBookingSettings(service);
-                                                                        }
-                                                                    }}
-                                                                    disabled={savingServices[prestation.id]}
-                                                                    className="bg-green-600 hover:bg-green-700 text-white"
-                                                                >
-                                                                    {savingServices[prestation.id] ? (
-                                                                        <>
-                                                                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                                                            Sauvegarde...
-                                                                        </>
-                                                                    ) : (
-                                                                        'Sauvegarder les paramètres'
-                                                                    )}
-                                                                </Button>
-                                                            </div>
-                                                        )}
+
                                                         
                                                         {/* NEW: Date Selection Section */}
                                                         {services.find(s => s._id === prestation.id)?.hasCustomAvailability && (
