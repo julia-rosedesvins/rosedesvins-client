@@ -35,7 +35,7 @@ export const PrestationScheduleConfig = ({ selectedDates, onChange, existingAvai
       console.log('PrestationScheduleConfig existingAvailability:', existingAvailability);
       const initialSchedules: { [dateKey: string]: ScheduleConfig } = {};
       
-      existingAvailability.forEach((availability: any) => {
+  existingAvailability.forEach((availability: any) => {
         // Validate and parse the date
         if (!availability.date) {
           console.warn('Availability item missing date:', availability);
@@ -52,23 +52,47 @@ export const PrestationScheduleConfig = ({ selectedDates, onChange, existingAvai
         
         const dayName = format(date, "EEEE", { locale: fr });
         
-        // Check if this day of week already has configuration
-        if (!initialSchedules[dayName]) {
+        // Clean logic: only use what API provides, no defaults during initialization
+        const existing = initialSchedules[dayName];
+        
+        console.log(`Processing ${dayName}:`, {
+          availability,
+          existing,
+          morningEnabled: Boolean(availability.morningEnabled),
+          afternoonEnabled: Boolean(availability.afternoonEnabled)
+        });
+        
+        if (!existing) {
           initialSchedules[dayName] = {
-            enabled: availability.enabled ?? true,
-            morningEnabled: availability.morningEnabled ?? false,
-            morningFrom: availability.morningFrom || '09:00',
-            morningTo: availability.morningTo || '12:00',
-            afternoonEnabled: availability.afternoonEnabled ?? false,
-            afternoonFrom: availability.afternoonFrom || '14:00',
-            afternoonTo: availability.afternoonTo || '18:00'
+            enabled: Boolean(availability.enabled),
+            morningEnabled: Boolean(availability.morningEnabled),
+            morningFrom: availability.morningFrom || '',
+            morningTo: availability.morningTo || '',
+            afternoonEnabled: Boolean(availability.afternoonEnabled),
+            afternoonFrom: availability.afternoonFrom || '',
+            afternoonTo: availability.afternoonTo || ''
           };
+        } else {
+          // Merge: OR the boolean flags, keep first provided time values
+          const merged = {
+            enabled: existing.enabled || Boolean(availability.enabled),
+            morningEnabled: existing.morningEnabled || Boolean(availability.morningEnabled),
+            morningFrom: existing.morningFrom || availability.morningFrom || '',
+            morningTo: existing.morningTo || availability.morningTo || '',
+            afternoonEnabled: existing.afternoonEnabled || Boolean(availability.afternoonEnabled),
+            afternoonFrom: existing.afternoonFrom || availability.afternoonFrom || '',
+            afternoonTo: existing.afternoonTo || availability.afternoonTo || ''
+          };
+          
+          console.log(`Merged result for ${dayName}:`, merged);
+          initialSchedules[dayName] = merged;
         }
       });
       
+      console.log('Setting schedules from API data:', initialSchedules);
       setSchedules(initialSchedules);
     }
-  }, [existingAvailability]);
+  }, [JSON.stringify(existingAvailability)]); // Use JSON.stringify to properly detect changes
 
   // Group dates by day of week
   const groupedDates = selectedDates.reduce((acc, date) => {
@@ -87,28 +111,29 @@ export const PrestationScheduleConfig = ({ selectedDates, onChange, existingAvai
 
   // Initialize schedules for new days that don't have existing data
   useEffect(() => {
-    const newSchedules = { ...schedules };
-    let hasChanges = false;
+    // Only add default schedules for days that don't exist yet
+    setSchedules(prevSchedules => {
+      const newSchedules = { ...prevSchedules };
+      let hasChanges = false;
 
-    uniqueDays.forEach(dayName => {
-      if (!newSchedules[dayName]) {
-        newSchedules[dayName] = {
-          enabled: true,
-          morningEnabled: false,
-          morningFrom: '09:00',
-          morningTo: '12:00',
-          afternoonEnabled: false,
-          afternoonFrom: '14:00',
-          afternoonTo: '18:00'
-        };
-        hasChanges = true;
-      }
+      uniqueDays.forEach(dayName => {
+        if (!newSchedules[dayName]) {
+          newSchedules[dayName] = {
+            enabled: true,
+            morningEnabled: false,
+            morningFrom: '09:00',
+            morningTo: '12:00',
+            afternoonEnabled: false,
+            afternoonFrom: '14:00',
+            afternoonTo: '18:00'
+          };
+          hasChanges = true;
+        }
+      });
+
+      return hasChanges ? newSchedules : prevSchedules;
     });
-
-    if (hasChanges) {
-      setSchedules(newSchedules);
-    }
-  }, [uniqueDays]);
+  }, [uniqueDays.join(',')]);
 
   useEffect(() => {
     if (onChange) {
@@ -132,19 +157,27 @@ export const PrestationScheduleConfig = ({ selectedDates, onChange, existingAvai
   };
 
   const handlePeriodToggle = (dayName: string, period: 'morning' | 'afternoon') => {
-    setSchedules(prev => ({
-      ...prev,
-      [dayName]: {
-        ...prev[dayName],
-        enabled: true,
-        morningEnabled: period === 'morning' ? !prev[dayName]?.morningEnabled : (prev[dayName]?.morningEnabled || false),
-        morningFrom: prev[dayName]?.morningFrom || "",
-        morningTo: prev[dayName]?.morningTo || "",
-        afternoonEnabled: period === 'afternoon' ? !prev[dayName]?.afternoonEnabled : (prev[dayName]?.afternoonEnabled || false),
-        afternoonFrom: prev[dayName]?.afternoonFrom || "",
-        afternoonTo: prev[dayName]?.afternoonTo || "",
-      }
-    }));
+    setSchedules(prev => {
+      const current = prev[dayName] || {} as any;
+      const togglingMorning = period === 'morning';
+      const nextMorningEnabled = togglingMorning ? !current.morningEnabled : (current.morningEnabled || false);
+      const nextAfternoonEnabled = !togglingMorning ? !current.afternoonEnabled : (current.afternoonEnabled || false);
+
+      return {
+        ...prev,
+        [dayName]: {
+          ...current,
+          enabled: true,
+          // Ensure sensible defaults when enabling a period
+          morningEnabled: nextMorningEnabled,
+          morningFrom: nextMorningEnabled ? (current.morningFrom || '09:00') : (current.morningFrom || ''),
+          morningTo: nextMorningEnabled ? (current.morningTo || '12:00') : (current.morningTo || ''),
+          afternoonEnabled: nextAfternoonEnabled,
+          afternoonFrom: nextAfternoonEnabled ? (current.afternoonFrom || '14:00') : (current.afternoonFrom || ''),
+          afternoonTo: nextAfternoonEnabled ? (current.afternoonTo || '18:00') : (current.afternoonTo || ''),
+        }
+      };
+    });
   };
 
   const handleTimeChange = (dayName: string, field: string, value: string) => {

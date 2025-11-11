@@ -118,18 +118,47 @@ export default function UserDomainProfile() {
 
             // Load services separately and initialize original settings
             const servicesResponse = await userService.getServices();
-            const servicesWithOriginalSettings = (servicesResponse.data || []).map((service: DomainService) => ({
-                ...service,
-                hasChanges: false,
-                originalBookingSettings: {
-                    bookingRestrictionActive: service.bookingRestrictionActive ?? false,
-                    bookingRestrictionTime: service.bookingRestrictionTime ?? "24h",
-                    multipleBookings: service.multipleBookings ?? false,
-                    hasCustomAvailability: service.hasCustomAvailability ?? false,
-                    dateAvailability: service.dateAvailability ?? []
+            const servicesWithOriginalSettings = (servicesResponse.data || []).map((service: DomainService) => {
+                // Determine if API already has custom availability
+                const availability = service.dateAvailability as any;
+                console.log(`Service "${service.serviceName}" API availability:`, JSON.stringify(availability, null, 2));
+                const hasAvailability = Array.isArray(availability)
+                    ? availability.length > 0
+                    : availability && typeof availability === 'object'
+                        ? Object.keys(availability).length > 0
+                        : false;
+
+                // Auto-select dates from API availability
+                let selectedDates: Date[] = [];
+                if (Array.isArray(availability)) {
+                    selectedDates = availability
+                        .filter((a: any) => a?.date && !isNaN(new Date(a.date).getTime()))
+                        .map((a: any) => new Date(a.date));
+                } else if (availability && typeof availability === 'object') {
+                    selectedDates = Object.keys(availability)
+                        .filter((d) => d && !isNaN(new Date(d).getTime()))
+                        .map((d) => new Date(d));
                 }
-            }));
-            setServices(servicesWithOriginalSettings);
+
+                const computedHasCustom = service.hasCustomAvailability ?? hasAvailability;
+
+                return {
+                    ...service,
+                    // Ensure UI has dates preselected so Calendar and Schedule render
+                    selectedDates,
+                    // Ensure the toggle reflects API data
+                    hasCustomAvailability: computedHasCustom,
+                    hasChanges: false,
+                    originalBookingSettings: {
+                        bookingRestrictionActive: service.bookingRestrictionActive ?? false,
+                        bookingRestrictionTime: service.bookingRestrictionTime ?? "24h",
+                        multipleBookings: service.multipleBookings ?? false,
+                        hasCustomAvailability: computedHasCustom,
+                        dateAvailability: service.dateAvailability ?? []
+                    }
+                } as EnhancedDomainService;
+            });
+            setServices(servicesWithOriginalSettings as EnhancedDomainService[]);
 
         } catch (error: any) {
             console.error('Error loading domain profile:', error);
