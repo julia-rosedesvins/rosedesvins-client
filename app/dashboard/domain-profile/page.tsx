@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Upload, Image, Camera, Plus, Edit, Trash2, Loader2, Code, CalendarIcon, X } from "lucide-react";
 import { AddServiceModal } from "@/components/AddServiceModal";
 import { EditServiceModal } from "@/components/EditServiceModal";
+import { PrestationScheduleConfig } from "@/components/PrestationScheduleConfig";
 import { Switch } from "@/components/ui/switch";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -42,7 +43,7 @@ export default function UserDomainProfile() {
     const [error, setError] = useState<string | null>(null);
     
     // New state variables for enhanced functionality
-    const [lastClickedDate, setLastClickedDate] = useState<{ [key: number]: Date | null }>({});
+    const [lastClickedDate, setLastClickedDate] = useState<{ [key: string]: Date | null }>({});
     const [isShiftPressed, setIsShiftPressed] = useState(false);
 
     // Form states
@@ -204,7 +205,7 @@ export default function UserDomainProfile() {
     };
 
     const prestations = services.map((service, index) => ({
-        id: index + 1,
+        id: service._id,
         name: service.serviceName,
         description: service.serviceDescription,
         price: `${service.pricePerPerson}€`,
@@ -212,11 +213,11 @@ export default function UserDomainProfile() {
         active: service.isActive,
         serviceBannerUrl: service.serviceBannerUrl,
         // New properties for enhanced functionality
-        periodActive: false,
-        multipleBookings: false,
-        bookingRestrictionActive: false,
-        bookingRestrictionTime: "24h",
-        selectedDates: [] as Date[]
+        periodActive: service.periodActive || false,
+        multipleBookings: service.multipleBookings || false,
+        bookingRestrictionActive: service.bookingRestrictionActive || false,
+        bookingRestrictionTime: service.bookingRestrictionTime || "24h",
+        selectedDates: service.selectedDates || [] as Date[]
     }));
 
     const handleEditPrestation = (prestation: any) => {
@@ -328,9 +329,10 @@ export default function UserDomainProfile() {
         }
     };
 
-    const handleToggleActive = async (prestationId: number) => {
+    const handleToggleActive = async (prestationId: string) => {
         try {
-            const serviceIndex = prestationId - 1;
+            const serviceIndex = services.findIndex(s => s._id === prestationId);
+            if (serviceIndex === -1) return;
             await userService.toggleServiceActive(serviceIndex);
 
             // Reload services to get updated list
@@ -358,10 +360,9 @@ export default function UserDomainProfile() {
         }
     };
 
-    const handleCopyIframeCode = async (prestationId: number) => {
+    const handleCopyIframeCode = async (prestationId: string) => {
         try {
-            const serviceIndex = prestationId - 1;
-            const service = services[serviceIndex];
+            const service = services.find(s => s._id === prestationId);
 
             if (!service || !domainProfile?.userId?._id) {
                 toast.error('Informations du service manquantes');
@@ -396,10 +397,10 @@ export default function UserDomainProfile() {
     };
 
     // New handlers for enhanced functionality
-    const handleTogglePeriod = (prestationId: number) => {
+    const handleTogglePeriod = (prestationId: string) => {
         setServices(prevServices =>
             prevServices.map(service =>
-                service.id === prestationId
+                service._id === prestationId
                     ? { ...service, periodActive: !service.periodActive }
                     : service
             )
@@ -407,10 +408,10 @@ export default function UserDomainProfile() {
         toast.success('Période de disponibilité mise à jour');
     };
 
-    const handleToggleMultipleBookings = (prestationId: number) => {
+    const handleToggleMultipleBookings = (prestationId: string) => {
         setServices(prevServices =>
             prevServices.map(service =>
-                service.id === prestationId
+                service._id === prestationId
                     ? { ...service, multipleBookings: !service.multipleBookings }
                     : service
             )
@@ -418,10 +419,10 @@ export default function UserDomainProfile() {
         toast.success('Réservations multiples mise à jour');
     };
 
-    const handleToggleBookingRestriction = (prestationId: number) => {
+    const handleToggleBookingRestriction = (prestationId: string) => {
         setServices(prevServices =>
             prevServices.map(service =>
-                service.id === prestationId
+                service._id === prestationId
                     ? { ...service, bookingRestrictionActive: !service.bookingRestrictionActive }
                     : service
             )
@@ -429,10 +430,10 @@ export default function UserDomainProfile() {
         toast.success('Restrictions de réservation mise à jour');
     };
 
-    const handleBookingRestrictionTimeChange = (prestationId: number, time: string) => {
+    const handleBookingRestrictionTimeChange = (prestationId: string, time: string) => {
         setServices(prevServices =>
             prevServices.map(service =>
-                service.id === prestationId
+                service._id === prestationId
                     ? { ...service, bookingRestrictionTime: time }
                     : service
             )
@@ -440,8 +441,8 @@ export default function UserDomainProfile() {
         toast.success(`Temps de restriction mis à jour: ${time}`);
     };
 
-    const handleDateSelect = (prestationId: number, date: Date, e: React.MouseEvent) => {
-        const service = services.find(s => s.id === prestationId);
+    const handleDateSelect = (prestationId: string, date: Date, e: React.MouseEvent) => {
+        const service = services.find(s => s._id === prestationId);
         if (!service) return;
 
         const existingDates = service.selectedDates || [];
@@ -477,7 +478,7 @@ export default function UserDomainProfile() {
 
             setServices(prevServices =>
                 prevServices.map(s =>
-                    s.id === prestationId
+                    s._id === prestationId
                         ? { ...s, selectedDates: newDates }
                         : s
                 )
@@ -491,7 +492,7 @@ export default function UserDomainProfile() {
 
             setServices(prevServices =>
                 prevServices.map(s =>
-                    s.id === prestationId
+                    s._id === prestationId
                         ? { ...s, selectedDates: newDates }
                         : s
                 )
@@ -501,10 +502,10 @@ export default function UserDomainProfile() {
         setLastClickedDate(prev => ({ ...prev, [prestationId]: date }));
     };
 
-    const handleRemoveDate = (prestationId: number, dateToRemove: Date) => {
+    const handleRemoveDate = (prestationId: string, dateToRemove: Date) => {
         setServices(prevServices =>
             prevServices.map(service =>
-                service.id === prestationId
+                service._id === prestationId
                     ? {
                         ...service,
                         selectedDates: service.selectedDates?.filter(
@@ -796,7 +797,10 @@ export default function UserDomainProfile() {
                                                             <Button variant="ghost" size="sm" className="text-gray-600 hover:text-gray-800 text-xs sm:text-sm p-1 sm:p-2" onClick={(e) => {
                                                                 e.stopPropagation();
                                                                 if (confirm('Are you sure you want to delete this service?')) {
-                                                                    handleDeleteService(prestation.id - 1);
+                                                                    const serviceIndex = services.findIndex(s => s._id === prestation.id);
+                                                                    if (serviceIndex !== -1) {
+                                                                        handleDeleteService(serviceIndex);
+                                                                    }
                                                                 }
                                                             }}>
                                                                 <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" />
@@ -894,7 +898,7 @@ export default function UserDomainProfile() {
                                                                                 onSelect={(dates) => {
                                                                                     if (dates) {
                                                                                         const updatedServices = services.map(service => {
-                                                                                            if (service.id === prestation.id) {
+                                                                                            if (service._id === prestation.id) {
                                                                                                 return {
                                                                                                     ...service,
                                                                                                     selectedDates: Array.isArray(dates) ? dates : [dates]
@@ -942,17 +946,15 @@ export default function UserDomainProfile() {
                                                                     </div>
                                                                 )}
                                                                 
-                                                                {/* Placeholder for PrestationScheduleConfig */}
                                                                 {prestation.selectedDates.length > 0 && (
                                                                     <div className="border-t pt-4 mt-4">
-                                                                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                                                                            <p className="text-sm text-blue-800">
-                                                                                📅 Configuration des horaires pour {prestation.selectedDates.length} date{prestation.selectedDates.length > 1 ? 's' : ''}
-                                                                            </p>
-                                                                            <p className="text-xs text-blue-600 mt-1">
-                                                                                Le composant PrestationScheduleConfig sera intégré ici pour configurer les créneaux horaires par date.
-                                                                            </p>
-                                                                        </div>
+                                                                        <PrestationScheduleConfig 
+                                                                            selectedDates={prestation.selectedDates}
+                                                                            onChange={(schedules) => {
+                                                                                // Store schedules for this prestation
+                                                                                console.log('Schedules for prestation', prestation.id, schedules);
+                                                                            }}
+                                                                        />
                                                                     </div>
                                                                 )}
                                                             </div>
