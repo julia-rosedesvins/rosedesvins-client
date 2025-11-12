@@ -326,7 +326,9 @@ export default function UserDomainProfile() {
                     // Already in correct format, just ensure dates are strings
                     dateAvailability = service.dateAvailability.map((item: any) => ({
                         ...item,
-                        date: item.date instanceof Date ? item.date.toISOString().split('T')[0] : item.date
+                        date: item.date instanceof Date 
+                            ? `${item.date.getFullYear()}-${(item.date.getMonth() + 1).toString().padStart(2, '0')}-${item.date.getDate().toString().padStart(2, '0')}`
+                            : item.date
                     }));
                 } else if (typeof service.dateAvailability === 'object') {
                     // Convert day-based schedules to date-based schedules
@@ -339,8 +341,10 @@ export default function UserDomainProfile() {
                         const daySchedule = daySchedules[dayName] as any;
                         
                         if (daySchedule) {
+                            // Fix timezone issue: format date in local timezone instead of UTC
+                            const dateString = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
                             dateAvailability.push({
-                                date: date.toISOString().split('T')[0], // Convert to YYYY-MM-DD format
+                                date: dateString, // Convert to YYYY-MM-DD format in local timezone
                                 enabled: daySchedule.enabled ?? true,
                                 morningEnabled: daySchedule.morningEnabled ?? false,
                                 morningFrom: daySchedule.morningFrom ?? "09:00",
