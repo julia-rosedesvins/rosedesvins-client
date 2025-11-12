@@ -43,13 +43,27 @@ export interface WidgetServiceData {
   isActive: boolean;
 }
 
+export interface SpecialDateOverride {
+  date: string;
+  enabled: boolean;
+  morningEnabled: boolean;
+  morningFrom: string;
+  morningTo: string;
+  afternoonEnabled: boolean;
+  afternoonFrom: string;
+  afternoonTo: string;
+  _id: string;
+}
+
 export interface WidgetAvailability {
   weeklyAvailability: any;
   publicHolidays: any[];
-  specialDateOverrides: any[];
+  specialDateOverrides: SpecialDateOverride[];
   timezone: string;
   defaultSlotDuration: number;
   bufferTime: number;
+  bookingRestrictionTime: string | null;
+  multipleBookingsSameSlot: boolean;
   isActive: boolean;
 }
 

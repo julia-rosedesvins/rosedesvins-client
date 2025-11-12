@@ -90,8 +90,23 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
     }
 
     // ✅ NEW: Booking advance limit validation
-    if (selectedDate && selectedTime && widgetData?.notificationPreferences?.bookingAdvanceLimit) {
-      const bookingAdvanceLimit = widgetData.notificationPreferences.bookingAdvanceLimit;
+    if (selectedDate && selectedTime) {
+      // Check if service has specific booking restriction time, otherwise use general preference
+      const serviceBookingRestriction = widgetData?.availability?.bookingRestrictionTime;
+      const generalBookingAdvanceLimit = widgetData?.notificationPreferences?.bookingAdvanceLimit;
+      
+      let bookingAdvanceLimit = generalBookingAdvanceLimit;
+      
+      // Override with service-specific restriction if available
+      if (serviceBookingRestriction) {
+        if (serviceBookingRestriction === '24h') {
+          bookingAdvanceLimit = '24_hours';
+        } else if (serviceBookingRestriction === '48h') {
+          bookingAdvanceLimit = '48_hours';
+        }
+      }
+      
+      if (bookingAdvanceLimit) {
       
       // Skip validation if advance limit is set to NEVER
       if (bookingAdvanceLimit !== 'never') {
@@ -126,6 +141,14 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
               minimumAdvanceHours = 2;
               limitLabel = '2 heures';
               break;
+            case '24_hours':
+              minimumAdvanceHours = 24;
+              limitLabel = '24 heures';
+              break;
+            case '48_hours':
+              minimumAdvanceHours = 48;
+              limitLabel = '48 heures';
+              break;
             case 'day_before':
               minimumAdvanceHours = 24;
               limitLabel = '1 jour';
@@ -145,11 +168,14 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
           }
 
           console.log('📅 Frontend booking advance validation:', {
-            bookingAdvanceLimit,
+            serviceBookingRestriction,
+            generalBookingAdvanceLimit,
+            effectiveBookingAdvanceLimit: bookingAdvanceLimit,
             bookingDateTime: bookingDateTime.toISOString(),
             currentTime: now.toISOString(),
             timeDifferenceHours: Math.round(timeDifferenceHours * 100) / 100,
             minimumAdvanceHours,
+            limitLabel,
             isValid: timeDifferenceHours >= minimumAdvanceHours
           });
         } catch (error) {
@@ -157,6 +183,7 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
           // Skip validation if there's an error, don't block the booking
         }
       }
+    }
     }
     
     setValidationErrors(errors);
@@ -297,8 +324,56 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
     return slotTime <= bufferTime;
   };
 
+  // Check if a time slot is blocked by special date overrides
+  const isTimeSlotBlockedByOverride = (date: Date, time: string): boolean => {
+    if (!widgetData?.availability?.specialDateOverrides?.length) return false;
+    
+    const dateString = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
+    
+    // Find override for this date
+    const override = widgetData.availability.specialDateOverrides.find(override => {
+      const overrideDate = new Date(override.date);
+      const overrideDateString = `${overrideDate.getFullYear()}-${(overrideDate.getMonth() + 1).toString().padStart(2, '0')}-${overrideDate.getDate().toString().padStart(2, '0')}`;
+      return overrideDateString === dateString;
+    });
+    
+    if (!override || !override.enabled) return false;
+    
+    // Parse time slot
+    const [hours, minutes] = time.split(':').map(Number);
+    const slotMinutes = hours * 60 + minutes;
+    
+    // Check morning override
+    if (override.morningEnabled && override.morningFrom && override.morningTo) {
+      const [morningFromHours, morningFromMins] = override.morningFrom.split(':').map(Number);
+      const [morningToHours, morningToMins] = override.morningTo.split(':').map(Number);
+      const morningFromMinutes = morningFromHours * 60 + morningFromMins;
+      const morningToMinutes = morningToHours * 60 + morningToMins;
+      
+      // If slot falls within morning override period, it's blocked
+      if (slotMinutes >= morningFromMinutes && slotMinutes < morningToMinutes) {
+        return true;
+      }
+    }
+    
+    // Check afternoon override
+    if (override.afternoonEnabled && override.afternoonFrom && override.afternoonTo) {
+      const [afternoonFromHours, afternoonFromMins] = override.afternoonFrom.split(':').map(Number);
+      const [afternoonToHours, afternoonToMins] = override.afternoonTo.split(':').map(Number);
+      const afternoonFromMinutes = afternoonFromHours * 60 + afternoonFromMins;
+      const afternoonToMinutes = afternoonToHours * 60 + afternoonToMins;
+      
+      // If slot falls within afternoon override period, it's blocked
+      if (slotMinutes >= afternoonFromMinutes && slotMinutes < afternoonToMinutes) {
+        return true;
+      }
+    }
+    
+    return false;
+  };
+
   // Check if a time slot is already booked by another user
-  // This now checks if the time slot overlaps with any existing event
+  // Now handles multiple bookings with participant limits
   const isTimeSlotBooked = (date: Date, time: string): boolean => {
     if (!bookedSlots.length) return false;
     
@@ -306,13 +381,16 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
     
     // Get service duration to calculate slot end time
     const serviceDuration = widgetData?.service?.timeOfServiceInMinutes || 60;
+    const maxParticipants = getMaxParticipants();
+    const multipleBookingsAllowed = widgetData?.availability?.multipleBookingsSameSlot ?? false;
     
     // Parse the time slot start time
     const [slotHours, slotMinutes] = time.split(':').map(Number);
     const slotStartMinutes = slotHours * 60 + slotMinutes;
     const slotEndMinutes = slotStartMinutes + serviceDuration;
     
-    return bookedSlots.some(slot => {
+    // Find all overlapping bookings for this date/time
+    const overlappingBookings = bookedSlots.filter(slot => {
       const slotDate = new Date(slot.eventDate);
       const slotDateString = `${slotDate.getFullYear()}-${(slotDate.getMonth() + 1).toString().padStart(2, '0')}-${slotDate.getDate().toString().padStart(2, '0')}`;
       
@@ -341,6 +419,29 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
       
       return overlaps;
     });
+    
+    // If no overlapping bookings, slot is available
+    if (overlappingBookings.length === 0) return false;
+    
+    // If multiple bookings not allowed, slot is blocked if any booking exists
+    if (!multipleBookingsAllowed) return true;
+    
+    // Calculate total participants in overlapping bookings
+    // Since PublicScheduleData doesn't include participant counts, we assume each booking uses average capacity
+    // This is a limitation of the current data structure - for more accurate counting, 
+    // the API would need to return participant information
+    const totalExistingParticipants = overlappingBookings.reduce((total, booking) => {
+      // For now, assume each existing booking takes 50% of max capacity as a reasonable estimate
+      // This prevents overbooking while still allowing some multiple bookings
+      const estimatedParticipants = Math.ceil(maxParticipants * 0.5);
+      return total + estimatedParticipants;
+    }, 0);
+    
+    // Current selection participants
+    const currentParticipants = adults + children;
+    
+    // Check if adding current participants would exceed maximum
+    return (totalExistingParticipants + currentParticipants) > maxParticipants;
   };
 
   // Get available time slots for the selected date
@@ -382,8 +483,8 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
           const minutes = currentMinutes % 60;
           const timeSlot = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
           
-          // Skip if time slot has passed (for today) or is already booked
-          if (!isTimeSlotPast(date, timeSlot) && !isTimeSlotBooked(date, timeSlot)) {
+          // Skip if time slot has passed (for today), is already booked, or blocked by special override
+          if (!isTimeSlotPast(date, timeSlot) && !isTimeSlotBooked(date, timeSlot) && !isTimeSlotBlockedByOverride(date, timeSlot)) {
             if (hours < 12) {
               morningSlots.push(timeSlot);
             } else {
