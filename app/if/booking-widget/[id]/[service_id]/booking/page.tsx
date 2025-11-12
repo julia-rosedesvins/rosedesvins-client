@@ -426,22 +426,9 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
     // If multiple bookings not allowed, slot is blocked if any booking exists
     if (!multipleBookingsAllowed) return true;
     
-    // Calculate total participants in overlapping bookings
-    // Since PublicScheduleData doesn't include participant counts, we assume each booking uses average capacity
-    // This is a limitation of the current data structure - for more accurate counting, 
-    // the API would need to return participant information
-    const totalExistingParticipants = overlappingBookings.reduce((total, booking) => {
-      // For now, assume each existing booking takes 50% of max capacity as a reasonable estimate
-      // This prevents overbooking while still allowing some multiple bookings
-      const estimatedParticipants = Math.ceil(maxParticipants * 0.5);
-      return total + estimatedParticipants;
-    }, 0);
-    
-    // Current selection participants
-    const currentParticipants = adults + children;
-    
-    // Check if adding current participants would exceed maximum
-    return (totalExistingParticipants + currentParticipants) > maxParticipants;
+    // If multiple bookings are allowed, always allow the booking
+    // Just let the user select any available slot without participant limit checking
+    return false;
   };
 
   // Get available time slots for the selected date
