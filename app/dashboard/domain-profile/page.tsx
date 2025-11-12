@@ -319,39 +319,36 @@ export default function UserDomainProfile() {
         setSavingServices(prev => ({ ...prev, [service._id!]: true }));
 
         try {
-            // Convert day-based schedules to actual date-based availability for API
+            // Convert schedules to actual date-based availability for API
             let dateAvailability = [];
             if (service.dateAvailability && service.selectedDates) {
                 if (Array.isArray(service.dateAvailability)) {
-                    // Already in correct format, just ensure dates are strings
-                    dateAvailability = service.dateAvailability.map((item: any) => ({
-                        ...item,
-                        date: item.date instanceof Date 
-                            ? `${item.date.getFullYear()}-${(item.date.getMonth() + 1).toString().padStart(2, '0')}-${item.date.getDate().toString().padStart(2, '0')}`
-                            : item.date
-                    }));
+                    // Already in correct format, just ensure dates are strings and filter only enabled dates
+                    dateAvailability = service.dateAvailability
+                        .filter((item: any) => item.enabled) // Only include enabled dates
+                        .map((item: any) => ({
+                            ...item,
+                            date: item.date instanceof Date 
+                                ? `${item.date.getFullYear()}-${(item.date.getMonth() + 1).toString().padStart(2, '0')}-${item.date.getDate().toString().padStart(2, '0')}`
+                                : item.date
+                        }));
                 } else if (typeof service.dateAvailability === 'object') {
-                    // Convert day-based schedules to date-based schedules
-                    const daySchedules = service.dateAvailability;
+                    // Convert date-keyed schedules to date-based schedules
+                    const dateSchedules = service.dateAvailability;
                     dateAvailability = [];
                     
-                    // Map each selected date to its corresponding day schedule
-                    service.selectedDates.forEach((date: Date) => {
-                        const dayName = format(date, "EEEE", { locale: fr });
-                        const daySchedule = daySchedules[dayName] as any;
-                        
-                        if (daySchedule) {
-                            // Fix timezone issue: format date in local timezone instead of UTC
-                            const dateString = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
+                    // Only include dates that are enabled in the schedules
+                    Object.entries(dateSchedules).forEach(([dateKey, schedule]: [string, any]) => {
+                        if (schedule && schedule.enabled) {
                             dateAvailability.push({
-                                date: dateString, // Convert to YYYY-MM-DD format in local timezone
-                                enabled: daySchedule.enabled ?? true,
-                                morningEnabled: daySchedule.morningEnabled ?? false,
-                                morningFrom: daySchedule.morningFrom ?? "09:00",
-                                morningTo: daySchedule.morningTo ?? "12:00",
-                                afternoonEnabled: daySchedule.afternoonEnabled ?? false,
-                                afternoonFrom: daySchedule.afternoonFrom ?? "14:00",
-                                afternoonTo: daySchedule.afternoonTo ?? "18:00"
+                                date: dateKey, // dateKey is already in YYYY-MM-DD format
+                                enabled: schedule.enabled,
+                                morningEnabled: schedule.morningEnabled ?? false,
+                                morningFrom: schedule.morningFrom ?? "09:00",
+                                morningTo: schedule.morningTo ?? "12:00",
+                                afternoonEnabled: schedule.afternoonEnabled ?? false,
+                                afternoonFrom: schedule.afternoonFrom ?? "14:00",
+                                afternoonTo: schedule.afternoonTo ?? "18:00"
                             });
                         }
                     });
@@ -707,12 +704,13 @@ export default function UserDomainProfile() {
                         ...service,
                         selectedDates: service.selectedDates?.filter(
                             date => date.getTime() !== dateToRemove.getTime()
-                        ) || []
+                        ) || [],
+                        hasChanges: true // Mark as having changes so save button becomes active
                     }
                     : service
             )
         );
-        toast.success('Date supprimée');
+        toast.success('Date retirée (cliquez sur "Sauvegarder" pour confirmer)');
     };
     return (
         <UserDashboardLayout title="Profil Domaine">
