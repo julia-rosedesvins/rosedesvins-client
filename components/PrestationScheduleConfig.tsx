@@ -5,8 +5,8 @@ import { fr } from "date-fns/locale";
 import { useState, useEffect } from "react";
 
 const timeOptions = [
-  "08:00", "08:30", "09:00", "09:30", "10:00", "10:30", "11:00", "11:30", 
-  "12:00", "12:30", "13:00", "13:30", "14:00", "14:30", "15:00", "15:30", 
+  "08:00", "08:30", "09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
+  "12:00", "12:30", "13:00", "13:30", "14:00", "14:30", "15:00", "15:30",
   "16:00", "16:30", "17:00", "17:30", "18:00", "18:30", "19:00", "19:30", "20:00"
 ];
 
@@ -34,91 +34,66 @@ export const PrestationScheduleConfig = ({ selectedDates, onChange, existingAvai
     if (existingAvailability && existingAvailability.length > 0) {
       console.log('PrestationScheduleConfig existingAvailability:', existingAvailability);
       const initialSchedules: { [dateKey: string]: ScheduleConfig } = {};
-      
-  existingAvailability.forEach((availability: any) => {
+
+      existingAvailability.forEach((availability: any) => {
         // Validate and parse the date
         if (!availability.date) {
           console.warn('Availability item missing date:', availability);
           return;
         }
-        
+
         const date = new Date(availability.date);
-        
+
         // Check if date is valid
         if (isNaN(date.getTime())) {
           console.warn('Invalid date in availability:', availability.date, availability);
           return;
         }
-        
-        const dayName = format(date, "EEEE", { locale: fr });
-        
-        // Clean logic: only use what API provides, no defaults during initialization
-        const existing = initialSchedules[dayName];
-        
-        console.log(`Processing ${dayName}:`, {
+
+        // Use the actual date as key instead of day name
+        const dateKey = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
+
+        console.log(`Processing date ${dateKey}:`, {
           availability,
-          existing,
           morningEnabled: Boolean(availability.morningEnabled),
           afternoonEnabled: Boolean(availability.afternoonEnabled)
         });
-        
-        if (!existing) {
-          initialSchedules[dayName] = {
-            enabled: Boolean(availability.enabled),
-            morningEnabled: Boolean(availability.morningEnabled),
-            morningFrom: availability.morningFrom || '',
-            morningTo: availability.morningTo || '',
-            afternoonEnabled: Boolean(availability.afternoonEnabled),
-            afternoonFrom: availability.afternoonFrom || '',
-            afternoonTo: availability.afternoonTo || ''
-          };
-        } else {
-          // Merge: OR the boolean flags, keep first provided time values
-          const merged = {
-            enabled: existing.enabled || Boolean(availability.enabled),
-            morningEnabled: existing.morningEnabled || Boolean(availability.morningEnabled),
-            morningFrom: existing.morningFrom || availability.morningFrom || '',
-            morningTo: existing.morningTo || availability.morningTo || '',
-            afternoonEnabled: existing.afternoonEnabled || Boolean(availability.afternoonEnabled),
-            afternoonFrom: existing.afternoonFrom || availability.afternoonFrom || '',
-            afternoonTo: existing.afternoonTo || availability.afternoonTo || ''
-          };
-          
-          console.log(`Merged result for ${dayName}:`, merged);
-          initialSchedules[dayName] = merged;
-        }
+
+        // Each date gets its own individual schedule
+        initialSchedules[dateKey] = {
+          enabled: Boolean(availability.enabled),
+          morningEnabled: Boolean(availability.morningEnabled),
+          morningFrom: availability.morningFrom || '',
+          morningTo: availability.morningTo || '',
+          afternoonEnabled: Boolean(availability.afternoonEnabled),
+          afternoonFrom: availability.afternoonFrom || '',
+          afternoonTo: availability.afternoonTo || ''
+        };
       });
-      
+
       console.log('Setting schedules from API data:', initialSchedules);
       setSchedules(initialSchedules);
     }
   }, [JSON.stringify(existingAvailability)]); // Use JSON.stringify to properly detect changes
 
-  // Group dates by day of week
-  const groupedDates = selectedDates.reduce((acc, date) => {
+  // Create list of dates with their formatted info
+  const sortedDates = selectedDates.sort((a, b) => a.getTime() - b.getTime()).map(date => {
+    const dateKey = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
     const dayName = format(date, "EEEE", { locale: fr });
-    if (!acc[dayName]) {
-      acc[dayName] = [];
-    }
-    acc[dayName].push(date);
-    return acc;
-  }, {} as { [dayName: string]: Date[] });
-
-  const uniqueDays = Object.keys(groupedDates).sort((a, b) => {
-    const daysOrder = ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"];
-    return daysOrder.indexOf(a.toLowerCase()) - daysOrder.indexOf(b.toLowerCase());
+    const formattedDate = format(date, "dd/MM/yyyy", { locale: fr });
+    return { date, dateKey, dayName, formattedDate };
   });
 
-  // Initialize schedules for new days that don't have existing data
+  // Initialize schedules for new dates that don't have existing data
   useEffect(() => {
-    // Only add default schedules for days that don't exist yet
+    // Only add default schedules for dates that don't exist yet
     setSchedules(prevSchedules => {
       const newSchedules = { ...prevSchedules };
       let hasChanges = false;
 
-      uniqueDays.forEach(dayName => {
-        if (!newSchedules[dayName]) {
-          newSchedules[dayName] = {
+      sortedDates.forEach(({ dateKey }) => {
+        if (!newSchedules[dateKey]) {
+          newSchedules[dateKey] = {
             enabled: true,
             morningEnabled: false,
             morningFrom: '09:00',
@@ -133,7 +108,7 @@ export const PrestationScheduleConfig = ({ selectedDates, onChange, existingAvai
 
       return hasChanges ? newSchedules : prevSchedules;
     });
-  }, [uniqueDays.join(',')]);
+  }, [sortedDates.map(d => d.dateKey).join(',')]);
 
   useEffect(() => {
     if (onChange) {
@@ -141,31 +116,31 @@ export const PrestationScheduleConfig = ({ selectedDates, onChange, existingAvai
     }
   }, [schedules]);
 
-  const handleDayToggle = (dayName: string) => {
+  const handleDateToggle = (dateKey: string) => {
     setSchedules(prev => ({
       ...prev,
-      [dayName]: {
-        enabled: !prev[dayName]?.enabled,
-        morningEnabled: prev[dayName]?.morningEnabled || false,
-        morningFrom: prev[dayName]?.morningFrom || "",
-        morningTo: prev[dayName]?.morningTo || "",
-        afternoonEnabled: prev[dayName]?.afternoonEnabled || false,
-        afternoonFrom: prev[dayName]?.afternoonFrom || "",
-        afternoonTo: prev[dayName]?.afternoonTo || "",
+      [dateKey]: {
+        enabled: !prev[dateKey]?.enabled,
+        morningEnabled: prev[dateKey]?.morningEnabled || false,
+        morningFrom: prev[dateKey]?.morningFrom || "",
+        morningTo: prev[dateKey]?.morningTo || "",
+        afternoonEnabled: prev[dateKey]?.afternoonEnabled || false,
+        afternoonFrom: prev[dateKey]?.afternoonFrom || "",
+        afternoonTo: prev[dateKey]?.afternoonTo || "",
       }
     }));
   };
 
-  const handlePeriodToggle = (dayName: string, period: 'morning' | 'afternoon') => {
+  const handlePeriodToggle = (dateKey: string, period: 'morning' | 'afternoon') => {
     setSchedules(prev => {
-      const current = prev[dayName] || {} as any;
+      const current = prev[dateKey] || {} as any;
       const togglingMorning = period === 'morning';
       const nextMorningEnabled = togglingMorning ? !current.morningEnabled : (current.morningEnabled || false);
       const nextAfternoonEnabled = !togglingMorning ? !current.afternoonEnabled : (current.afternoonEnabled || false);
 
       return {
         ...prev,
-        [dayName]: {
+        [dateKey]: {
           ...current,
           enabled: true,
           // Ensure sensible defaults when enabling a period
@@ -180,24 +155,16 @@ export const PrestationScheduleConfig = ({ selectedDates, onChange, existingAvai
     });
   };
 
-  const handleTimeChange = (dayName: string, field: string, value: string) => {
+  const handleTimeChange = (dateKey: string, field: string, value: string) => {
     setSchedules(prev => ({
       ...prev,
-      [dayName]: {
-        ...prev[dayName],
-        enabled: prev[dayName]?.enabled || false,
+      [dateKey]: {
+        ...prev[dateKey],
+        enabled: prev[dateKey]?.enabled || false,
         [field]: value
       }
     }));
   };
-
-  if (uniqueDays.length === 0) {
-    return (
-      <div className="text-sm text-muted-foreground text-center py-4">
-        Aucune date sélectionnée. Veuillez sélectionner des dates dans le calendrier ci-dessus.
-      </div>
-    );
-  }
 
   if (selectedDates.length === 0) {
     return (
@@ -210,7 +177,7 @@ export const PrestationScheduleConfig = ({ selectedDates, onChange, existingAvai
   return (
     <div className="space-y-4 mt-4">
       <div className="text-sm font-medium mb-3">Configuration des horaires ({selectedDates.length} dates sélectionnées)</div>
-      
+
       <div className="grid grid-cols-7 gap-4 mb-2 text-center font-medium text-xs">
         <div></div>
         <div></div>
@@ -218,7 +185,7 @@ export const PrestationScheduleConfig = ({ selectedDates, onChange, existingAvai
         <div></div>
         <div className="col-span-2">Après-midi</div>
       </div>
-      
+
       <div className="grid grid-cols-7 gap-2 mb-3 text-center text-xs text-muted-foreground">
         <div></div>
         <div></div>
@@ -228,44 +195,43 @@ export const PrestationScheduleConfig = ({ selectedDates, onChange, existingAvai
         <div>de</div>
         <div>à</div>
       </div>
-      
-      {uniqueDays.map((dayName) => {
-        const dateCount = groupedDates[dayName].length;
+
+      {sortedDates.map(({ dateKey, dayName, formattedDate }) => {
         return (
-          <div key={dayName} className="grid grid-cols-7 gap-2 items-center">
+          <div key={dateKey} className="grid grid-cols-7 gap-2 items-center">
             <div className="flex flex-col">
               <div className="flex items-center space-x-2">
-                <Checkbox 
-                  id={`schedule-${dayName}`}
-                  checked={schedules[dayName]?.enabled || false}
-                  onCheckedChange={() => handleDayToggle(dayName)}
+                <Checkbox
+                  id={`schedule-${dateKey}`}
+                  checked={schedules[dateKey]?.enabled || false}
+                  onCheckedChange={() => handleDateToggle(dateKey)}
                 />
-                <label 
-                  htmlFor={`schedule-${dayName}`} 
+                <label
+                  htmlFor={`schedule-${dateKey}`}
                   className="text-xs font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                 >
-                  {dayName}
+                  {formattedDate}
                 </label>
               </div>
               <span className="text-xs text-muted-foreground ml-6">
-                ({dateCount} date{dateCount > 1 ? 's' : ''})
+                ({dayName})
               </span>
             </div>
-            
+
             <div className="flex items-center justify-center">
-              <Checkbox 
-                id={`${dayName}-morning`}
-                checked={schedules[dayName]?.morningEnabled || false}
-                onCheckedChange={() => handlePeriodToggle(dayName, 'morning')}
-                disabled={!schedules[dayName]?.enabled}
+              <Checkbox
+                id={`${dateKey}-morning`}
+                checked={schedules[dateKey]?.morningEnabled || false}
+                onCheckedChange={() => handlePeriodToggle(dateKey, 'morning')}
+                disabled={!schedules[dateKey]?.enabled}
               />
             </div>
-            
-            {schedules[dayName]?.enabled && schedules[dayName]?.morningEnabled ? (
+
+            {schedules[dateKey]?.enabled && schedules[dateKey]?.morningEnabled ? (
               <>
                 <Select
-                  value={schedules[dayName]?.morningFrom || ""}
-                  onValueChange={(value) => handleTimeChange(dayName, 'morningFrom', value)}
+                  value={schedules[dateKey]?.morningFrom || ""}
+                  onValueChange={(value) => handleTimeChange(dateKey, 'morningFrom', value)}
                 >
                   <SelectTrigger className="h-8 text-xs">
                     <SelectValue placeholder="08:00" />
@@ -276,10 +242,10 @@ export const PrestationScheduleConfig = ({ selectedDates, onChange, existingAvai
                     ))}
                   </SelectContent>
                 </Select>
-                
+
                 <Select
-                  value={schedules[dayName]?.morningTo || ""}
-                  onValueChange={(value) => handleTimeChange(dayName, 'morningTo', value)}
+                  value={schedules[dateKey]?.morningTo || ""}
+                  onValueChange={(value) => handleTimeChange(dateKey, 'morningTo', value)}
                 >
                   <SelectTrigger className="h-8 text-xs">
                     <SelectValue placeholder="13:00" />
@@ -294,21 +260,21 @@ export const PrestationScheduleConfig = ({ selectedDates, onChange, existingAvai
             ) : (
               <div className="col-span-2"></div>
             )}
-            
+
             <div className="flex items-center justify-center">
-              <Checkbox 
-                id={`${dayName}-afternoon`}
-                checked={schedules[dayName]?.afternoonEnabled || false}
-                onCheckedChange={() => handlePeriodToggle(dayName, 'afternoon')}
-                disabled={!schedules[dayName]?.enabled}
+              <Checkbox
+                id={`${dateKey}-afternoon`}
+                checked={schedules[dateKey]?.afternoonEnabled || false}
+                onCheckedChange={() => handlePeriodToggle(dateKey, 'afternoon')}
+                disabled={!schedules[dateKey]?.enabled}
               />
             </div>
-            
-            {schedules[dayName]?.enabled && schedules[dayName]?.afternoonEnabled ? (
+
+            {schedules[dateKey]?.enabled && schedules[dateKey]?.afternoonEnabled ? (
               <>
                 <Select
-                  value={schedules[dayName]?.afternoonFrom || ""}
-                  onValueChange={(value) => handleTimeChange(dayName, 'afternoonFrom', value)}
+                  value={schedules[dateKey]?.afternoonFrom || ""}
+                  onValueChange={(value) => handleTimeChange(dateKey, 'afternoonFrom', value)}
                 >
                   <SelectTrigger className="h-8 text-xs">
                     <SelectValue placeholder="13:00" />
@@ -319,10 +285,10 @@ export const PrestationScheduleConfig = ({ selectedDates, onChange, existingAvai
                     ))}
                   </SelectContent>
                 </Select>
-                
+
                 <Select
-                  value={schedules[dayName]?.afternoonTo || ""}
-                  onValueChange={(value) => handleTimeChange(dayName, 'afternoonTo', value)}
+                  value={schedules[dateKey]?.afternoonTo || ""}
+                  onValueChange={(value) => handleTimeChange(dateKey, 'afternoonTo', value)}
                 >
                   <SelectTrigger className="h-8 text-xs">
                     <SelectValue placeholder="20:00" />
