@@ -710,7 +710,7 @@ export default function UserDomainProfile() {
                     : service
             )
         );
-        toast.success('Date retirée (cliquez sur "Sauvegarder" pour confirmer)');
+        toast.success('Date retirée (cliquez sur "Enregistrer" pour confirmer)');
     };
     return (
         <UserDashboardLayout title="Profil Domaine">
@@ -991,8 +991,8 @@ export default function UserDomainProfile() {
                                                                         <Loader2 className="h-3 w-3 animate-spin" />
                                                                     ) : (
                                                                         <>
-                                                                            <span className="sm:hidden">Sauv.</span>
-                                                                            <span className="hidden sm:inline">Sauvegarder</span>
+                                                                            <span className="sm:hidden">Enreg.</span>
+                                                                            <span className="hidden sm:inline">Enregistrer</span>
                                                                         </>
                                                                     )}
                                                                 </Button>
