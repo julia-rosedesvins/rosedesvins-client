@@ -178,7 +178,8 @@ export const PrestationScheduleConfig = ({ selectedDates, onChange, existingAvai
     <div className="space-y-4 mt-4">
       <div className="text-sm font-medium mb-3">Configuration des horaires ({selectedDates.length} dates sélectionnées)</div>
 
-      <div className="grid grid-cols-7 gap-4 mb-2 text-center font-medium text-xs">
+      {/* Desktop headers */}
+      <div className="hidden md:grid md:grid-cols-7 gap-4 mb-2 text-center font-medium text-xs">
         <div></div>
         <div></div>
         <div className="col-span-2">Matin</div>
@@ -186,7 +187,7 @@ export const PrestationScheduleConfig = ({ selectedDates, onChange, existingAvai
         <div className="col-span-2">Après-midi</div>
       </div>
 
-      <div className="grid grid-cols-7 gap-2 mb-3 text-center text-xs text-muted-foreground">
+      <div className="hidden md:grid md:grid-cols-7 gap-2 mb-3 text-center text-xs text-muted-foreground">
         <div></div>
         <div></div>
         <div>de</div>
@@ -198,8 +199,9 @@ export const PrestationScheduleConfig = ({ selectedDates, onChange, existingAvai
 
       {sortedDates.map(({ dateKey, dayName, formattedDate }) => {
         return (
-          <div key={dateKey} className="grid grid-cols-7 gap-2 items-center">
-            <div className="flex flex-col">
+          <div key={dateKey}>
+            {/* Mobile Layout */}
+            <div className="md:hidden space-y-3 border rounded-lg p-3 bg-gray-50">
               <div className="flex items-center space-x-2">
                 <Checkbox
                   id={`schedule-${dateKey}`}
@@ -208,101 +210,220 @@ export const PrestationScheduleConfig = ({ selectedDates, onChange, existingAvai
                 />
                 <label
                   htmlFor={`schedule-${dateKey}`}
-                  className="text-xs font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                 >
-                  {formattedDate}
+                  {formattedDate} ({dayName})
                 </label>
               </div>
-              <span className="text-xs text-muted-foreground ml-6">
-                ({dayName})
-              </span>
+
+              {schedules[dateKey]?.enabled && (
+                <div className="space-y-3 ml-6">
+                  {/* Morning Section - Mobile */}
+                  <div className="space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`${dateKey}-morning-mobile`}
+                        checked={schedules[dateKey]?.morningEnabled || false}
+                        onCheckedChange={() => handlePeriodToggle(dateKey, 'morning')}
+                      />
+                      <span className="text-sm font-medium">Matin</span>
+                    </div>
+                    {schedules[dateKey]?.morningEnabled && (
+                      <div className="flex space-x-2 ml-6">
+                        <div className="flex-1">
+                          <label className="text-xs text-muted-foreground">De</label>
+                          <Select
+                            value={schedules[dateKey]?.morningFrom || ""}
+                            onValueChange={(value) => handleTimeChange(dateKey, 'morningFrom', value)}
+                          >
+                            <SelectTrigger className="h-8 text-xs">
+                              <SelectValue placeholder="08:00" />
+                            </SelectTrigger>
+                            <SelectContent className="bg-white z-50">
+                              {timeOptions.slice(0, 11).map((time) => (
+                                <SelectItem key={time} value={time}>{time}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="flex-1">
+                          <label className="text-xs text-muted-foreground">À</label>
+                          <Select
+                            value={schedules[dateKey]?.morningTo || ""}
+                            onValueChange={(value) => handleTimeChange(dateKey, 'morningTo', value)}
+                          >
+                            <SelectTrigger className="h-8 text-xs">
+                              <SelectValue placeholder="13:00" />
+                            </SelectTrigger>
+                            <SelectContent className="bg-white z-50">
+                              {timeOptions.slice(0, 11).map((time) => (
+                                <SelectItem key={time} value={time}>{time}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Afternoon Section - Mobile */}
+                  <div className="space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`${dateKey}-afternoon-mobile`}
+                        checked={schedules[dateKey]?.afternoonEnabled || false}
+                        onCheckedChange={() => handlePeriodToggle(dateKey, 'afternoon')}
+                      />
+                      <span className="text-sm font-medium">Après-midi</span>
+                    </div>
+                    {schedules[dateKey]?.afternoonEnabled && (
+                      <div className="flex space-x-2 ml-6">
+                        <div className="flex-1">
+                          <label className="text-xs text-muted-foreground">De</label>
+                          <Select
+                            value={schedules[dateKey]?.afternoonFrom || ""}
+                            onValueChange={(value) => handleTimeChange(dateKey, 'afternoonFrom', value)}
+                          >
+                            <SelectTrigger className="h-8 text-xs">
+                              <SelectValue placeholder="13:00" />
+                            </SelectTrigger>
+                            <SelectContent className="bg-white z-50">
+                              {timeOptions.slice(10).map((time) => (
+                                <SelectItem key={time} value={time}>{time}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="flex-1">
+                          <label className="text-xs text-muted-foreground">À</label>
+                          <Select
+                            value={schedules[dateKey]?.afternoonTo || ""}
+                            onValueChange={(value) => handleTimeChange(dateKey, 'afternoonTo', value)}
+                          >
+                            <SelectTrigger className="h-8 text-xs">
+                              <SelectValue placeholder="20:00" />
+                            </SelectTrigger>
+                            <SelectContent className="bg-white z-50">
+                              {timeOptions.slice(10).map((time) => (
+                                <SelectItem key={time} value={time}>{time}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
-            <div className="flex items-center justify-center">
-              <Checkbox
-                id={`${dateKey}-morning`}
-                checked={schedules[dateKey]?.morningEnabled || false}
-                onCheckedChange={() => handlePeriodToggle(dateKey, 'morning')}
-                disabled={!schedules[dateKey]?.enabled}
-              />
+            {/* Desktop Layout */}
+            <div className="hidden md:grid md:grid-cols-7 gap-2 items-center">
+              <div className="flex flex-col">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`schedule-${dateKey}-desktop`}
+                    checked={schedules[dateKey]?.enabled || false}
+                    onCheckedChange={() => handleDateToggle(dateKey)}
+                  />
+                  <label
+                    htmlFor={`schedule-${dateKey}-desktop`}
+                    className="text-xs font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                  >
+                    {formattedDate}
+                  </label>
+                </div>
+                <span className="text-xs text-muted-foreground ml-6">
+                  ({dayName})
+                </span>
+              </div>
+
+              <div className="flex items-center justify-center">
+                <Checkbox
+                  id={`${dateKey}-morning-desktop`}
+                  checked={schedules[dateKey]?.morningEnabled || false}
+                  onCheckedChange={() => handlePeriodToggle(dateKey, 'morning')}
+                  disabled={!schedules[dateKey]?.enabled}
+                />
+              </div>
+
+              {schedules[dateKey]?.enabled && schedules[dateKey]?.morningEnabled ? (
+                <>
+                  <Select
+                    value={schedules[dateKey]?.morningFrom || ""}
+                    onValueChange={(value) => handleTimeChange(dateKey, 'morningFrom', value)}
+                  >
+                    <SelectTrigger className="h-8 text-xs">
+                      <SelectValue placeholder="08:00" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white z-50">
+                      {timeOptions.slice(0, 11).map((time) => (
+                        <SelectItem key={time} value={time}>{time}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  <Select
+                    value={schedules[dateKey]?.morningTo || ""}
+                    onValueChange={(value) => handleTimeChange(dateKey, 'morningTo', value)}
+                  >
+                    <SelectTrigger className="h-8 text-xs">
+                      <SelectValue placeholder="13:00" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white z-50">
+                      {timeOptions.slice(0, 11).map((time) => (
+                        <SelectItem key={time} value={time}>{time}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </>
+              ) : (
+                <div className="col-span-2"></div>
+              )}
+
+              <div className="flex items-center justify-center">
+                <Checkbox
+                  id={`${dateKey}-afternoon-desktop`}
+                  checked={schedules[dateKey]?.afternoonEnabled || false}
+                  onCheckedChange={() => handlePeriodToggle(dateKey, 'afternoon')}
+                  disabled={!schedules[dateKey]?.enabled}
+                />
+              </div>
+
+              {schedules[dateKey]?.enabled && schedules[dateKey]?.afternoonEnabled ? (
+                <>
+                  <Select
+                    value={schedules[dateKey]?.afternoonFrom || ""}
+                    onValueChange={(value) => handleTimeChange(dateKey, 'afternoonFrom', value)}
+                  >
+                    <SelectTrigger className="h-8 text-xs">
+                      <SelectValue placeholder="13:00" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white z-50">
+                      {timeOptions.slice(10).map((time) => (
+                        <SelectItem key={time} value={time}>{time}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  <Select
+                    value={schedules[dateKey]?.afternoonTo || ""}
+                    onValueChange={(value) => handleTimeChange(dateKey, 'afternoonTo', value)}
+                  >
+                    <SelectTrigger className="h-8 text-xs">
+                      <SelectValue placeholder="20:00" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white z-50">
+                      {timeOptions.slice(10).map((time) => (
+                        <SelectItem key={time} value={time}>{time}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </>
+              ) : (
+                <div className="col-span-2"></div>
+              )}
             </div>
-
-            {schedules[dateKey]?.enabled && schedules[dateKey]?.morningEnabled ? (
-              <>
-                <Select
-                  value={schedules[dateKey]?.morningFrom || ""}
-                  onValueChange={(value) => handleTimeChange(dateKey, 'morningFrom', value)}
-                >
-                  <SelectTrigger className="h-8 text-xs">
-                    <SelectValue placeholder="08:00" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white z-50">
-                    {timeOptions.slice(0, 11).map((time) => (
-                      <SelectItem key={time} value={time}>{time}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                <Select
-                  value={schedules[dateKey]?.morningTo || ""}
-                  onValueChange={(value) => handleTimeChange(dateKey, 'morningTo', value)}
-                >
-                  <SelectTrigger className="h-8 text-xs">
-                    <SelectValue placeholder="13:00" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white z-50">
-                    {timeOptions.slice(0, 11).map((time) => (
-                      <SelectItem key={time} value={time}>{time}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </>
-            ) : (
-              <div className="col-span-2"></div>
-            )}
-
-            <div className="flex items-center justify-center">
-              <Checkbox
-                id={`${dateKey}-afternoon`}
-                checked={schedules[dateKey]?.afternoonEnabled || false}
-                onCheckedChange={() => handlePeriodToggle(dateKey, 'afternoon')}
-                disabled={!schedules[dateKey]?.enabled}
-              />
-            </div>
-
-            {schedules[dateKey]?.enabled && schedules[dateKey]?.afternoonEnabled ? (
-              <>
-                <Select
-                  value={schedules[dateKey]?.afternoonFrom || ""}
-                  onValueChange={(value) => handleTimeChange(dateKey, 'afternoonFrom', value)}
-                >
-                  <SelectTrigger className="h-8 text-xs">
-                    <SelectValue placeholder="13:00" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white z-50">
-                    {timeOptions.slice(10).map((time) => (
-                      <SelectItem key={time} value={time}>{time}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                <Select
-                  value={schedules[dateKey]?.afternoonTo || ""}
-                  onValueChange={(value) => handleTimeChange(dateKey, 'afternoonTo', value)}
-                >
-                  <SelectTrigger className="h-8 text-xs">
-                    <SelectValue placeholder="20:00" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white z-50">
-                    {timeOptions.slice(10).map((time) => (
-                      <SelectItem key={time} value={time}>{time}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </>
-            ) : (
-              <div className="col-span-2"></div>
-            )}
           </div>
         );
       })}

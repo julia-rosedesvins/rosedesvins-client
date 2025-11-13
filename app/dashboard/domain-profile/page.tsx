@@ -947,7 +947,7 @@ export default function UserDomainProfile() {
                                 {/* Section Prestations œnotouristiques */}
                                 <div className="border-t pt-4 lg:pt-6">
                                     <h3 className="text-base lg:text-lg font-semibold mb-4">Mes prestations œnotouristiques</h3>
-                                    <div className={`grid gap-4 lg:gap-6 ${selectedPrestation ? 'xl:grid-cols-2' : 'grid-cols-1'}`}>
+                                    <div className={`grid gap-4 lg:gap-6 ${selectedPrestation ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1'}`}>
                                         {/* Liste des prestations */}
                                         <div className="space-y-3">
                                             {prestations.map((prestation) => (
@@ -966,13 +966,13 @@ export default function UserDomainProfile() {
                                                             selectedPrestation === prestation.id.toString() ? null : prestation.id.toString()
                                                         )}
                                                     >
-                                                        <span className="text-gray-700 font-medium mb-2 sm:mb-0">{prestation.name}</span>
-                                                        <div className="flex flex-wrap items-center gap-2 sm:space-x-3">
+                                                        <span className="text-gray-700 font-medium mb-3 sm:mb-0">{prestation.name}</span>
+                                                        <div className="flex flex-wrap items-center gap-2 sm:gap-1">
                                                             {/* Save Button - Show when changes are detected */}
                                                             {services.find(s => s._id === prestation.id)?.hasChanges && (
                                                                 <Button 
                                                                     size="sm" 
-                                                                    className="text-white text-xs sm:text-sm p-1 sm:p-2"
+                                                                    className="text-white text-xs px-2 py-1 sm:px-3 sm:py-2"
                                                                     style={{ backgroundColor: '#3A7B59' }}
                                                                     onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#2d5f43'}
                                                                     onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#3A7B59'}
@@ -988,34 +988,40 @@ export default function UserDomainProfile() {
                                                                     disabled={savingServices[prestation.id]}
                                                                 >
                                                                     {savingServices[prestation.id] ? (
-                                                                        <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
+                                                                        <Loader2 className="h-3 w-3 animate-spin" />
                                                                     ) : (
-                                                                        <span className="hidden sm:inline">Sauvegarder</span>
+                                                                        <>
+                                                                            <span className="sm:hidden">Sauv.</span>
+                                                                            <span className="hidden sm:inline">Sauvegarder</span>
+                                                                        </>
                                                                     )}
                                                                 </Button>
                                                             )}
-                                                            <Button variant="ghost" size="sm" className="text-gray-600 hover:text-gray-800 text-xs sm:text-sm p-1 sm:p-2" onClick={(e) => {
+                                                            <Button variant="ghost" size="sm" className="text-gray-600 hover:text-gray-800 text-xs px-2 py-1 sm:px-3 sm:py-2" onClick={(e) => {
                                                                 e.stopPropagation();
                                                                 handleEditPrestation(prestation);
                                                             }}>
-                                                                <Edit className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" />
+                                                                <Edit className="h-3 w-3 sm:mr-1" />
                                                                 <span className="hidden sm:inline">Editer</span>
                                                             </Button>
-                                                            <Button variant="ghost" size="sm" className="text-gray-600 hover:text-gray-800 text-xs sm:text-sm p-1 sm:p-2" onClick={(e) => {
+                                                            <Button variant="ghost" size="sm" className="text-gray-600 hover:text-gray-800 text-xs px-2 py-1 sm:px-3 sm:py-2" onClick={(e) => {
                                                                 e.stopPropagation();
                                                                 handleCopyIframeCode(prestation.id);
                                                             }}>
-                                                                <Code className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" />
+                                                                <Code className="h-3 w-3 sm:mr-1" />
                                                                 <span className="hidden sm:inline">Code</span>
                                                             </Button>
-                                                            <div className="flex items-center space-x-2" onClick={(e) => e.stopPropagation()}>
+                                                            <div className="flex items-center space-x-1 sm:space-x-2" onClick={(e) => e.stopPropagation()}>
                                                                 <Switch
                                                                     checked={prestation.active}
                                                                     onCheckedChange={() => handleToggleActive(prestation.id)}
                                                                 />
-                                                                <span className="text-xs sm:text-sm text-gray-600">Activer</span>
+                                                                <span className="text-xs text-gray-600 sm:text-sm">
+                                                                    <span className="sm:hidden">Act.</span>
+                                                                    <span className="hidden sm:inline">Activer</span>
+                                                                </span>
                                                             </div>
-                                                            <Button variant="ghost" size="sm" className="text-gray-600 hover:text-gray-800 text-xs sm:text-sm p-1 sm:p-2" onClick={(e) => {
+                                                            <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-800 text-xs px-2 py-1 sm:px-3 sm:py-2" onClick={(e) => {
                                                                 e.stopPropagation();
                                                                 if (confirm('Are you sure you want to delete this service?')) {
                                                                     const serviceIndex = services.findIndex(s => s._id === prestation.id);
@@ -1024,7 +1030,7 @@ export default function UserDomainProfile() {
                                                                     }
                                                                 }
                                                             }}>
-                                                                <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" />
+                                                                <Trash2 className="h-3 w-3 sm:mr-1" />
                                                                 <span className="hidden sm:inline">Supprimer</span>
                                                             </Button>
                                                         </div>
@@ -1032,9 +1038,9 @@ export default function UserDomainProfile() {
                                                     
                                                     {/* NEW: Enhanced Settings Section */}
                                                     <div className="p-3 border-t border-gray-100" onClick={(e) => e.stopPropagation()}>
-                                                        <div className="space-y-3 mb-3">
+                                                        <div className="space-y-4 mb-3">
                                                             {/* Booking Restrictions */}
-                                                            <div className="flex items-center justify-between">
+                                                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                                                                 <span className="text-sm font-medium text-gray-700">Restrictions de réservations</span>
                                                                 <div className="flex items-center space-x-2">
                                                                     <Switch
@@ -1062,7 +1068,7 @@ export default function UserDomainProfile() {
                                                             )}
                                                             
                                                             {/* Multiple Bookings */}
-                                                            <div className="flex items-center justify-between">
+                                                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                                                                 <span className="text-sm font-medium text-gray-700">Réservations multiples par créneau</span>
                                                                 <div className="flex items-center space-x-2">
                                                                     <Switch
@@ -1074,7 +1080,7 @@ export default function UserDomainProfile() {
                                                             </div>
                                                             
                                                             {/* Period Availability */}
-                                                            <div className="flex items-center justify-between">
+                                                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                                                                 <span className="text-sm font-medium text-gray-700">Période de disponibilité</span>
                                                                 <div className="flex items-center space-x-2">
                                                                     <Switch
@@ -1131,7 +1137,7 @@ export default function UserDomainProfile() {
                                                                     </Popover>
                                                                 </div>
                                                                 {prestation.selectedDates.length > 0 && (
-                                                                    <div className="flex flex-wrap gap-1 max-h-20 overflow-y-auto">
+                                                                    <div className="flex flex-wrap gap-1 max-h-32 sm:max-h-20 overflow-y-auto">
                                                                         {prestation.selectedDates
                                                                             .sort((a, b) => a.getTime() - b.getTime())
                                                                             .slice(0, 10)
@@ -1140,7 +1146,9 @@ export default function UserDomainProfile() {
                                                                                     key={idx} 
                                                                                     className="inline-flex items-center gap-1 text-xs bg-green-100 text-green-800 px-2 py-1 rounded group hover:bg-green-200 transition-colors"
                                                                                 >
-                                                                                    {format(date, "dd/MM/yy", { locale: fr })}
+                                                                                    <span className="text-xs">
+                                                                                        {format(date, "dd/MM", { locale: fr })}
+                                                                                    </span>
                                                                                     <button
                                                                                         onClick={(e) => {
                                                                                             e.stopPropagation();
