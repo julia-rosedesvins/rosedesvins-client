@@ -244,8 +244,8 @@ export default function UserDomainProfile() {
             toast.success(response.message);
         } catch (error: any) {
             console.error('Error saving domain profile:', error);
-            setError(error?.message || 'Failed to save domain profile');
-            toast.error(error?.message || 'Failed to save domain profile');
+            setError(error?.message || 'Échec de la sauvegarde du profil du domaine');
+            toast.error(error?.message || 'Échec de la sauvegarde du profil du domaine');
         } finally {
             setIsSaving(false);
         }
@@ -399,10 +399,10 @@ export default function UserDomainProfile() {
                 })
             );
 
-            toast.success(`Booking settings saved for ${service.serviceName}`);
+            toast.success(`Paramètres de réservation sauvegardés pour ${service.serviceName}`);
         } catch (error) {
             console.error('Error saving booking settings:', error);
-            toast.error(`Failed to save booking settings for ${service.serviceName}`);
+            toast.error(`Échec de la sauvegarde des paramètres pour ${service.serviceName}`);
         } finally {
             setSavingServices(prev => ({ ...prev, [service._id!]: false }));
         }
@@ -519,10 +519,10 @@ export default function UserDomainProfile() {
             setServices(servicesResponse.data || []);
 
             setIsAddServiceModalOpen(false);
-            toast.success('Service added successfully!');
+            toast.success('Service ajouté avec succès !');
         } catch (error: any) {
             console.error('Error adding service:', error);
-            toast.error(error.message || 'Failed to add service');
+            toast.error(error.message || 'Échec de l\'ajout du service');
         }
     };
 
@@ -546,11 +546,11 @@ export default function UserDomainProfile() {
                 const servicesResponse = await userService.getServices();
                 setServices(servicesResponse.data || []);
 
-                toast.success('Service updated successfully!');
+                toast.success('Service mis à jour avec succès !');
             }
         } catch (error: any) {
             console.error('Error updating service:', error);
-            toast.error(error.message || 'Failed to update service');
+            toast.error(error.message || 'Échec de la mise à jour du service');
         }
     };
 
@@ -563,10 +563,10 @@ export default function UserDomainProfile() {
             // Reload services to get updated list
             const servicesResponse = await userService.getServices();
             setServices(servicesResponse.data || []);
-            toast.success('Service status updated successfully!');
+            toast.success('Statut du service mis à jour avec succès !');
         } catch (error: any) {
             console.error('Error toggling service status:', error);
-            toast.error(error.message || 'Failed to update service status');
+            toast.error(error.message || 'Échec de la mise à jour du statut du service');
         }
     };
 
@@ -578,10 +578,10 @@ export default function UserDomainProfile() {
             const servicesResponse = await userService.getServices();
             setServices(servicesResponse.data || []);
 
-            toast.success('Service deleted successfully!');
+            toast.success('Service supprimé avec succès !');
         } catch (error: any) {
             console.error('Error deleting service:', error);
-            toast.error(error.message || 'Failed to delete service');
+            toast.error(error.message || 'Échec de la suppression du service');
         }
     };
 
