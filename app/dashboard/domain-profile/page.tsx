@@ -322,10 +322,22 @@ export default function UserDomainProfile() {
             // Convert schedules to actual date-based availability for API
             let dateAvailability = [];
             if (service.dateAvailability && service.selectedDates) {
+                // Create a set of selected date strings for quick lookup
+                const selectedDateStrings = new Set(
+                    service.selectedDates.map((date: Date) => 
+                        `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`
+                    )
+                );
+
                 if (Array.isArray(service.dateAvailability)) {
-                    // Already in correct format, just ensure dates are strings and filter only enabled dates
+                    // Filter by both: enabled AND still in selectedDates (not removed)
                     dateAvailability = service.dateAvailability
-                        .filter((item: any) => item.enabled) // Only include enabled dates
+                        .filter((item: any) => {
+                            const itemDateString = item.date instanceof Date 
+                                ? `${item.date.getFullYear()}-${(item.date.getMonth() + 1).toString().padStart(2, '0')}-${item.date.getDate().toString().padStart(2, '0')}`
+                                : item.date;
+                            return item.enabled && selectedDateStrings.has(itemDateString);
+                        })
                         .map((item: any) => ({
                             ...item,
                             date: item.date instanceof Date 
@@ -337,9 +349,9 @@ export default function UserDomainProfile() {
                     const dateSchedules = service.dateAvailability;
                     dateAvailability = [];
                     
-                    // Only include dates that are enabled in the schedules
+                    // Only include dates that are enabled AND still in selectedDates (not removed)
                     Object.entries(dateSchedules).forEach(([dateKey, schedule]: [string, any]) => {
-                        if (schedule && schedule.enabled) {
+                        if (schedule && schedule.enabled && selectedDateStrings.has(dateKey)) {
                             dateAvailability.push({
                                 date: dateKey, // dateKey is already in YYYY-MM-DD format
                                 enabled: schedule.enabled,
@@ -697,18 +709,52 @@ export default function UserDomainProfile() {
     };
 
     const handleRemoveDate = (prestationId: string, dateToRemove: Date) => {
+        const dateKeyToRemove = `${dateToRemove.getFullYear()}-${(dateToRemove.getMonth() + 1).toString().padStart(2, '0')}-${dateToRemove.getDate().toString().padStart(2, '0')}`;
+        
         setServices(prevServices =>
-            prevServices.map(service =>
-                service._id === prestationId
-                    ? {
-                        ...service,
-                        selectedDates: service.selectedDates?.filter(
-                            date => date.getTime() !== dateToRemove.getTime()
-                        ) || [],
-                        hasChanges: true // Mark as having changes so save button becomes active
+            prevServices.map(service => {
+                if (service._id === prestationId) {
+                    // Remove from selectedDates
+                    const newSelectedDates = service.selectedDates?.filter(
+                        date => date.getTime() !== dateToRemove.getTime()
+                    ) || [];
+
+                    // Also clean up the schedule data for the removed date
+                    let newDateAvailability = service.dateAvailability;
+                    if (newDateAvailability && typeof newDateAvailability === 'object' && !Array.isArray(newDateAvailability)) {
+                        // Remove the schedule entry for this date and convert to array format
+                        const schedulesCopy = { ...(newDateAvailability as Record<string, any>) };
+                        delete schedulesCopy[dateKeyToRemove];
+                        // Convert object to array format
+                        newDateAvailability = Object.entries(schedulesCopy).map(([date, config]) => ({
+                            date: new Date(date),
+                            enabled: Boolean(config.enabled),
+                            morningEnabled: Boolean(config.morningEnabled),
+                            morningFrom: String(config.morningFrom || ''),
+                            morningTo: String(config.morningTo || ''),
+                            afternoonEnabled: Boolean(config.afternoonEnabled),
+                            afternoonFrom: String(config.afternoonFrom || ''),
+                            afternoonTo: String(config.afternoonTo || '')
+                        }));
+                    } else if (Array.isArray(newDateAvailability)) {
+                        // Filter out the schedule entry for this date
+                        newDateAvailability = newDateAvailability.filter((item: any) => {
+                            const itemDateString = item.date instanceof Date 
+                                ? `${item.date.getFullYear()}-${(item.date.getMonth() + 1).toString().padStart(2, '0')}-${item.date.getDate().toString().padStart(2, '0')}`
+                                : item.date;
+                            return itemDateString !== dateKeyToRemove;
+                        });
                     }
-                    : service
-            )
+
+                    return {
+                        ...service,
+                        selectedDates: newSelectedDates,
+                        dateAvailability: newDateAvailability,
+                        hasChanges: true // Mark as having changes so save button becomes active
+                    };
+                }
+                return service;
+            })
         );
         toast.success('Date retirée (cliquez sur "Enregistrer" pour confirmer)');
     };
@@ -1194,8 +1240,20 @@ export default function UserDomainProfile() {
                                                                                 return [];
                                                                             })()}
                                                                             onChange={(schedules) => {
+                                                                                // Convert object format to array format for backend compatibility
+                                                                                const scheduleArray = Object.entries(schedules).map(([dateKey, config]) => ({
+                                                                                    date: dateKey,
+                                                                                    enabled: config.enabled,
+                                                                                    morningEnabled: config.morningEnabled,
+                                                                                    morningFrom: config.morningFrom,
+                                                                                    morningTo: config.morningTo,
+                                                                                    afternoonEnabled: config.afternoonEnabled,
+                                                                                    afternoonFrom: config.afternoonFrom,
+                                                                                    afternoonTo: config.afternoonTo
+                                                                                }));
+                                                                                
                                                                                 // Update service with new schedule data
-                                                                                updateServiceBookingSettings(prestation.id, 'dateAvailability', schedules);
+                                                                                updateServiceBookingSettings(prestation.id, 'dateAvailability', scheduleArray);
                                                                                 // Only update hasCustomAvailability if there are actual enabled schedules
                                                                                 const hasEnabledSchedules = Object.values(schedules).some((schedule: any) => 
                                                                                     schedule.enabled && (schedule.morningEnabled || schedule.afternoonEnabled)
