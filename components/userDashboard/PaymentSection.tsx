@@ -24,7 +24,40 @@ export const PaymentSection = () => {
 
   // Load payment methods on component mount
   useEffect(() => {
-    loadPaymentMethods();
+    let isMounted = true;
+    
+    const loadData = async () => {
+      setIsLoading(true);
+      try {
+        const response = await paymentMethodsService.getPaymentMethods();
+        
+        if (isMounted) {
+          if (response.data && response.data.methods) {
+            setSelectedMethods(response.data.methods);
+            setHasChanges(false);
+          } else {
+            console.log('ℹ️ No payment methods found, using empty array');
+            setSelectedMethods([]);
+            setHasChanges(false);
+          }
+        }
+      } catch (error) {
+        if (isMounted) {
+          console.error('❌ Failed to load payment methods:', error);
+          toast.error('Erreur lors du chargement des moyens de paiement');
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+    
+    loadData();
+    
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const loadPaymentMethods = async () => {

@@ -71,8 +71,8 @@ export const AvailabilitySection = () => {
     // Deep compare schedules
     const schedulesChanged = JSON.stringify(schedules) !== JSON.stringify(originalData.schedules);
     
-    // Compare holidays
-    const holidaysChanged = JSON.stringify(selectedHolidays.sort()) !== JSON.stringify(originalData.holidays.sort());
+    // Compare holidays - create copies before sorting to avoid mutation
+    const holidaysChanged = JSON.stringify([...selectedHolidays].sort()) !== JSON.stringify([...originalData.holidays].sort());
     
     const hasDataChanges = schedulesChanged || holidaysChanged;
 
@@ -121,13 +121,23 @@ export const AvailabilitySection = () => {
 
         setSchedules(convertedSchedules);
         
-        // Convert public holidays to selected holidays
+        // Convert public holidays to selected holidays with validation
         const holidayIds = apiData.publicHolidays
-          .filter(holiday => holiday.isBlocked !== false)
+          .filter(holiday => holiday.isBlocked !== false && holiday.date)
           .map(holiday => {
-            // Map holiday dates to IDs
-            const foundHoliday = holidays.find(h => h.date === holiday.date.split('T')[0]);
-            return foundHoliday?.id;
+            try {
+              // Safely extract date string
+              const dateStr = typeof holiday.date === 'string' 
+                ? holiday.date.split('T')[0] 
+                : new Date(holiday.date).toISOString().split('T')[0];
+              
+              // Map holiday dates to IDs
+              const foundHoliday = holidays.find(h => h.date === dateStr);
+              return foundHoliday?.id;
+            } catch (error) {
+              console.warn('Invalid holiday date format:', holiday);
+              return null;
+            }
           })
           .filter(Boolean) as string[];
           

@@ -36,19 +36,32 @@ export const NotificationSection = () => {
       const response = await notificationPreferencesService.getNotificationPreferences();
       
       if (response.data) {
+        // Validate and set preferences with fallbacks
         setPreferences({
-          customerNotificationBefore: response.data.customerNotificationBefore,
-          providerNotificationBefore: response.data.providerNotificationBefore,
-          bookingAdvanceLimit: response.data.bookingAdvanceLimit,
+          customerNotificationBefore: response.data.customerNotificationBefore || NOTIFICATION_OPTIONS.DAY_BEFORE,
+          providerNotificationBefore: response.data.providerNotificationBefore || NOTIFICATION_OPTIONS.TWO_HOURS,
+          bookingAdvanceLimit: response.data.bookingAdvanceLimit || NOTIFICATION_OPTIONS.LAST_MINUTE,
         });
         setHasChanges(false);
       } else {
         console.log('ℹ️ No notification preferences found, using defaults');
+        // Set defaults explicitly
+        setPreferences({
+          customerNotificationBefore: NOTIFICATION_OPTIONS.DAY_BEFORE,
+          providerNotificationBefore: NOTIFICATION_OPTIONS.TWO_HOURS,
+          bookingAdvanceLimit: NOTIFICATION_OPTIONS.LAST_MINUTE,
+        });
         setHasChanges(false);
       }
     } catch (error) {
       console.error('❌ Failed to load notification preferences:', error);
       toast.error('Erreur lors du chargement des préférences');
+      // Set defaults on error to prevent undefined state
+      setPreferences({
+        customerNotificationBefore: NOTIFICATION_OPTIONS.DAY_BEFORE,
+        providerNotificationBefore: NOTIFICATION_OPTIONS.TWO_HOURS,
+        bookingAdvanceLimit: NOTIFICATION_OPTIONS.LAST_MINUTE,
+      });
     } finally {
       setIsLoading(false);
     }

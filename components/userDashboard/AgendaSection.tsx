@@ -32,60 +32,67 @@ export const AgendaSection = () => {
 
   // Check connection status on component mount
   useEffect(() => {
+    // SSR safety check
+    if (typeof window === 'undefined') return;
+    
     checkConnectedProvider();
     checkOrangeConnectionStatus();
     checkMicrosoftConnectionStatus();
     checkGoogleConnectionStatus();
     
-    // Check for Microsoft OAuth callback success or error
-    const urlParams = new URLSearchParams(window.location.search);
-    const microsoftConnected = urlParams.get('microsoft_connected');
-    const microsoftError = urlParams.get('microsoft_error');
-    const googleConnected = urlParams.get('google_connected');
-    const googleError = urlParams.get('google_error');
-    
-    if (microsoftConnected === 'true') {
-      // Remove the parameter from URL
-      const newUrl = new URL(window.location.href);
-      newUrl.searchParams.delete('microsoft_connected');
-      window.history.replaceState({}, '', newUrl.toString());
+    try {
+      // Check for Microsoft OAuth callback success or error
+      const urlParams = new URLSearchParams(window.location.search);
+      const microsoftConnected = urlParams.get('microsoft_connected');
+      const microsoftError = urlParams.get('microsoft_error');
+      const googleConnected = urlParams.get('google_connected');
+      const googleError = urlParams.get('google_error');
       
-      // Show success message and refresh status
-      toast.success('🎉 Microsoft Calendar connecté avec succès!');
-      setTimeout(() => {
-        checkConnectedProvider();
-        checkMicrosoftConnectionStatus();
-      }, 1000);
-    } else if (microsoftError) {
-      // Remove the parameter from URL
-      const newUrl = new URL(window.location.href);
-      newUrl.searchParams.delete('microsoft_error');
-      window.history.replaceState({}, '', newUrl.toString());
-      
-      // Show error message
-      toast.error(`❌ Erreur Microsoft: ${decodeURIComponent(microsoftError)}`);
-    }
+      if (microsoftConnected === 'true') {
+        // Remove the parameter from URL
+        const newUrl = new URL(window.location.href);
+        newUrl.searchParams.delete('microsoft_connected');
+        window.history.replaceState({}, '', newUrl.toString());
+        
+        // Show success message and refresh status
+        toast.success('🎉 Microsoft Calendar connecté avec succès!');
+        setTimeout(() => {
+          checkConnectedProvider();
+          checkMicrosoftConnectionStatus();
+        }, 1000);
+      } else if (microsoftError) {
+        // Remove the parameter from URL
+        const newUrl = new URL(window.location.href);
+        newUrl.searchParams.delete('microsoft_error');
+        window.history.replaceState({}, '', newUrl.toString());
+        
+        // Show error message
+        toast.error(`❌ Erreur Microsoft: ${decodeURIComponent(microsoftError)}`);
+      }
 
-    if (googleConnected === 'true') {
-      // Remove the parameter from URL
-      const newUrl = new URL(window.location.href);
-      newUrl.searchParams.delete('google_connected');
-      window.history.replaceState({}, '', newUrl.toString());
-      
-      // Show success message and refresh status
-      toast.success('🎉 Google Calendar connecté avec succès!');
-      setTimeout(() => {
-        checkConnectedProvider();
-        checkGoogleConnectionStatus();
-      }, 1000);
-    } else if (googleError) {
-      // Remove the parameter from URL
-      const newUrl = new URL(window.location.href);
-      newUrl.searchParams.delete('google_error');
-      window.history.replaceState({}, '', newUrl.toString());
-      
-      // Show error message
-      toast.error(`❌ Erreur Google: ${decodeURIComponent(googleError)}`);
+      if (googleConnected === 'true') {
+        // Remove the parameter from URL
+        const newUrl = new URL(window.location.href);
+        newUrl.searchParams.delete('google_connected');
+        window.history.replaceState({}, '', newUrl.toString());
+        
+        // Show success message and refresh status
+        toast.success('🎉 Google Calendar connecté avec succès!');
+        setTimeout(() => {
+          checkConnectedProvider();
+          checkGoogleConnectionStatus();
+        }, 1000);
+      } else if (googleError) {
+        // Remove the parameter from URL
+        const newUrl = new URL(window.location.href);
+        newUrl.searchParams.delete('google_error');
+        window.history.replaceState({}, '', newUrl.toString());
+        
+        // Show error message
+        toast.error(`❌ Erreur Google: ${decodeURIComponent(googleError)}`);
+      }
+    } catch (error) {
+      console.error('Error parsing URL parameters:', error);
     }
   }, []);
 
@@ -310,8 +317,9 @@ export const AgendaSection = () => {
         console.log('✅ OAuth URL generated, redirecting to Microsoft...');
         toast.success('🔗 Redirection vers Microsoft...');
         
-        // Redirect to Microsoft OAuth
+        // Redirect to Microsoft OAuth - don't set state after this as we're navigating away
         window.location.href = oauthResult.data.authUrl;
+        return; // Exit early to avoid finally block
       } else {
         throw new Error('Failed to generate OAuth URL');
       }
@@ -327,7 +335,8 @@ export const AgendaSection = () => {
       } else {
         toast.error('Erreur lors de la connexion à Microsoft');
       }
-    } finally {
+      
+      // Only reset state if we didn't navigate away
       setIsMicrosoftConnecting(false);
     }
   };
@@ -370,8 +379,9 @@ export const AgendaSection = () => {
         console.log('✅ OAuth URL generated, redirecting to Google...');
         toast.success('🔗 Redirection vers Google...');
         
-        // Redirect to Google OAuth
+        // Redirect to Google OAuth - don't set state after this as we're navigating away
         window.location.href = oauthResult.data.authUrl;
+        return; // Exit early to avoid finally block
       } else {
         throw new Error('Failed to generate OAuth URL');
       }
@@ -387,7 +397,8 @@ export const AgendaSection = () => {
       } else {
         toast.error('Erreur lors de la connexion à Google');
       }
-    } finally {
+      
+      // Only reset state if we didn't navigate away
       setIsGoogleConnecting(false);
     }
   };
