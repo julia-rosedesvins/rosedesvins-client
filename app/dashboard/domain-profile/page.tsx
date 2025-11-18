@@ -446,8 +446,14 @@ export default function UserDomainProfile() {
     });
 
     const handleEditPrestation = (prestation: any) => {
-        const serviceIndex = prestation.id - 1;
-        const service = services[serviceIndex];
+        // Find the service by _id instead of using index
+        const service = services.find(s => s._id === prestation.id);
+        
+        if (!service) {
+            console.error('Service not found for id:', prestation.id);
+            toast.error('Service introuvable');
+            return;
+        }
 
         // Map languages from service data to UI format
         const languagesState = {
@@ -486,7 +492,7 @@ export default function UserDomainProfile() {
         // Create enhanced prestation object with all needed data
         const enhancedPrestation = {
             ...prestation,
-            originalIndex: serviceIndex,
+            serviceId: service._id, // Use _id instead of index
             numberOfPeople: service.numberOfPeople,
             winesTasted: service.numberOfWinesTasted.toString(),
             languages: languagesState,
@@ -528,26 +534,34 @@ export default function UserDomainProfile() {
 
     const handleSavePrestation = async (updatedService: any, serviceBanner?: File | null) => {
         try {
-            if (updatedService.originalIndex !== undefined) {
-                const updateData = {
-                    serviceName: updatedService.serviceName || '',
-                    serviceDescription: updatedService.serviceDescription || '',
-                    numberOfPeople: updatedService.numberOfPeople || '1',
-                    pricePerPerson: updatedService.pricePerPerson || 0,
-                    timeOfServiceInMinutes: updatedService.timeOfServiceInMinutes || 60,
-                    numberOfWinesTasted: updatedService.numberOfWinesTasted || 0,
-                    languagesOffered: updatedService.languagesOffered || ['French'],
-                    isActive: updatedService.isActive !== undefined ? updatedService.isActive : true
-                };
-
-                await userService.updateService(updatedService.originalIndex, updateData, serviceBanner || undefined);
-
-                // Reload services to get updated list
-                const servicesResponse = await userService.getServices();
-                setServices(servicesResponse.data || []);
-
-                toast.success('Service mis à jour avec succès !');
+            // Find the service by ID to get the correct index
+            const serviceIndex = services.findIndex(s => s._id === updatedService.serviceId);
+            
+            if (serviceIndex === -1) {
+                console.error('Service not found for id:', updatedService.serviceId);
+                toast.error('Service introuvable');
+                return;
             }
+            
+            const updateData = {
+                serviceName: updatedService.serviceName || '',
+                serviceDescription: updatedService.serviceDescription || '',
+                numberOfPeople: updatedService.numberOfPeople || '1',
+                pricePerPerson: updatedService.pricePerPerson || 0,
+                timeOfServiceInMinutes: updatedService.timeOfServiceInMinutes || 60,
+                numberOfWinesTasted: updatedService.numberOfWinesTasted || 0,
+                languagesOffered: updatedService.languagesOffered || ['French'],
+                isActive: updatedService.isActive !== undefined ? updatedService.isActive : true
+            };
+
+            await userService.updateService(serviceIndex, updateData, serviceBanner || undefined);
+
+            // Reload services to get updated list
+            const servicesResponse = await userService.getServices();
+            setServices(servicesResponse.data || []);
+
+            setIsEditServiceModalOpen(false);
+            toast.success('Service mis à jour avec succès !');
         } catch (error: any) {
             console.error('Error updating service:', error);
             toast.error(error.message || 'Échec de la mise à jour du service');

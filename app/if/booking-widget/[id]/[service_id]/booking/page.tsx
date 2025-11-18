@@ -324,51 +324,85 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
     return slotTime <= bufferTime;
   };
 
-  // Check if a time slot is blocked by special date overrides
-  const isTimeSlotBlockedByOverride = (date: Date, time: string): boolean => {
+  // Check if we have active special date overrides (exclusive mode)
+  const hasActiveSpecialOverrides = (): boolean => {
     if (!widgetData?.availability?.specialDateOverrides?.length) return false;
+    
+    // Check if at least one override is enabled
+    return widgetData.availability.specialDateOverrides.some(override => override.enabled);
+  };
+
+  // Get time slots from special date overrides for a specific date
+  const getOverrideTimeSlotsForDate = (date: Date): { morning: string[], afternoon: string[] } => {
+    if (!widgetData?.availability?.specialDateOverrides?.length) {
+      return { morning: [], afternoon: [] };
+    }
     
     const dateString = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
     
     // Find override for this date
     const override = widgetData.availability.specialDateOverrides.find(override => {
+      if (!override.enabled) return false;
+      
       const overrideDate = new Date(override.date);
       const overrideDateString = `${overrideDate.getFullYear()}-${(overrideDate.getMonth() + 1).toString().padStart(2, '0')}-${overrideDate.getDate().toString().padStart(2, '0')}`;
       return overrideDateString === dateString;
     });
     
-    if (!override || !override.enabled) return false;
+    if (!override) return { morning: [], afternoon: [] };
     
-    // Parse time slot
-    const [hours, minutes] = time.split(':').map(Number);
-    const slotMinutes = hours * 60 + minutes;
+    const morningSlots: string[] = [];
+    const afternoonSlots: string[] = [];
+    const slotDuration = widgetData.availability?.defaultSlotDuration || 30;
+    const serviceDuration = widgetData.service?.timeOfServiceInMinutes || 60;
     
-    // Check morning override
+    // Generate morning slots if morning is enabled
     if (override.morningEnabled && override.morningFrom && override.morningTo) {
       const [morningFromHours, morningFromMins] = override.morningFrom.split(':').map(Number);
       const [morningToHours, morningToMins] = override.morningTo.split(':').map(Number);
       const morningFromMinutes = morningFromHours * 60 + morningFromMins;
       const morningToMinutes = morningToHours * 60 + morningToMins;
       
-      // If slot falls within morning override period, it's blocked
-      if (slotMinutes >= morningFromMinutes && slotMinutes < morningToMinutes) {
-        return true;
+      // Generate slots ensuring service duration fits
+      for (let currentMinutes = morningFromMinutes; currentMinutes + serviceDuration <= morningToMinutes; currentMinutes += slotDuration) {
+        const hours = Math.floor(currentMinutes / 60);
+        const minutes = currentMinutes % 60;
+        const timeSlot = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+        
+        // Skip if time slot has passed or is already booked
+        if (!isTimeSlotPast(date, timeSlot) && !isTimeSlotBooked(date, timeSlot)) {
+          morningSlots.push(timeSlot);
+        }
       }
     }
     
-    // Check afternoon override
+    // Generate afternoon slots if afternoon is enabled
     if (override.afternoonEnabled && override.afternoonFrom && override.afternoonTo) {
       const [afternoonFromHours, afternoonFromMins] = override.afternoonFrom.split(':').map(Number);
       const [afternoonToHours, afternoonToMins] = override.afternoonTo.split(':').map(Number);
       const afternoonFromMinutes = afternoonFromHours * 60 + afternoonFromMins;
       const afternoonToMinutes = afternoonToHours * 60 + afternoonToMins;
       
-      // If slot falls within afternoon override period, it's blocked
-      if (slotMinutes >= afternoonFromMinutes && slotMinutes < afternoonToMinutes) {
-        return true;
+      // Generate slots ensuring service duration fits
+      for (let currentMinutes = afternoonFromMinutes; currentMinutes + serviceDuration <= afternoonToMinutes; currentMinutes += slotDuration) {
+        const hours = Math.floor(currentMinutes / 60);
+        const minutes = currentMinutes % 60;
+        const timeSlot = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+        
+        // Skip if time slot has passed or is already booked
+        if (!isTimeSlotPast(date, timeSlot) && !isTimeSlotBooked(date, timeSlot)) {
+          afternoonSlots.push(timeSlot);
+        }
       }
     }
     
+    return { morning: morningSlots, afternoon: afternoonSlots };
+  };
+
+  // Check if a time slot is blocked by special date overrides
+  // OLD LOGIC: This is no longer used - kept for reference but can be removed
+  const isTimeSlotBlockedByOverride = (date: Date, time: string): boolean => {
+    // This function is deprecated - we now use exclusive override mode
     return false;
   };
 
@@ -433,7 +467,18 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
 
   // Get available time slots for the selected date
   const getAvailableTimeSlots = (date: Date | null) => {
-    if (!date || !widgetData?.availability?.weeklyAvailability) {
+    if (!date) {
+      return { morning: [], afternoon: [] };
+    }
+
+    // NEW LOGIC: If special date overrides exist, use exclusive mode
+    if (hasActiveSpecialOverrides()) {
+      // Only show time slots from override dates
+      return getOverrideTimeSlotsForDate(date);
+    }
+
+    // FALLBACK: Use regular weekly availability if no overrides
+    if (!widgetData?.availability?.weeklyAvailability) {
       return { morning: [], afternoon: [] };
     }
 
@@ -470,8 +515,8 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
           const minutes = currentMinutes % 60;
           const timeSlot = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
           
-          // Skip if time slot has passed (for today), is already booked, or blocked by special override
-          if (!isTimeSlotPast(date, timeSlot) && !isTimeSlotBooked(date, timeSlot) && !isTimeSlotBlockedByOverride(date, timeSlot)) {
+          // Skip if time slot has passed or is already booked
+          if (!isTimeSlotPast(date, timeSlot) && !isTimeSlotBooked(date, timeSlot)) {
             if (hours < 12) {
               morningSlots.push(timeSlot);
             } else {
@@ -495,6 +540,13 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
 
   // Check if a date has any available time slots (excluding booked ones)
   const isDateAvailable = (date: Date) => {
+    // NEW LOGIC: If special date overrides exist, check if this date has overrides
+    if (hasActiveSpecialOverrides()) {
+      const overrideSlots = getOverrideTimeSlotsForDate(date);
+      return overrideSlots.morning.length > 0 || overrideSlots.afternoon.length > 0;
+    }
+
+    // FALLBACK: Use regular weekly availability
     if (!widgetData?.availability?.weeklyAvailability) return false;
     
     const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
