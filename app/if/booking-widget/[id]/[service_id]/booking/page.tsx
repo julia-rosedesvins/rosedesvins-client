@@ -89,6 +89,47 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
       errors.push("Veuillez sélectionner une langue");
     }
 
+    // ✅ NEW: Check capacity for multiple bookings
+    if (selectedDate && selectedTime && widgetData?.availability?.multipleBookingsSameSlot) {
+      const dateString = `${selectedDate.getFullYear()}-${(selectedDate.getMonth() + 1).toString().padStart(2, '0')}-${selectedDate.getDate().toString().padStart(2, '0')}`;
+      const serviceDuration = widgetData?.service?.timeOfServiceInMinutes || 60;
+      
+      // Parse the selected time slot
+      const [slotHours, slotMinutes] = selectedTime.split(':').map(Number);
+      const slotStartMinutes = slotHours * 60 + slotMinutes;
+      const slotEndMinutes = slotStartMinutes + serviceDuration;
+      
+      // Find overlapping bookings
+      const overlappingBookings = bookedSlots.filter(slot => {
+        const slotDate = new Date(slot.eventDate);
+        const slotDateString = `${slotDate.getFullYear()}-${(slotDate.getMonth() + 1).toString().padStart(2, '0')}-${slotDate.getDate().toString().padStart(2, '0')}`;
+        
+        if (slotDateString !== dateString) return false;
+        
+        const [eventHours, eventMinutes] = slot.eventTime.split(':').map(Number);
+        const eventStartMinutes = eventHours * 60 + eventMinutes;
+        
+        let eventEndMinutes = eventStartMinutes + serviceDuration;
+        if (slot.eventEndTime) {
+          const [endHours, endMinutes] = slot.eventEndTime.split(':').map(Number);
+          eventEndMinutes = endHours * 60 + endMinutes;
+        }
+        
+        return slotStartMinutes < eventEndMinutes && slotEndMinutes > eventStartMinutes;
+      });
+      
+      // Calculate total existing participants
+      const totalExistingParticipants = overlappingBookings.reduce((sum, booking) => {
+        return sum + (booking.totalParticipants || 0);
+      }, 0);
+      
+      const totalWithNewBooking = totalExistingParticipants + totalParticipants;
+      
+      if (totalWithNewBooking > maxParticipants) {
+        errors.push(`Ce créneau horaire a atteint sa capacité maximale. Participants actuels: ${totalExistingParticipants}/${maxParticipants}. Veuillez choisir un autre horaire.`);
+      }
+    }
+
     // ✅ NEW: Booking advance limit validation
     if (selectedDate && selectedTime) {
       // Check if service has specific booking restriction time, otherwise use general preference
@@ -283,6 +324,20 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
     setAfternoonStartIndex(0);
   }, [selectedDate]);
 
+  // Clear selected time if it becomes unavailable due to participant count change
+  useEffect(() => {
+    if (selectedTime && selectedDate) {
+      const availableSlots = getAvailableTimeSlots(selectedDate);
+      const allAvailableTimes = [...availableSlots.morning, ...availableSlots.afternoon];
+      
+      // If the currently selected time is no longer available, clear it
+      if (!allAvailableTimes.includes(selectedTime)) {
+        setSelectedTime(null);
+        console.log('Selected time cleared due to capacity limit');
+      }
+    }
+  }, [adults, children, selectedDate, selectedTime]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
@@ -418,6 +473,15 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
     const maxParticipants = getMaxParticipants();
     const multipleBookingsAllowed = widgetData?.availability?.multipleBookingsSameSlot ?? false;
     
+    console.log('⚙️ Slot booking check config:', {
+      date: dateString,
+      time,
+      multipleBookingsAllowed,
+      maxParticipants,
+      currentParticipants: `${adults} adults + ${children} children = ${adults + children}`,
+      bookedSlotsCount: bookedSlots.length
+    });
+    
     // Parse the time slot start time
     const [slotHours, slotMinutes] = time.split(':').map(Number);
     const slotStartMinutes = slotHours * 60 + slotMinutes;
@@ -460,9 +524,31 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
     // If multiple bookings not allowed, slot is blocked if any booking exists
     if (!multipleBookingsAllowed) return true;
     
-    // If multiple bookings are allowed, always allow the booking
-    // Just let the user select any available slot without participant limit checking
-    return false;
+    // If multiple bookings are allowed, check participant capacity
+    // Calculate total existing participants in overlapping bookings
+    const totalExistingParticipants = overlappingBookings.reduce((sum, booking) => {
+      return sum + (booking.totalParticipants || 0);
+    }, 0);
+    
+    // Check if the slot is completely full (no capacity left at all)
+    const remainingCapacity = maxParticipants - totalExistingParticipants;
+    const slotCompletelyFull = remainingCapacity <= 0;
+    
+    console.log('🔍 Capacity check for slot:', {
+      date: dateString,
+      time,
+      multipleBookingsAllowed,
+      overlappingBookingsCount: overlappingBookings.length,
+      totalExistingParticipants,
+      maxParticipants,
+      remainingCapacity,
+      slotCompletelyFull,
+      message: slotCompletelyFull ? '❌ SLOT FULL - BLOCKED' : `✅ SLOT AVAILABLE (${remainingCapacity} spots left)`
+    });
+    
+    // Only block the slot if it's completely full (no capacity left at all)
+    // The validation will handle checking if the user's selected participant count fits
+    return slotCompletelyFull;
   };
 
   // Get available time slots for the selected date
@@ -525,6 +611,14 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
           }
         }
       }
+    });
+
+    console.log('📅 Available slots generated:', {
+      date: selectedDate ? `${selectedDate.getFullYear()}-${(selectedDate.getMonth() + 1).toString().padStart(2, '0')}-${selectedDate.getDate().toString().padStart(2, '0')}` : null,
+      morningSlots: morningSlots.length,
+      afternoonSlots: afternoonSlots.length,
+      morning: morningSlots,
+      afternoon: afternoonSlots
     });
 
     return { morning: morningSlots, afternoon: afternoonSlots };

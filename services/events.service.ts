@@ -68,6 +68,7 @@ export interface PublicScheduleData {
   eventDate: string;
   eventTime: string;
   eventEndTime?: string; // Optional end time for blocking time ranges
+  totalParticipants?: number; // Total participants for booking events
 }
 
 export interface GetPublicScheduleResponse {
