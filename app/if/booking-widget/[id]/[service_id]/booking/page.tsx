@@ -360,23 +360,81 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
     );
   }
 
-  // Check if a time slot has passed for today
+  // Check if a time slot has passed or violates advance booking restrictions
   const isTimeSlotPast = (date: Date, time: string): boolean => {
-    const now = new Date();
-    const isToday = date.getDate() === now.getDate() && 
-                   date.getMonth() === now.getMonth() && 
-                   date.getFullYear() === now.getFullYear();
-    
-    if (!isToday) return false; // Only check for today
-    
-    const [hours, minutes] = time.split(':').map(Number);
-    const slotTime = new Date(now);
-    slotTime.setHours(hours, minutes, 0, 0);
-    
-    // Add a small buffer (5 minutes) to prevent booking slots that are about to start
-    const bufferTime = new Date(now.getTime() + 5 * 60 * 1000);
-    
-    return slotTime <= bufferTime;
+    try {
+      // Create date-time for the slot
+      const [hours, minutes] = time.split(':').map(Number);
+      const slotDateTime = new Date(date);
+      slotDateTime.setHours(hours, minutes, 0, 0);
+      
+      const now = new Date();
+      
+      // Add a small buffer (5 minutes) to prevent booking slots that are about to start
+      const bufferTime = new Date(now.getTime() + 5 * 60 * 1000);
+      
+      // Check if slot is in the past (with buffer)
+      if (slotDateTime <= bufferTime) {
+        return true;
+      }
+      
+      // Check advance booking restrictions (24h or 48h)
+      const serviceBookingRestriction = widgetData?.availability?.bookingRestrictionTime;
+      const generalBookingAdvanceLimit = widgetData?.notificationPreferences?.bookingAdvanceLimit;
+      
+      let bookingAdvanceLimit = generalBookingAdvanceLimit;
+      
+      // Override with service-specific restriction if available
+      if (serviceBookingRestriction) {
+        if (serviceBookingRestriction === '24h') {
+          bookingAdvanceLimit = '24_hours';
+        } else if (serviceBookingRestriction === '48h') {
+          bookingAdvanceLimit = '48_hours';
+        }
+      }
+      
+      // If no advance limit or set to never, don't filter by advance time
+      if (!bookingAdvanceLimit || bookingAdvanceLimit === 'never') {
+        return false;
+      }
+      
+      // Calculate minimum advance time in hours
+      let minimumAdvanceHours = 0;
+      
+      switch (bookingAdvanceLimit) {
+        case '1_hour':
+          minimumAdvanceHours = 1;
+          break;
+        case '2_hours':
+          minimumAdvanceHours = 2;
+          break;
+        case '24_hours':
+          minimumAdvanceHours = 24;
+          break;
+        case '48_hours':
+          minimumAdvanceHours = 48;
+          break;
+        case 'day_before':
+          minimumAdvanceHours = 24;
+          break;
+        case 'last_minute':
+          minimumAdvanceHours = 0.0833; // 5 minutes
+          break;
+        default:
+          minimumAdvanceHours = 0;
+      }
+      
+      // Check if slot meets minimum advance requirement
+      const timeDifferenceMs = slotDateTime.getTime() - now.getTime();
+      const timeDifferenceHours = timeDifferenceMs / (1000 * 60 * 60);
+      
+      // Slot is "past" (unavailable) if it doesn't meet the advance requirement
+      return timeDifferenceHours < minimumAdvanceHours;
+      
+    } catch (error) {
+      console.error('Error checking if time slot is past:', error);
+      return false; // Don't filter out on error
+    }
   };
 
   // Check if we have active special date overrides (exclusive mode)
