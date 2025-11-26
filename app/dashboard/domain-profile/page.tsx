@@ -14,12 +14,37 @@ import { Switch } from "@/components/ui/switch";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { userService, DomainProfile, DomainService } from "@/services/user.service";
 import toast from "react-hot-toast";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+
+// Safe date parsing helper - prevents crashes from invalid dates
+const safeParseDate = (dateValue: any): Date | null => {
+    try {
+        if (!dateValue) return null;
+        const date = new Date(dateValue);
+        return isNaN(date.getTime()) ? null : date;
+    } catch (error) {
+        console.warn('Failed to parse date:', dateValue, error);
+        return null;
+    }
+};
+
+// Safe date string formatter - prevents crashes from invalid dates
+const formatDateKey = (date: Date | null): string | null => {
+    try {
+        if (!date || !(date instanceof Date) || isNaN(date.getTime())) {
+            return null;
+        }
+        return `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
+    } catch (error) {
+        console.warn('Failed to format date:', date, error);
+        return null;
+    }
+};
 
 // Extended interface for enhanced booking features
 interface EnhancedDomainService extends DomainService {
@@ -119,44 +144,62 @@ export default function UserDomainProfile() {
             // Load services separately and initialize original settings
             const servicesResponse = await userService.getServices();
             const servicesWithOriginalSettings = (servicesResponse.data || []).map((service: DomainService) => {
-                // Determine if API already has custom availability
-                const availability = service.dateAvailability as any;
-                console.log(`Service "${service.serviceName}" API availability:`, JSON.stringify(availability, null, 2));
-                const hasAvailability = Array.isArray(availability)
-                    ? availability.length > 0
-                    : availability && typeof availability === 'object'
-                        ? Object.keys(availability).length > 0
-                        : false;
+                try {
+                    // Determine if API already has custom availability
+                    const availability = service.dateAvailability as any;
+                    console.log(`Service "${service.serviceName}" API availability:`, JSON.stringify(availability, null, 2));
+                    const hasAvailability = Array.isArray(availability)
+                        ? availability.length > 0
+                        : availability && typeof availability === 'object'
+                            ? Object.keys(availability).length > 0
+                            : false;
 
-                // Auto-select dates from API availability
-                let selectedDates: Date[] = [];
-                if (Array.isArray(availability)) {
-                    selectedDates = availability
-                        .filter((a: any) => a?.date && !isNaN(new Date(a.date).getTime()))
-                        .map((a: any) => new Date(a.date));
-                } else if (availability && typeof availability === 'object') {
-                    selectedDates = Object.keys(availability)
-                        .filter((d) => d && !isNaN(new Date(d).getTime()))
-                        .map((d) => new Date(d));
-                }
-
-                const computedHasCustom = service.hasCustomAvailability ?? hasAvailability;
-
-                return {
-                    ...service,
-                    // Ensure UI has dates preselected so Calendar and Schedule render
-                    selectedDates,
-                    // Ensure the toggle reflects API data
-                    hasCustomAvailability: computedHasCustom,
-                    hasChanges: false,
-                    originalBookingSettings: {
-                        bookingRestrictionActive: service.bookingRestrictionActive ?? false,
-                        bookingRestrictionTime: service.bookingRestrictionTime ?? "24h",
-                        multipleBookings: service.multipleBookings ?? false,
-                        hasCustomAvailability: computedHasCustom,
-                        dateAvailability: service.dateAvailability ?? []
+                    // Auto-select dates from API availability with safe parsing
+                    let selectedDates: Date[] = [];
+                    if (Array.isArray(availability)) {
+                        selectedDates = availability
+                            .map((a: any) => safeParseDate(a?.date))
+                            .filter((date): date is Date => date !== null);
+                    } else if (availability && typeof availability === 'object') {
+                        selectedDates = Object.keys(availability)
+                            .map((d) => safeParseDate(d))
+                            .filter((date): date is Date => date !== null);
                     }
-                } as EnhancedDomainService;
+
+                    const computedHasCustom = service.hasCustomAvailability ?? hasAvailability;
+
+                    return {
+                        ...service,
+                        // Ensure UI has dates preselected so Calendar and Schedule render
+                        selectedDates,
+                        // Ensure the toggle reflects API data
+                        hasCustomAvailability: computedHasCustom,
+                        hasChanges: false,
+                        originalBookingSettings: {
+                            bookingRestrictionActive: service.bookingRestrictionActive ?? false,
+                            bookingRestrictionTime: service.bookingRestrictionTime ?? "24h",
+                            multipleBookings: service.multipleBookings ?? false,
+                            hasCustomAvailability: computedHasCustom,
+                            dateAvailability: service.dateAvailability ?? []
+                        }
+                    } as EnhancedDomainService;
+                } catch (serviceError) {
+                    console.error(`Error processing service "${service.serviceName}":`, serviceError);
+                    // Return service with safe defaults on error
+                    return {
+                        ...service,
+                        selectedDates: [],
+                        hasCustomAvailability: false,
+                        hasChanges: false,
+                        originalBookingSettings: {
+                            bookingRestrictionActive: false,
+                            bookingRestrictionTime: "24h",
+                            multipleBookings: false,
+                            hasCustomAvailability: false,
+                            dateAvailability: []
+                        }
+                    } as EnhancedDomainService;
+                }
             });
             setServices(servicesWithOriginalSettings as EnhancedDomainService[]);
 
@@ -185,6 +228,10 @@ export default function UserDomainProfile() {
                 reader.onload = (e) => {
                     setProfilePicturePreview(e.target?.result as string);
                 };
+                reader.onerror = () => {
+                    toast.error('Erreur lors de la lecture du fichier');
+                    setProfilePicturePreview(null);
+                };
                 reader.readAsDataURL(file);
                 toast.success(`Nouvelle photo sélectionnée: ${file.name}`);
             } else {
@@ -196,6 +243,10 @@ export default function UserDomainProfile() {
                 const reader = new FileReader();
                 reader.onload = (e) => {
                     setLogoPreview(e.target?.result as string);
+                };
+                reader.onerror = () => {
+                    toast.error('Erreur lors de la lecture du fichier');
+                    setLogoPreview(null);
                 };
                 reader.readAsDataURL(file);
                 toast.success(`Nouveau logo sélectionné: ${file.name}`);
@@ -408,31 +459,36 @@ export default function UserDomainProfile() {
         }
     };
 
-        const prestations = services.map((service, index) => {
-        // Extract dates from dateAvailability if selectedDates is not set
-        let selectedDates = service.selectedDates || [];
-        
-
-        
-        if ((!selectedDates || selectedDates.length === 0) && service.dateAvailability) {
-            if (Array.isArray(service.dateAvailability)) {
-                selectedDates = service.dateAvailability
-                    .filter((avail: any) => avail.date && !isNaN(new Date(avail.date).getTime()))
-                    .map((avail: any) => new Date(avail.date));
-            } else if (typeof service.dateAvailability === 'object') {
-                // Handle object format: convert keys to dates
-                selectedDates = Object.keys(service.dateAvailability)
-                    .filter(dateKey => dateKey && !isNaN(new Date(dateKey).getTime()))
-                    .map(dateKey => new Date(dateKey));
+    // Use useMemo to prevent unnecessary re-computation of prestations
+    const prestations = useMemo(() => {
+        return services.map((service, index) => {
+            // Extract dates from dateAvailability if selectedDates is not set
+            let selectedDates: Date[] = service.selectedDates || [];
+            
+            if ((!selectedDates || selectedDates.length === 0) && service.dateAvailability) {
+                try {
+                    if (Array.isArray(service.dateAvailability)) {
+                        selectedDates = service.dateAvailability
+                            .map((avail: any) => safeParseDate(avail?.date))
+                            .filter((date): date is Date => date !== null);
+                    } else if (service.dateAvailability && typeof service.dateAvailability === 'object') {
+                        // Handle object format: convert keys to dates
+                        selectedDates = Object.keys(service.dateAvailability)
+                            .map(dateKey => safeParseDate(dateKey))
+                            .filter((date): date is Date => date !== null);
+                    }
+                } catch (error) {
+                    console.error('Error processing date availability for service:', service._id, error);
+                    selectedDates = [];
+                }
             }
-        }
 
-        return {
-            id: service._id,
-            name: service.serviceName,
-            description: service.serviceDescription,
-            price: `${service.pricePerPerson}€`,
-            duration: `${Math.floor(service.timeOfServiceInMinutes / 60)}h${service.timeOfServiceInMinutes % 60 > 0 ? (service.timeOfServiceInMinutes % 60) + 'min' : ''}`,
+            return {
+                id: service._id,
+                name: service.serviceName,
+                description: service.serviceDescription,
+                price: `${service.pricePerPerson}€`,
+                duration: `${Math.floor(service.timeOfServiceInMinutes / 60)}h${service.timeOfServiceInMinutes % 60 > 0 ? (service.timeOfServiceInMinutes % 60) + 'min' : ''}`,
             active: service.isActive,
             serviceBannerUrl: service.serviceBannerUrl,
             // New properties for enhanced functionality
@@ -444,6 +500,7 @@ export default function UserDomainProfile() {
             selectedDates: selectedDates
         };
     });
+    }, [services]);
 
     const handleEditPrestation = (prestation: any) => {
         // Find the service by _id instead of using index
@@ -723,7 +780,11 @@ export default function UserDomainProfile() {
     };
 
     const handleRemoveDate = (prestationId: string, dateToRemove: Date) => {
-        const dateKeyToRemove = `${dateToRemove.getFullYear()}-${(dateToRemove.getMonth() + 1).toString().padStart(2, '0')}-${dateToRemove.getDate().toString().padStart(2, '0')}`;
+        const dateKeyToRemove = formatDateKey(dateToRemove);
+        if (!dateKeyToRemove) {
+            toast.error('Date invalide');
+            return;
+        }
         
         setServices(prevServices =>
             prevServices.map(service => {
@@ -740,22 +801,24 @@ export default function UserDomainProfile() {
                         const schedulesCopy = { ...(newDateAvailability as Record<string, any>) };
                         delete schedulesCopy[dateKeyToRemove];
                         // Convert object to array format
-                        newDateAvailability = Object.entries(schedulesCopy).map(([date, config]) => ({
-                            date: new Date(date),
-                            enabled: Boolean(config.enabled),
-                            morningEnabled: Boolean(config.morningEnabled),
-                            morningFrom: String(config.morningFrom || ''),
-                            morningTo: String(config.morningTo || ''),
-                            afternoonEnabled: Boolean(config.afternoonEnabled),
-                            afternoonFrom: String(config.afternoonFrom || ''),
-                            afternoonTo: String(config.afternoonTo || '')
-                        }));
+                        newDateAvailability = Object.entries(schedulesCopy).map(([date, config]) => {
+                            const parsedDate = safeParseDate(date);
+                            return {
+                                date: parsedDate || new Date(),
+                                enabled: Boolean(config.enabled),
+                                morningEnabled: Boolean(config.morningEnabled),
+                                morningFrom: String(config.morningFrom || ''),
+                                morningTo: String(config.morningTo || ''),
+                                afternoonEnabled: Boolean(config.afternoonEnabled),
+                                afternoonFrom: String(config.afternoonFrom || ''),
+                                afternoonTo: String(config.afternoonTo || '')
+                            };
+                        });
                     } else if (Array.isArray(newDateAvailability)) {
                         // Filter out the schedule entry for this date
                         newDateAvailability = newDateAvailability.filter((item: any) => {
-                            const itemDateString = item.date instanceof Date 
-                                ? `${item.date.getFullYear()}-${(item.date.getMonth() + 1).toString().padStart(2, '0')}-${item.date.getDate().toString().padStart(2, '0')}`
-                                : item.date;
+                            const itemDate = item.date instanceof Date ? item.date : safeParseDate(item.date);
+                            const itemDateString = formatDateKey(itemDate);
                             return itemDateString !== dateKeyToRemove;
                         });
                     }
