@@ -6,13 +6,61 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Upload, Image, Camera, Plus, Edit, Trash2, Loader2, Code } from "lucide-react";
+import { Upload, Image, Camera, Plus, Edit, Trash2, Loader2, Code, CalendarIcon, X } from "lucide-react";
 import { AddServiceModal } from "@/components/AddServiceModal";
 import { EditServiceModal } from "@/components/EditServiceModal";
+import { PrestationScheduleConfig } from "@/components/PrestationScheduleConfig";
 import { Switch } from "@/components/ui/switch";
-import { useState, useEffect } from "react";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useState, useEffect, useMemo } from "react";
 import { userService, DomainProfile, DomainService } from "@/services/user.service";
 import toast from "react-hot-toast";
+import { format } from "date-fns";
+import { fr } from "date-fns/locale";
+import { cn } from "@/lib/utils";
+
+// Safe date parsing helper - prevents crashes from invalid dates
+const safeParseDate = (dateValue: any): Date | null => {
+    try {
+        if (!dateValue) return null;
+        const date = new Date(dateValue);
+        return isNaN(date.getTime()) ? null : date;
+    } catch (error) {
+        console.warn('Failed to parse date:', dateValue, error);
+        return null;
+    }
+};
+
+// Safe date string formatter - prevents crashes from invalid dates
+const formatDateKey = (date: Date | null): string | null => {
+    try {
+        if (!date || !(date instanceof Date) || isNaN(date.getTime())) {
+            return null;
+        }
+        return `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
+    } catch (error) {
+        console.warn('Failed to format date:', date, error);
+        return null;
+    }
+};
+
+// Extended interface for enhanced booking features
+interface EnhancedDomainService extends DomainService {
+    id?: number;
+    active?: boolean;
+    periodActive?: boolean;
+    selectedDates?: Date[];
+    hasChanges?: boolean;
+    originalBookingSettings?: {
+        bookingRestrictionActive: boolean;
+        bookingRestrictionTime: string;
+        multipleBookings: boolean;
+        hasCustomAvailability: boolean;
+        dateAvailability: any[];
+    };
+}
 
 export default function UserDomainProfile() {
     const [isAddServiceModalOpen, setIsAddServiceModalOpen] = useState(false);
@@ -23,6 +71,12 @@ export default function UserDomainProfile() {
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    
+    // New state variables for enhanced functionality
+    const [lastClickedDate, setLastClickedDate] = useState<{ [key: string]: Date | null }>({});
+    const [isShiftPressed, setIsShiftPressed] = useState(false);
+    const [serviceSchedules, setServiceSchedules] = useState<{ [serviceId: string]: any }>({});
+    const [savingServices, setSavingServices] = useState<{ [serviceId: string]: boolean }>({});
 
     // Form states
     const [formData, setFormData] = useState({
@@ -36,11 +90,29 @@ export default function UserDomainProfile() {
     const [domainLogo, setDomainLogo] = useState<File | null>(null);
     const [profilePicturePreview, setProfilePicturePreview] = useState<string | null>(null);
     const [logoPreview, setLogoPreview] = useState<string | null>(null);
-    const [services, setServices] = useState<DomainService[]>([]);
+    const [services, setServices] = useState<EnhancedDomainService[]>([]);
 
     // Load domain profile data on mount
     useEffect(() => {
         loadDomainProfile();
+    }, []);
+
+    // Keyboard event handler for Shift key detection
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Shift') setIsShiftPressed(true);
+        };
+        const handleKeyUp = (e: KeyboardEvent) => {
+            if (e.key === 'Shift') setIsShiftPressed(false);
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        window.addEventListener('keyup', handleKeyUp);
+
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+            window.removeEventListener('keyup', handleKeyUp);
+        };
     }, []);
 
     const loadDomainProfile = async () => {
@@ -69,9 +141,67 @@ export default function UserDomainProfile() {
                 }
             }
 
-            // Load services separately
+            // Load services separately and initialize original settings
             const servicesResponse = await userService.getServices();
-            setServices(servicesResponse.data || []);
+            const servicesWithOriginalSettings = (servicesResponse.data || []).map((service: DomainService) => {
+                try {
+                    // Determine if API already has custom availability
+                    const availability = service.dateAvailability as any;
+                    console.log(`Service "${service.serviceName}" API availability:`, JSON.stringify(availability, null, 2));
+                    const hasAvailability = Array.isArray(availability)
+                        ? availability.length > 0
+                        : availability && typeof availability === 'object'
+                            ? Object.keys(availability).length > 0
+                            : false;
+
+                    // Auto-select dates from API availability with safe parsing
+                    let selectedDates: Date[] = [];
+                    if (Array.isArray(availability)) {
+                        selectedDates = availability
+                            .map((a: any) => safeParseDate(a?.date))
+                            .filter((date): date is Date => date !== null);
+                    } else if (availability && typeof availability === 'object') {
+                        selectedDates = Object.keys(availability)
+                            .map((d) => safeParseDate(d))
+                            .filter((date): date is Date => date !== null);
+                    }
+
+                    const computedHasCustom = service.hasCustomAvailability ?? hasAvailability;
+
+                    return {
+                        ...service,
+                        // Ensure UI has dates preselected so Calendar and Schedule render
+                        selectedDates,
+                        // Ensure the toggle reflects API data
+                        hasCustomAvailability: computedHasCustom,
+                        hasChanges: false,
+                        originalBookingSettings: {
+                            bookingRestrictionActive: service.bookingRestrictionActive ?? false,
+                            bookingRestrictionTime: service.bookingRestrictionTime ?? "24h",
+                            multipleBookings: service.multipleBookings ?? false,
+                            hasCustomAvailability: computedHasCustom,
+                            dateAvailability: service.dateAvailability ?? []
+                        }
+                    } as EnhancedDomainService;
+                } catch (serviceError) {
+                    console.error(`Error processing service "${service.serviceName}":`, serviceError);
+                    // Return service with safe defaults on error
+                    return {
+                        ...service,
+                        selectedDates: [],
+                        hasCustomAvailability: false,
+                        hasChanges: false,
+                        originalBookingSettings: {
+                            bookingRestrictionActive: false,
+                            bookingRestrictionTime: "24h",
+                            multipleBookings: false,
+                            hasCustomAvailability: false,
+                            dateAvailability: []
+                        }
+                    } as EnhancedDomainService;
+                }
+            });
+            setServices(servicesWithOriginalSettings as EnhancedDomainService[]);
 
         } catch (error: any) {
             console.error('Error loading domain profile:', error);
@@ -98,6 +228,10 @@ export default function UserDomainProfile() {
                 reader.onload = (e) => {
                     setProfilePicturePreview(e.target?.result as string);
                 };
+                reader.onerror = () => {
+                    toast.error('Erreur lors de la lecture du fichier');
+                    setProfilePicturePreview(null);
+                };
                 reader.readAsDataURL(file);
                 toast.success(`Nouvelle photo sélectionnée: ${file.name}`);
             } else {
@@ -109,6 +243,10 @@ export default function UserDomainProfile() {
                 const reader = new FileReader();
                 reader.onload = (e) => {
                     setLogoPreview(e.target?.result as string);
+                };
+                reader.onerror = () => {
+                    toast.error('Erreur lors de la lecture du fichier');
+                    setLogoPreview(null);
                 };
                 reader.readAsDataURL(file);
                 toast.success(`Nouveau logo sélectionné: ${file.name}`);
@@ -157,26 +295,222 @@ export default function UserDomainProfile() {
             toast.success(response.message);
         } catch (error: any) {
             console.error('Error saving domain profile:', error);
-            setError(error?.message || 'Failed to save domain profile');
-            toast.error(error?.message || 'Failed to save domain profile');
+            setError(error?.message || 'Échec de la sauvegarde du profil du domaine');
+            toast.error(error?.message || 'Échec de la sauvegarde du profil du domaine');
         } finally {
             setIsSaving(false);
         }
     };
 
-    const prestations = services.map((service, index) => ({
-        id: index + 1,
-        name: service.serviceName,
-        description: service.serviceDescription,
-        price: `${service.pricePerPerson}€`,
-        duration: `${Math.floor(service.timeOfServiceInMinutes / 60)}h${service.timeOfServiceInMinutes % 60 > 0 ? (service.timeOfServiceInMinutes % 60) + 'min' : ''}`,
-        active: service.isActive,
-        serviceBannerUrl: service.serviceBannerUrl
-    }));
+    // Track changes in booking settings
+    const updateServiceBookingSettings = (serviceId: string, field: keyof EnhancedDomainService, value: any) => {
+        // Skip change detection for selectedDates as it's not a booking setting
+        if (field === 'selectedDates') {
+            updateSelectedDates(serviceId, value);
+            return;
+        }
+
+        setServices(prevServices => 
+            prevServices.map(service => {
+                if (service._id === serviceId) {
+                    const originalSettings = service.originalBookingSettings || {
+                        bookingRestrictionActive: service.bookingRestrictionActive ?? false,
+                        bookingRestrictionTime: service.bookingRestrictionTime ?? "24h",
+                        multipleBookings: service.multipleBookings ?? false,
+                        hasCustomAvailability: service.hasCustomAvailability ?? false,
+                        dateAvailability: service.dateAvailability ?? []
+                    };
+
+                    const updatedService = {
+                        ...service,
+                        [field]: value,
+                        originalBookingSettings: originalSettings
+                    };
+
+                    // Check if any changes were made
+                    const currentDateAvailability = updatedService.dateAvailability || {};
+                    const originalDateAvailability = originalSettings.dateAvailability || {};
+                    
+                    const hasChanges = (
+                        updatedService.bookingRestrictionActive !== originalSettings.bookingRestrictionActive ||
+                        updatedService.bookingRestrictionTime !== originalSettings.bookingRestrictionTime ||
+                        updatedService.multipleBookings !== originalSettings.multipleBookings ||
+                        updatedService.hasCustomAvailability !== originalSettings.hasCustomAvailability ||
+                        JSON.stringify(currentDateAvailability) !== JSON.stringify(originalDateAvailability)
+                    );
+
+                    updatedService.hasChanges = hasChanges;
+                    return updatedService;
+                }
+                return service;
+            })
+        );
+    };
+
+    // Update selected dates without triggering change detection for booking settings
+    const updateSelectedDates = (serviceId: string, selectedDates: Date[]) => {
+        setServices(prevServices => 
+            prevServices.map(service => {
+                if (service._id === serviceId) {
+                    return {
+                        ...service,
+                        selectedDates: selectedDates
+                    };
+                }
+                return service;
+            })
+        );
+    };
+
+    // Save service booking settings
+    const saveServiceBookingSettings = async (service: EnhancedDomainService) => {
+        console.log('saveServiceBookingSettings called for service:', service._id, service.serviceName);
+        if (!service.hasChanges || savingServices[service._id!]) return;
+
+        setSavingServices(prev => ({ ...prev, [service._id!]: true }));
+
+        try {
+            // Convert schedules to actual date-based availability for API
+            let dateAvailability = [];
+            if (service.dateAvailability && service.selectedDates) {
+                // Create a set of selected date strings for quick lookup
+                const selectedDateStrings = new Set(
+                    service.selectedDates.map((date: Date) => 
+                        `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`
+                    )
+                );
+
+                if (Array.isArray(service.dateAvailability)) {
+                    // Filter by both: enabled AND still in selectedDates (not removed)
+                    dateAvailability = service.dateAvailability
+                        .filter((item: any) => {
+                            const itemDateString = item.date instanceof Date 
+                                ? `${item.date.getFullYear()}-${(item.date.getMonth() + 1).toString().padStart(2, '0')}-${item.date.getDate().toString().padStart(2, '0')}`
+                                : item.date;
+                            return item.enabled && selectedDateStrings.has(itemDateString);
+                        })
+                        .map((item: any) => ({
+                            ...item,
+                            date: item.date instanceof Date 
+                                ? `${item.date.getFullYear()}-${(item.date.getMonth() + 1).toString().padStart(2, '0')}-${item.date.getDate().toString().padStart(2, '0')}`
+                                : item.date
+                        }));
+                } else if (typeof service.dateAvailability === 'object') {
+                    // Convert date-keyed schedules to date-based schedules
+                    const dateSchedules = service.dateAvailability;
+                    dateAvailability = [];
+                    
+                    // Only include dates that are enabled AND still in selectedDates (not removed)
+                    Object.entries(dateSchedules).forEach(([dateKey, schedule]: [string, any]) => {
+                        if (schedule && schedule.enabled && selectedDateStrings.has(dateKey)) {
+                            dateAvailability.push({
+                                date: dateKey, // dateKey is already in YYYY-MM-DD format
+                                enabled: schedule.enabled,
+                                morningEnabled: schedule.morningEnabled ?? false,
+                                morningFrom: schedule.morningFrom ?? "09:00",
+                                morningTo: schedule.morningTo ?? "12:00",
+                                afternoonEnabled: schedule.afternoonEnabled ?? false,
+                                afternoonFrom: schedule.afternoonFrom ?? "14:00",
+                                afternoonTo: schedule.afternoonTo ?? "18:00"
+                            });
+                        }
+                    });
+                }
+            }
+
+            const bookingSettings = {
+                bookingRestrictionActive: service.bookingRestrictionActive ?? false,
+                bookingRestrictionTime: service.bookingRestrictionTime ?? "24h",
+                multipleBookings: service.multipleBookings ?? false,
+                hasCustomAvailability: service.hasCustomAvailability ?? false,
+                dateAvailability
+            };
+
+            console.log('Sending booking settings to API:', bookingSettings);
+
+            await userService.updateServiceBookingSettings(service._id!, bookingSettings);
+            
+            // Update the original settings and clear changes flag
+            setServices(prevServices =>
+                prevServices.map(s => {
+                    if (s._id === service._id) {
+                        return {
+                            ...s,
+                            hasChanges: false,
+                            originalBookingSettings: {
+                                bookingRestrictionActive: s.bookingRestrictionActive ?? false,
+                                bookingRestrictionTime: s.bookingRestrictionTime ?? "24h",
+                                multipleBookings: s.multipleBookings ?? false,
+                                hasCustomAvailability: s.hasCustomAvailability ?? false,
+                                dateAvailability: s.dateAvailability ?? []
+                            }
+                        };
+                    }
+                    return s;
+                })
+            );
+
+            toast.success(`Paramètres de réservation sauvegardés pour ${service.serviceName}`);
+        } catch (error) {
+            console.error('Error saving booking settings:', error);
+            toast.error(`Échec de la sauvegarde des paramètres pour ${service.serviceName}`);
+        } finally {
+            setSavingServices(prev => ({ ...prev, [service._id!]: false }));
+        }
+    };
+
+    // Use useMemo to prevent unnecessary re-computation of prestations
+    const prestations = useMemo(() => {
+        return services.map((service, index) => {
+            // Extract dates from dateAvailability if selectedDates is not set
+            let selectedDates: Date[] = service.selectedDates || [];
+            
+            if ((!selectedDates || selectedDates.length === 0) && service.dateAvailability) {
+                try {
+                    if (Array.isArray(service.dateAvailability)) {
+                        selectedDates = service.dateAvailability
+                            .map((avail: any) => safeParseDate(avail?.date))
+                            .filter((date): date is Date => date !== null);
+                    } else if (service.dateAvailability && typeof service.dateAvailability === 'object') {
+                        // Handle object format: convert keys to dates
+                        selectedDates = Object.keys(service.dateAvailability)
+                            .map(dateKey => safeParseDate(dateKey))
+                            .filter((date): date is Date => date !== null);
+                    }
+                } catch (error) {
+                    console.error('Error processing date availability for service:', service._id, error);
+                    selectedDates = [];
+                }
+            }
+
+            return {
+                id: service._id,
+                name: service.serviceName,
+                description: service.serviceDescription,
+                price: `${service.pricePerPerson}€`,
+                duration: `${Math.floor(service.timeOfServiceInMinutes / 60)}h${service.timeOfServiceInMinutes % 60 > 0 ? (service.timeOfServiceInMinutes % 60) + 'min' : ''}`,
+            active: service.isActive,
+            serviceBannerUrl: service.serviceBannerUrl,
+            // New properties for enhanced functionality
+            periodActive: service.hasCustomAvailability || selectedDates.length > 0,
+            hasCustomAvailability: service.hasCustomAvailability || false,
+            multipleBookings: service.multipleBookings || false,
+            bookingRestrictionActive: service.bookingRestrictionActive || false,
+            bookingRestrictionTime: service.bookingRestrictionTime || "24h",
+            selectedDates: selectedDates
+        };
+    });
+    }, [services]);
 
     const handleEditPrestation = (prestation: any) => {
-        const serviceIndex = prestation.id - 1;
-        const service = services[serviceIndex];
+        // Find the service by _id instead of using index
+        const service = services.find(s => s._id === prestation.id);
+        
+        if (!service) {
+            console.error('Service not found for id:', prestation.id);
+            toast.error('Service introuvable');
+            return;
+        }
 
         // Map languages from service data to UI format
         const languagesState = {
@@ -215,7 +549,7 @@ export default function UserDomainProfile() {
         // Create enhanced prestation object with all needed data
         const enhancedPrestation = {
             ...prestation,
-            originalIndex: serviceIndex,
+            serviceId: service._id, // Use _id instead of index
             numberOfPeople: service.numberOfPeople,
             winesTasted: service.numberOfWinesTasted.toString(),
             languages: languagesState,
@@ -248,53 +582,62 @@ export default function UserDomainProfile() {
             setServices(servicesResponse.data || []);
 
             setIsAddServiceModalOpen(false);
-            toast.success('Service added successfully!');
+            toast.success('Service ajouté avec succès !');
         } catch (error: any) {
             console.error('Error adding service:', error);
-            toast.error(error.message || 'Failed to add service');
+            toast.error(error.message || 'Échec de l\'ajout du service');
         }
     };
 
     const handleSavePrestation = async (updatedService: any, serviceBanner?: File | null) => {
         try {
-            if (updatedService.originalIndex !== undefined) {
-                const updateData = {
-                    serviceName: updatedService.serviceName || '',
-                    serviceDescription: updatedService.serviceDescription || '',
-                    numberOfPeople: updatedService.numberOfPeople || '1',
-                    pricePerPerson: updatedService.pricePerPerson || 0,
-                    timeOfServiceInMinutes: updatedService.timeOfServiceInMinutes || 60,
-                    numberOfWinesTasted: updatedService.numberOfWinesTasted || 0,
-                    languagesOffered: updatedService.languagesOffered || ['French'],
-                    isActive: updatedService.isActive !== undefined ? updatedService.isActive : true
-                };
-
-                await userService.updateService(updatedService.originalIndex, updateData, serviceBanner || undefined);
-
-                // Reload services to get updated list
-                const servicesResponse = await userService.getServices();
-                setServices(servicesResponse.data || []);
-
-                toast.success('Service updated successfully!');
+            // Find the service by ID to get the correct index
+            const serviceIndex = services.findIndex(s => s._id === updatedService.serviceId);
+            
+            if (serviceIndex === -1) {
+                console.error('Service not found for id:', updatedService.serviceId);
+                toast.error('Service introuvable');
+                return;
             }
+            
+            const updateData = {
+                serviceName: updatedService.serviceName || '',
+                serviceDescription: updatedService.serviceDescription || '',
+                numberOfPeople: updatedService.numberOfPeople || '1',
+                pricePerPerson: updatedService.pricePerPerson || 0,
+                timeOfServiceInMinutes: updatedService.timeOfServiceInMinutes || 60,
+                numberOfWinesTasted: updatedService.numberOfWinesTasted || 0,
+                languagesOffered: updatedService.languagesOffered || ['French'],
+                isActive: updatedService.isActive !== undefined ? updatedService.isActive : true
+            };
+
+            await userService.updateService(serviceIndex, updateData, serviceBanner || undefined);
+
+            // Reload services to get updated list
+            const servicesResponse = await userService.getServices();
+            setServices(servicesResponse.data || []);
+
+            setIsEditServiceModalOpen(false);
+            toast.success('Service mis à jour avec succès !');
         } catch (error: any) {
             console.error('Error updating service:', error);
-            toast.error(error.message || 'Failed to update service');
+            toast.error(error.message || 'Échec de la mise à jour du service');
         }
     };
 
-    const handleToggleActive = async (prestationId: number) => {
+    const handleToggleActive = async (prestationId: string) => {
         try {
-            const serviceIndex = prestationId - 1;
+            const serviceIndex = services.findIndex(s => s._id === prestationId);
+            if (serviceIndex === -1) return;
             await userService.toggleServiceActive(serviceIndex);
 
             // Reload services to get updated list
             const servicesResponse = await userService.getServices();
             setServices(servicesResponse.data || []);
-            toast.success('Service status updated successfully!');
+            toast.success('Statut du service mis à jour avec succès !');
         } catch (error: any) {
             console.error('Error toggling service status:', error);
-            toast.error(error.message || 'Failed to update service status');
+            toast.error(error.message || 'Échec de la mise à jour du statut du service');
         }
     };
 
@@ -306,17 +649,16 @@ export default function UserDomainProfile() {
             const servicesResponse = await userService.getServices();
             setServices(servicesResponse.data || []);
 
-            toast.success('Service deleted successfully!');
+            toast.success('Service supprimé avec succès !');
         } catch (error: any) {
             console.error('Error deleting service:', error);
-            toast.error(error.message || 'Failed to delete service');
+            toast.error(error.message || 'Échec de la suppression du service');
         }
     };
 
-    const handleCopyIframeCode = async (prestationId: number) => {
+    const handleCopyIframeCode = async (prestationId: string) => {
         try {
-            const serviceIndex = prestationId - 1;
-            const service = services[serviceIndex];
+            const service = services.find(s => s._id === prestationId);
 
             if (!service || !domainProfile?.userId?._id) {
                 toast.error('Informations du service manquantes');
@@ -348,6 +690,150 @@ export default function UserDomainProfile() {
             console.error('Error copying iframe code:', error);
             toast.error('Erreur lors de la copie du code iframe');
         }
+    };
+
+    // New handlers for enhanced functionality
+    const handleTogglePeriod = (prestationId: string) => {
+        const service = services.find(s => s._id === prestationId);
+        if (service) {
+            updateServiceBookingSettings(prestationId, 'hasCustomAvailability', !service.hasCustomAvailability);
+        }
+    };
+
+    const handleToggleMultipleBookings = (prestationId: string) => {
+        const service = services.find(s => s._id === prestationId);
+        if (service) {
+            updateServiceBookingSettings(prestationId, 'multipleBookings', !service.multipleBookings);
+        }
+    };
+
+    const handleToggleBookingRestriction = (prestationId: string) => {
+        const service = services.find(s => s._id === prestationId);
+        if (service) {
+            updateServiceBookingSettings(prestationId, 'bookingRestrictionActive', !service.bookingRestrictionActive);
+        }
+    };
+
+    const handleBookingRestrictionTimeChange = (prestationId: string, time: string) => {
+        updateServiceBookingSettings(prestationId, 'bookingRestrictionTime', time);
+    };
+
+    const handleDateSelect = (prestationId: string, date: Date, e: React.MouseEvent) => {
+        const service = services.find(s => s._id === prestationId);
+        if (!service) return;
+
+        const existingDates = service.selectedDates || [];
+        let newDates: Date[];
+
+        if (e.shiftKey && lastClickedDate[prestationId]) {
+            // Range selection
+            const startDate = lastClickedDate[prestationId]!;
+            const endDate = date;
+            const range: Date[] = [];
+            for (let d = new Date(Math.min(startDate.getTime(), endDate.getTime()));
+                d <= new Date(Math.max(startDate.getTime(), endDate.getTime()));
+                d.setDate(d.getDate() + 1)) {
+                range.push(new Date(d));
+            }
+
+            // Check if we're removing (if all dates in range are selected) or adding
+            const isRemoving = existingDates.some((d: Date) =>
+                range.some(rangeDate => rangeDate.toDateString() === d.toDateString())
+            );
+
+            if (isRemoving) {
+                // Remove all dates in range
+                newDates = existingDates.filter((d: Date) =>
+                    !range.some(rangeDate => rangeDate.toDateString() === d.toDateString())
+                );
+            } else {
+                // Add all dates in range that aren't already selected
+                newDates = [...existingDates, ...range.filter(rangeDate =>
+                    !existingDates.some((d: Date) => d.toDateString() === rangeDate.toDateString())
+                )];
+            }
+
+            setServices(prevServices =>
+                prevServices.map(s =>
+                    s._id === prestationId
+                        ? { ...s, selectedDates: newDates }
+                        : s
+                )
+            );
+        } else {
+            // Single date selection
+            const dateExists = existingDates.some((d: Date) => d.toDateString() === date.toDateString());
+            newDates = dateExists
+                ? existingDates.filter((d: Date) => d.toDateString() !== date.toDateString())
+                : [...existingDates, date];
+
+            setServices(prevServices =>
+                prevServices.map(s =>
+                    s._id === prestationId
+                        ? { ...s, selectedDates: newDates }
+                        : s
+                )
+            );
+        }
+
+        setLastClickedDate(prev => ({ ...prev, [prestationId]: date }));
+    };
+
+    const handleRemoveDate = (prestationId: string, dateToRemove: Date) => {
+        const dateKeyToRemove = formatDateKey(dateToRemove);
+        if (!dateKeyToRemove) {
+            toast.error('Date invalide');
+            return;
+        }
+        
+        setServices(prevServices =>
+            prevServices.map(service => {
+                if (service._id === prestationId) {
+                    // Remove from selectedDates
+                    const newSelectedDates = service.selectedDates?.filter(
+                        date => date.getTime() !== dateToRemove.getTime()
+                    ) || [];
+
+                    // Also clean up the schedule data for the removed date
+                    let newDateAvailability = service.dateAvailability;
+                    if (newDateAvailability && typeof newDateAvailability === 'object' && !Array.isArray(newDateAvailability)) {
+                        // Remove the schedule entry for this date and convert to array format
+                        const schedulesCopy = { ...(newDateAvailability as Record<string, any>) };
+                        delete schedulesCopy[dateKeyToRemove];
+                        // Convert object to array format
+                        newDateAvailability = Object.entries(schedulesCopy).map(([date, config]) => {
+                            const parsedDate = safeParseDate(date);
+                            return {
+                                date: parsedDate || new Date(),
+                                enabled: Boolean(config.enabled),
+                                morningEnabled: Boolean(config.morningEnabled),
+                                morningFrom: String(config.morningFrom || ''),
+                                morningTo: String(config.morningTo || ''),
+                                afternoonEnabled: Boolean(config.afternoonEnabled),
+                                afternoonFrom: String(config.afternoonFrom || ''),
+                                afternoonTo: String(config.afternoonTo || '')
+                            };
+                        });
+                    } else if (Array.isArray(newDateAvailability)) {
+                        // Filter out the schedule entry for this date
+                        newDateAvailability = newDateAvailability.filter((item: any) => {
+                            const itemDate = item.date instanceof Date ? item.date : safeParseDate(item.date);
+                            const itemDateString = formatDateKey(itemDate);
+                            return itemDateString !== dateKeyToRemove;
+                        });
+                    }
+
+                    return {
+                        ...service,
+                        selectedDates: newSelectedDates,
+                        dateAvailability: newDateAvailability,
+                        hasChanges: true // Mark as having changes so save button becomes active
+                    };
+                }
+                return service;
+            })
+        );
+        toast.success('Date retirée (cliquez sur "Enregistrer" pour confirmer)');
     };
     return (
         <UserDashboardLayout title="Profil Domaine">
@@ -584,57 +1070,280 @@ export default function UserDomainProfile() {
                                 {/* Section Prestations œnotouristiques */}
                                 <div className="border-t pt-4 lg:pt-6">
                                     <h3 className="text-base lg:text-lg font-semibold mb-4">Mes prestations œnotouristiques</h3>
-                                    <div className={`grid gap-4 lg:gap-6 ${selectedPrestation ? 'xl:grid-cols-2' : 'grid-cols-1'}`}>
+                                    <div className={`grid gap-4 lg:gap-6 ${selectedPrestation ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1'}`}>
                                         {/* Liste des prestations */}
                                         <div className="space-y-3">
                                             {prestations.map((prestation) => (
-                                                <div
-                                                    key={prestation.id}
-                                                    className={`flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 border rounded-lg cursor-pointer transition-colors ${selectedPrestation === prestation.id.toString()
-                                                        ? 'bg-green-50'
-                                                        : 'border-gray-200 bg-white hover:bg-gray-50'
-                                                        }`}
-                                                    style={
-                                                        selectedPrestation === prestation.id.toString()
-                                                            ? { borderColor: '#3A7B59' }
-                                                            : {}
-                                                    }
-                                                    onClick={() => setSelectedPrestation(
-                                                        selectedPrestation === prestation.id.toString() ? null : prestation.id.toString()
-                                                    )}
-                                                >
-                                                    <span className="text-gray-700 font-medium mb-2 sm:mb-0">{prestation.name}</span>
-                                                    <div className="flex flex-wrap items-center gap-2 sm:space-x-3">
-                                                        <Button variant="ghost" size="sm" className="text-gray-600 hover:text-gray-800 text-xs sm:text-sm p-1 sm:p-2" onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            handleEditPrestation(prestation);
-                                                        }}>
-                                                            <Edit className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" />
-                                                            <span className="hidden sm:inline">Editer</span>
-                                                        </Button>
-                                                        <Button variant="ghost" size="sm" className="text-gray-600 hover:text-gray-800 text-xs sm:text-sm p-1 sm:p-2" onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            handleCopyIframeCode(prestation.id);
-                                                        }}>
-                                                            <Code className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" />
-                                                            <span className="hidden sm:inline">Code</span>
-                                                        </Button>
-                                                        <div className="flex items-center space-x-2" onClick={(e) => e.stopPropagation()}>
-                                                            <Switch
-                                                                checked={prestation.active}
-                                                                onCheckedChange={() => handleToggleActive(prestation.id)}
-                                                            />
-                                                            <span className="text-xs sm:text-sm text-gray-600">Activer</span>
+                                                <div key={prestation.id} className="border rounded-lg bg-white">
+                                                    <div
+                                                        className={`flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 cursor-pointer transition-colors ${selectedPrestation === prestation.id.toString()
+                                                            ? 'bg-green-50'
+                                                            : 'hover:bg-gray-50'
+                                                            }`}
+                                                        style={
+                                                            selectedPrestation === prestation.id.toString()
+                                                                ? { borderColor: '#3A7B59' }
+                                                                : {}
+                                                        }
+                                                        onClick={() => setSelectedPrestation(
+                                                            selectedPrestation === prestation.id.toString() ? null : prestation.id.toString()
+                                                        )}
+                                                    >
+                                                        <span className="text-gray-700 font-medium mb-3 sm:mb-0">{prestation.name}</span>
+                                                        <div className="flex flex-wrap items-center gap-2 sm:gap-1">
+                                                            {/* Save Button - Show when changes are detected */}
+                                                            {services.find(s => s._id === prestation.id)?.hasChanges && (
+                                                                <Button 
+                                                                    size="sm" 
+                                                                    className="text-white text-xs px-2 py-1 sm:px-3 sm:py-2"
+                                                                    style={{ backgroundColor: '#3A7B59' }}
+                                                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#2d5f43'}
+                                                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#3A7B59'}
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        console.log('Save button clicked for prestation:', prestation.id, prestation.name);
+                                                                        const service = services.find(s => s._id === prestation.id);
+                                                                        console.log('Found service:', service?._id, service?.serviceName);
+                                                                        if (service) {
+                                                                            saveServiceBookingSettings(service);
+                                                                        }
+                                                                    }}
+                                                                    disabled={savingServices[prestation.id]}
+                                                                >
+                                                                    {savingServices[prestation.id] ? (
+                                                                        <Loader2 className="h-3 w-3 animate-spin" />
+                                                                    ) : (
+                                                                        <>
+                                                                            <span className="sm:hidden">Enreg.</span>
+                                                                            <span className="hidden sm:inline">Enregistrer</span>
+                                                                        </>
+                                                                    )}
+                                                                </Button>
+                                                            )}
+                                                            <Button variant="ghost" size="sm" className="text-gray-600 hover:text-gray-800 text-xs px-2 py-1 sm:px-3 sm:py-2" onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleEditPrestation(prestation);
+                                                            }}>
+                                                                <Edit className="h-3 w-3 sm:mr-1" />
+                                                                <span className="hidden sm:inline">Editer</span>
+                                                            </Button>
+                                                            <Button variant="ghost" size="sm" className="text-gray-600 hover:text-gray-800 text-xs px-2 py-1 sm:px-3 sm:py-2" onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleCopyIframeCode(prestation.id);
+                                                            }}>
+                                                                <Code className="h-3 w-3 sm:mr-1" />
+                                                                <span className="hidden sm:inline">Code</span>
+                                                            </Button>
+                                                            <div className="flex items-center space-x-1 sm:space-x-2" onClick={(e) => e.stopPropagation()}>
+                                                                <Switch
+                                                                    checked={prestation.active}
+                                                                    onCheckedChange={() => handleToggleActive(prestation.id)}
+                                                                />
+                                                                <span className="text-xs text-gray-600 sm:text-sm">
+                                                                    <span className="sm:hidden">Act.</span>
+                                                                    <span className="hidden sm:inline">Activer</span>
+                                                                </span>
+                                                            </div>
+                                                            <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-800 text-xs px-2 py-1 sm:px-3 sm:py-2" onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                if (confirm('Are you sure you want to delete this service?')) {
+                                                                    const serviceIndex = services.findIndex(s => s._id === prestation.id);
+                                                                    if (serviceIndex !== -1) {
+                                                                        handleDeleteService(serviceIndex);
+                                                                    }
+                                                                }
+                                                            }}>
+                                                                <Trash2 className="h-3 w-3 sm:mr-1" />
+                                                                <span className="hidden sm:inline">Supprimer</span>
+                                                            </Button>
                                                         </div>
-                                                        <Button variant="ghost" size="sm" className="text-gray-600 hover:text-gray-800 text-xs sm:text-sm p-1 sm:p-2" onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            if (confirm('Are you sure you want to delete this service?')) {
-                                                                handleDeleteService(prestation.id - 1);
-                                                            }
-                                                        }}>
-                                                            <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" />
-                                                            <span className="hidden sm:inline">Supprimer</span>
-                                                        </Button>
+                                                    </div>
+                                                    
+                                                    {/* NEW: Enhanced Settings Section */}
+                                                    <div className="p-3 border-t border-gray-100" onClick={(e) => e.stopPropagation()}>
+                                                        <div className="space-y-4 mb-3">
+                                                            {/* Booking Restrictions */}
+                                                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                                                                <span className="text-sm font-medium text-gray-700">Restrictions de réservations</span>
+                                                                <div className="flex items-center space-x-2">
+                                                                    <Switch
+                                                                        checked={prestation.bookingRestrictionActive}
+                                                                        onCheckedChange={() => handleToggleBookingRestriction(prestation.id)}
+                                                                    />
+                                                                    <span className="text-sm text-gray-600">Activer</span>
+                                                                </div>
+                                                            </div>
+                                                            {prestation.bookingRestrictionActive && (
+                                                                <div className="ml-4 mt-2">
+                                                                    <Select
+                                                                        value={prestation.bookingRestrictionTime}
+                                                                        onValueChange={(value) => handleBookingRestrictionTimeChange(prestation.id, value)}
+                                                                    >
+                                                                        <SelectTrigger className="w-[180px]">
+                                                                            <SelectValue placeholder="Sélectionner" />
+                                                                        </SelectTrigger>
+                                                                        <SelectContent>
+                                                                            <SelectItem value="24h">24h</SelectItem>
+                                                                            <SelectItem value="48h">48h</SelectItem>
+                                                                        </SelectContent>
+                                                                    </Select>
+                                                                </div>
+                                                            )}
+                                                            
+                                                            {/* Multiple Bookings */}
+                                                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                                                                <span className="text-sm font-medium text-gray-700">Réservations multiples par créneau</span>
+                                                                <div className="flex items-center space-x-2">
+                                                                    <Switch
+                                                                        checked={prestation.multipleBookings}
+                                                                        onCheckedChange={() => handleToggleMultipleBookings(prestation.id)}
+                                                                    />
+                                                                    <span className="text-sm text-gray-600">Activer</span>
+                                                                </div>
+                                                            </div>
+                                                            
+                                                            {/* Period Availability */}
+                                                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                                                                <span className="text-sm font-medium text-gray-700">Période de disponibilité</span>
+                                                                <div className="flex items-center space-x-2">
+                                                                    <Switch
+                                                                        checked={services.find(s => s._id === prestation.id)?.hasCustomAvailability || false}
+                                                                        onCheckedChange={() => handleTogglePeriod(prestation.id)}
+                                                                    />
+                                                                    <span className="text-sm text-gray-600">Activer</span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+
+                                                        
+                                                        {/* NEW: Date Selection Section */}
+                                                        {services.find(s => s._id === prestation.id)?.hasCustomAvailability && (
+                                                            <div className="space-y-3">
+                                                                <div className="space-y-2">
+                                                                    <Label className="text-xs text-gray-600">
+                                                                        Sélectionnez les dates disponibles
+                                                                    </Label>
+                                                                    <p className="text-xs text-muted-foreground">
+                                                                        Cliquez pour sélectionner des dates individuelles. Maintenez Shift et cliquez pour sélectionner une plage.
+                                                                    </p>
+                                                                    <Popover>
+                                                                        <PopoverTrigger asChild>
+                                                                            <Button
+                                                                                variant="outline"
+                                                                                className={cn(
+                                                                                    "w-full justify-start text-left font-normal",
+                                                                                    !prestation.selectedDates.length && "text-muted-foreground"
+                                                                                )}
+                                                                            >
+                                                                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                                                                {prestation.selectedDates.length > 0 
+                                                                                    ? `${prestation.selectedDates.length} date${prestation.selectedDates.length > 1 ? 's' : ''} sélectionnée${prestation.selectedDates.length > 1 ? 's' : ''}`
+                                                                                    : <span>Sélectionner des dates</span>
+                                                                                }
+                                                                            </Button>
+                                                                        </PopoverTrigger>
+                                                                        <PopoverContent className="w-auto p-0" align="start">
+                                                                            <Calendar
+                                                                                mode="multiple"
+                                                                                selected={prestation.selectedDates}
+                                                                                onSelect={(dates) => {
+                                                                                    if (dates) {
+                                                                                        const selectedDates = Array.isArray(dates) ? dates : [dates];
+                                                                                        updateSelectedDates(prestation.id, selectedDates);
+                                                                                    }
+                                                                                }}
+                                                                                initialFocus
+                                                                                className="pointer-events-auto"
+                                                                            />
+                                                                        </PopoverContent>
+                                                                    </Popover>
+                                                                </div>
+                                                                {prestation.selectedDates.length > 0 && (
+                                                                    <div className="flex flex-wrap gap-1 max-h-32 sm:max-h-20 overflow-y-auto">
+                                                                        {prestation.selectedDates
+                                                                            .sort((a, b) => a.getTime() - b.getTime())
+                                                                            .slice(0, 10)
+                                                                            .map((date, idx) => (
+                                                                                <span 
+                                                                                    key={idx} 
+                                                                                    className="inline-flex items-center gap-1 text-xs bg-green-100 text-green-800 px-2 py-1 rounded group hover:bg-green-200 transition-colors"
+                                                                                >
+                                                                                    <span className="text-xs">
+                                                                                        {format(date, "dd/MM", { locale: fr })}
+                                                                                    </span>
+                                                                                    <button
+                                                                                        onClick={(e) => {
+                                                                                            e.stopPropagation();
+                                                                                            handleRemoveDate(prestation.id, date);
+                                                                                        }}
+                                                                                        className="hover:bg-green-300 rounded-full p-0.5 transition-colors"
+                                                                                        aria-label="Supprimer cette date"
+                                                                                    >
+                                                                                        <X className="h-3 w-3" />
+                                                                                    </button>
+                                                                                </span>
+                                                                            ))}
+                                                                        {prestation.selectedDates.length > 10 && (
+                                                                            <span className="text-xs text-muted-foreground px-2 py-1">
+                                                                                +{prestation.selectedDates.length - 10} autres
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                )}
+                                                                
+                                                                {prestation.selectedDates.length > 0 && (
+                                                                    <div className="border-t pt-4 mt-4">
+                                                                        <PrestationScheduleConfig 
+                                                                            selectedDates={prestation.selectedDates}
+                                                                            existingAvailability={(() => {
+                                                                                const service = services.find(s => s._id === prestation.id);
+                                                                                const availability = service?.dateAvailability || [];
+
+                                                                                if (Array.isArray(availability)) {
+                                                                                    // Validate array items have valid dates
+                                                                                    return availability.filter(item => 
+                                                                                        item && item.date && !isNaN(new Date(item.date).getTime())
+                                                                                    );
+                                                                                }
+                                                                                if (availability && typeof availability === 'object') {
+                                                                                    return Object.entries(availability)
+                                                                                        .filter(([date, config]) => date && !isNaN(new Date(date).getTime()))
+                                                                                        .map(([date, config]) => ({ 
+                                                                                            date, 
+                                                                                            ...(config && typeof config === 'object' ? config as any : {})
+                                                                                        }));
+                                                                                }
+                                                                                return [];
+                                                                            })()}
+                                                                            onChange={(schedules) => {
+                                                                                // Convert object format to array format for backend compatibility
+                                                                                const scheduleArray = Object.entries(schedules).map(([dateKey, config]) => ({
+                                                                                    date: dateKey,
+                                                                                    enabled: config.enabled,
+                                                                                    morningEnabled: config.morningEnabled,
+                                                                                    morningFrom: config.morningFrom,
+                                                                                    morningTo: config.morningTo,
+                                                                                    afternoonEnabled: config.afternoonEnabled,
+                                                                                    afternoonFrom: config.afternoonFrom,
+                                                                                    afternoonTo: config.afternoonTo
+                                                                                }));
+                                                                                
+                                                                                // Update service with new schedule data
+                                                                                updateServiceBookingSettings(prestation.id, 'dateAvailability', scheduleArray);
+                                                                                // Only update hasCustomAvailability if there are actual enabled schedules
+                                                                                const hasEnabledSchedules = Object.values(schedules).some((schedule: any) => 
+                                                                                    schedule.enabled && (schedule.morningEnabled || schedule.afternoonEnabled)
+                                                                                );
+                                                                                if (hasEnabledSchedules) {
+                                                                                    updateServiceBookingSettings(prestation.id, 'hasCustomAvailability', true);
+                                                                                }
+                                                                            }}
+                                                                        />
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 </div>
                                             ))}

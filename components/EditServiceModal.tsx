@@ -289,6 +289,7 @@ export const EditServiceModal = ({ isOpen, onClose, prestation, onSave }: EditSe
 
       // Create the service data object with proper data types and validation
       const updatedServiceData = {
+        serviceId: (prestation as any).serviceId, // Preserve the service ID for updating
         originalIndex: (prestation as any).originalIndex, // Preserve the index for updating
         serviceName: formData.nom.trim(),
         serviceDescription: formData.description.trim(),

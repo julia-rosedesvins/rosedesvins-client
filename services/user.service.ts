@@ -127,6 +127,21 @@ export interface DomainService {
   languagesOffered: string[];
   serviceBannerUrl?: string;
   isActive: boolean;
+  // New booking settings fields
+  bookingRestrictionActive?: boolean;
+  bookingRestrictionTime?: string;
+  multipleBookings?: boolean;
+  hasCustomAvailability?: boolean;
+  dateAvailability?: Array<{
+    date: Date;
+    enabled: boolean;
+    morningEnabled: boolean;
+    morningFrom: string;
+    morningTo: string;
+    afternoonEnabled: boolean;
+    afternoonFrom: string;
+    afternoonTo: string;
+  }>;
 }
 
 export interface DomainProfile {
@@ -515,7 +530,7 @@ class UserService {
   }
 
   /**
-   * Toggle service active status
+   * Toggle service active status by index
    * @param serviceIndex - Index of the service to toggle
    * @returns Promise with updated service response
    */
@@ -525,6 +540,43 @@ class UserService {
       return response.data;
     } catch (error) {
       console.error('UserService: Toggle service active error:', error);
+      if (axios.isAxiosError(error) && error.response) {
+        throw error.response.data as ApiError;
+      }
+      throw new Error('Network error occurred');
+    }
+  }
+
+  /**
+   * Update service booking settings
+   * @param serviceId - Service ID
+   * @param bookingSettings - Booking settings to update
+   * @returns Promise with updated service response
+   */
+  async updateServiceBookingSettings(
+    serviceId: string, 
+    bookingSettings: {
+      bookingRestrictionActive?: boolean;
+      bookingRestrictionTime?: string;
+      multipleBookings?: boolean;
+      hasCustomAvailability?: boolean;
+      dateAvailability?: Array<{
+        date: string;
+        enabled: boolean;
+        morningEnabled?: boolean;
+        morningFrom?: string;
+        morningTo?: string;
+        afternoonEnabled?: boolean;
+        afternoonFrom?: string;
+        afternoonTo?: string;
+      }>;
+    }
+  ): Promise<{ success: boolean; message: string; data: any }> {
+    try {
+      const response = await apiClient.put(`/domain-profile/services/${serviceId}/booking-settings`, bookingSettings);
+      return response.data;
+    } catch (error) {
+      console.error('UserService: Update service booking settings error:', error);
       if (axios.isAxiosError(error) && error.response) {
         throw error.response.data as ApiError;
       }
