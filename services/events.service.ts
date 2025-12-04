@@ -68,6 +68,7 @@ export interface PublicScheduleData {
   eventDate: string;
   eventTime: string;
   eventEndTime?: string; // Optional end time for blocking time ranges
+  eventType?: 'booking' | 'personal' | 'external' | 'blocked'; // Event type to differentiate external events
   totalParticipants?: number; // Total participants for booking events
 }
 

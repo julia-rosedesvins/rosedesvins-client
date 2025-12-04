@@ -118,15 +118,23 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
         return slotStartMinutes < eventEndMinutes && slotEndMinutes > eventStartMinutes;
       });
       
-      // Calculate total existing participants
-      const totalExistingParticipants = overlappingBookings.reduce((sum, booking) => {
-        return sum + (booking.totalParticipants || 0);
-      }, 0);
+      // 🔒 CRITICAL FIX: Check if any overlapping event is external
+      // External events should block the slot completely, even with multi-slot enabled
+      const hasExternalEvent = overlappingBookings.some(booking => booking.eventType === 'external');
       
-      const totalWithNewBooking = totalExistingParticipants + totalParticipants;
-      
-      if (totalWithNewBooking > maxParticipants) {
-        errors.push(`Ce créneau horaire a atteint sa capacité maximale. Participants actuels: ${totalExistingParticipants}/${maxParticipants}. Veuillez choisir un autre horaire.`);
+      if (hasExternalEvent) {
+        errors.push(`Ce créneau horaire n'est pas disponible en raison d'un événement externe dans le calendrier. Veuillez choisir un autre horaire.`);
+      } else {
+        // Calculate total existing participants (only for non-external events)
+        const totalExistingParticipants = overlappingBookings.reduce((sum, booking) => {
+          return sum + (booking.totalParticipants || 0);
+        }, 0);
+        
+        const totalWithNewBooking = totalExistingParticipants + totalParticipants;
+        
+        if (totalWithNewBooking > maxParticipants) {
+          errors.push(`Ce créneau horaire a atteint sa capacité maximale. Participants actuels: ${totalExistingParticipants}/${maxParticipants}. Veuillez choisir un autre horaire.`);
+        }
       }
     }
 
@@ -578,6 +586,20 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
     
     // If no overlapping bookings, slot is available
     if (overlappingBookings.length === 0) return false;
+    
+    // 🔒 CRITICAL FIX: Check if any overlapping event is external
+    // External events (from Google Calendar, Outlook, etc.) should ALWAYS block the slot
+    // even if multi-slot bookings are enabled
+    const hasExternalEvent = overlappingBookings.some(booking => booking.eventType === 'external');
+    
+    if (hasExternalEvent) {
+      console.log('🚫 Slot blocked due to external calendar event (multi-slot disabled for external events):', {
+        date: dateString,
+        time,
+        externalEvents: overlappingBookings.filter(b => b.eventType === 'external').length
+      });
+      return true; // Block the slot completely
+    }
     
     // If multiple bookings not allowed, slot is blocked if any booking exists
     if (!multipleBookingsAllowed) return true;
