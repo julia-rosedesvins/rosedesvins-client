@@ -1,6 +1,7 @@
 import { ReactNode } from "react"
 import Navbar from "./Navbar"
 import Footer from "./Footer"
+import CookieConsent from "./CookieConsent"
 
 interface LandingPageLayoutProps {
   children: ReactNode
@@ -13,6 +14,7 @@ export default function LandingPageLayout({ children, className = "bg-gray-50" }
       <Navbar />
       {children}
       <Footer />
+      <CookieConsent />
     </div>
   )
 }
