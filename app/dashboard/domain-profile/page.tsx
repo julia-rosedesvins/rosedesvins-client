@@ -221,38 +221,63 @@ export default function UserDomainProfile() {
     };
 
     const handleFileChange = (field: 'domainProfilePicture' | 'domainLogo', file: File | null) => {
-        if (field === 'domainProfilePicture') {
-            setDomainProfilePicture(file);
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    setProfilePicturePreview(e.target?.result as string);
-                };
-                reader.onerror = () => {
-                    toast.error('Erreur lors de la lecture du fichier');
-                    setProfilePicturePreview(null);
-                };
-                reader.readAsDataURL(file);
-                toast.success(`Nouvelle photo sélectionnée: ${file.name}`);
-            } else {
+        if (!file) {
+            if (field === 'domainProfilePicture') {
+                setDomainProfilePicture(null);
                 setProfilePicturePreview(null);
-            }
-        } else {
-            setDomainLogo(file);
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    setLogoPreview(e.target?.result as string);
-                };
-                reader.onerror = () => {
-                    toast.error('Erreur lors de la lecture du fichier');
-                    setLogoPreview(null);
-                };
-                reader.readAsDataURL(file);
-                toast.success(`Nouveau logo sélectionné: ${file.name}`);
             } else {
+                setDomainLogo(null);
                 setLogoPreview(null);
             }
+            return;
+        }
+
+        // Validate file size - 800KB limit
+        const maxSizeKB = 800;
+        const maxSizeBytes = maxSizeKB * 1024;
+        const fileSizeKB = Math.round(file.size / 1024);
+
+        if (file.size > maxSizeBytes) {
+            toast.error(
+                `L'image est trop volumineuse (${fileSizeKB} Ko). \n` +
+                `La taille maximale autorisée est de ${maxSizeKB} Ko. \n` +
+                `Veuillez compresser votre image ou en choisir une plus légère.`,
+                { duration: 6000 }
+            );
+            return;
+        }
+
+        // Validate file type
+        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+        if (!allowedTypes.includes(file.type)) {
+            toast.error('Format de fichier non supporté. Utilisez JPG, PNG ou WebP.');
+            return;
+        }
+
+        if (field === 'domainProfilePicture') {
+            setDomainProfilePicture(file);
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                setProfilePicturePreview(e.target?.result as string);
+            };
+            reader.onerror = () => {
+                toast.error('Erreur lors de la lecture du fichier');
+                setProfilePicturePreview(null);
+            };
+            reader.readAsDataURL(file);
+            toast.success(`Nouvelle photo sélectionnée: ${file.name} (${fileSizeKB} Ko)`);
+        } else {
+            setDomainLogo(file);
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                setLogoPreview(e.target?.result as string);
+            };
+            reader.onerror = () => {
+                toast.error('Erreur lors de la lecture du fichier');
+                setLogoPreview(null);
+            };
+            reader.readAsDataURL(file);
+            toast.success(`Nouveau logo sélectionné: ${file.name} (${fileSizeKB} Ko)`);
         }
     };
 
@@ -935,7 +960,7 @@ export default function UserDomainProfile() {
                                                         </label>
                                                         <p className="text-xs mt-1">ou glissez-déposez votre image ici</p>
                                                     </div>
-                                                    <p className="text-xs text-gray-500">PNG, JPG jusqu'à 5MB</p>
+                                                    <p className="text-xs text-gray-500">PNG, JPG jusqu'à 800 Ko</p>
                                                 </div>
                                             )}
                                             <input
@@ -993,7 +1018,7 @@ export default function UserDomainProfile() {
                                                         </label>
                                                         <p className="text-xs mt-1">ou glissez-déposez votre logo ici</p>
                                                     </div>
-                                                    <p className="text-xs text-gray-500">PNG, JPG, SVG jusqu'à 5MB</p>
+                                                    <p className="text-xs text-gray-500">PNG, JPG, SVG jusqu'à 800 Ko</p>
                                                 </div>
                                             )}
                                             <input

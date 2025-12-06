@@ -58,8 +58,16 @@ export const EditServiceModal = ({ isOpen, onClose, prestation, onSave }: EditSe
   const handleBannerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 5 * 1024 * 1024) { // 5MB limit
-        setErrors(prev => ({ ...prev, banner: "La taille du fichier ne doit pas dépasser 5MB" }));
+      // Validate file size - 800KB limit
+      const maxSizeKB = 800;
+      const maxSizeBytes = maxSizeKB * 1024;
+      const fileSizeKB = Math.round(file.size / 1024);
+
+      if (file.size > maxSizeBytes) {
+        setErrors(prev => ({ 
+          ...prev, 
+          banner: `L'image est trop volumineuse (${fileSizeKB} Ko). La taille maximale autorisée est de ${maxSizeKB} Ko. Veuillez compresser votre image ou en choisir une plus légère.` 
+        }));
         return;
       }
       
@@ -393,7 +401,7 @@ export const EditServiceModal = ({ isOpen, onClose, prestation, onSave }: EditSe
                       Cliquez pour ajouter une image de votre prestation
                     </p>
                     <p className="text-xs text-gray-400 mt-1">
-                      JPG, PNG ou WebP (max. 5MB)
+                      JPG, PNG ou WebP (max. 800 Ko)
                     </p>
                   </div>
                 </div>
