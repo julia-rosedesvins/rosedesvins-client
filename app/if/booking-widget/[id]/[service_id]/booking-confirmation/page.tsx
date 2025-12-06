@@ -161,7 +161,7 @@ function BookingConfirmationContent({ id, serviceId }: { id: string, serviceId: 
   const displayTime = bookingData?.selectedTime || "Aucun horaire sélectionné";
   const totalParticipants = (bookingData?.adults ?? 2) + (bookingData?.children ?? 0);
   const pricePerPerson = widgetData?.service?.pricePerPerson ?? 0;
-  const totalPrice = totalParticipants * pricePerPerson;
+  const totalPrice = (bookingData?.adults ?? 2) * pricePerPerson;
 
   const formatParticipants = () => {
     const adults = bookingData?.adults ?? 2;
@@ -280,7 +280,7 @@ function BookingConfirmationContent({ id, serviceId }: { id: string, serviceId: 
 
                 <div className="flex items-center gap-3">
                   <CreditCard className="w-5 h-5" style={{ color: colorCode }} />
-                  <span className="text-sm">Paiement sur place</span>
+                  <span>Paiement sur place</span>
                 </div>
 
                 <div className="mt-6">

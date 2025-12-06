@@ -804,8 +804,8 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
         {/* Validation Errors */}
         {validationErrors.length > 0 && (
           <div className="mb-4 md:mb-6 p-3 md:p-4 bg-red-50 border border-red-200 rounded-lg">
-            <h3 className="text-red-800 font-medium mb-2 text-sm md:text-base">Veuillez corriger les erreurs suivantes :</h3>
-            <ul className="text-red-700 space-y-1 text-sm md:text-base">
+            <h3 className="text-red-800 font-medium mb-2 text-base md:text-lg">Veuillez corriger les erreurs suivantes :</h3>
+            <ul className="text-red-700 space-y-1 text-base md:text-lg">
               {validationErrors.map((error, index) => (
                 <li key={index} className="flex items-start">
                   <span className="text-red-500 mr-2">•</span>

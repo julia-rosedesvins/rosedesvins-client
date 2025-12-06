@@ -90,7 +90,7 @@ function CheckoutContent({ id, serviceId }: { id: string, serviceId: string }) {
   const displayTime = bookingData?.selectedTime || "Aucun horaire sélectionné";
   const totalParticipants = (bookingData?.adults ?? 0) + (bookingData?.children ?? 0);
   const pricePerPerson = widgetData?.service?.pricePerPerson ?? 0;
-  const totalPrice = totalParticipants * pricePerPerson;
+  const totalPrice = (bookingData?.adults ?? 0) * pricePerPerson;
 
   const formatParticipants = () => {
     const adults = bookingData?.adults ?? 0;
