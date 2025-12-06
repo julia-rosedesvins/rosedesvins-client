@@ -422,7 +422,11 @@ export const ReservationsList = () => {
                     </div>
                     <div className="flex items-start space-x-2">
                       <MessageCircle className="h-3 w-3 text-gray-500 mt-0.5" />
-                      <span className="text-sm text-gray-600">{reservation.comments}</span>
+                      <span className="text-sm text-gray-600 line-clamp-2">
+                        {reservation.comments && reservation.comments.length > 50 
+                          ? `${reservation.comments.substring(0, 50)}...` 
+                          : reservation.comments || 'Aucun commentaire'}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -486,8 +490,10 @@ export const ReservationsList = () => {
                       {reservation.language}
                     </TableCell>
                     <TableCell className="text-center text-sm px-4 py-4">
-                      <div className="max-w-[150px] mx-auto">
-                        {reservation.activity}
+                      <div className="max-w-[150px] mx-auto truncate" title={reservation.comments}>
+                        {reservation.comments && reservation.comments.length > 30 
+                          ? `${reservation.comments.substring(0, 30)}...` 
+                          : reservation.comments || '-'}
                       </div>
                     </TableCell>
                     <TableCell className="text-center px-4 py-4">
