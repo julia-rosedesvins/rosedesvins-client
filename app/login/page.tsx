@@ -1,5 +1,5 @@
 'use client';
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -18,7 +18,31 @@ export default function LoginPage() {
     const [error, setError] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
     const router = useRouter();
-    const { login, isLoading } = useUser();
+    const { login, isLoading, isAuthenticated } = useUser();
+
+    // Redirect to dashboard if already logged in
+    useEffect(() => {
+        if (isAuthenticated && !isLoading) {
+            router.push('/dashboard');
+        }
+    }, [isAuthenticated, isLoading, router]);
+
+    // Show loading while checking auth status
+    if (isLoading) {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-green-50 to-green-100 flex items-center justify-center">
+                <div className="flex items-center space-x-2">
+                    <div className="w-8 h-8 border-4 border-gray-300 border-t-[#3A7B59] rounded-full animate-spin"></div>
+                    <span className="text-gray-600">Chargement...</span>
+                </div>
+            </div>
+        );
+    }
+
+    // Don't render login form if already authenticated
+    if (isAuthenticated) {
+        return null;
+    }
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();

@@ -1,7 +1,7 @@
 "use client"
 
-import { Instagram, Linkedin, Menu, X } from "lucide-react"
-import { useState } from "react"
+import { Instagram, Linkedin, Menu, X, LogIn, User } from "lucide-react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter, usePathname } from "next/navigation"
 
@@ -20,8 +20,29 @@ const socialLinks = [
 
 export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [mounted, setMounted] = useState(false)
   const router = useRouter()
   const pathname = usePathname()
+
+  // Check if user is logged in
+  useEffect(() => {
+    setMounted(true)
+    
+    const checkLoginStatus = () => {
+      const token = localStorage.getItem('token')
+      setIsLoggedIn(!!token)
+    }
+    
+    checkLoginStatus()
+    
+    // Listen for storage changes (e.g., when user logs in/out in another tab)
+    window.addEventListener('storage', checkLoginStatus)
+    
+    return () => {
+      window.removeEventListener('storage', checkLoginStatus)
+    }
+  }, [])
 
   const handleContactClick = (e: React.MouseEvent) => {
     e.preventDefault()
@@ -55,6 +76,26 @@ export default function Navbar() {
           {link.label}
         </Link>
       ))}
+      
+      {/* Login/Account Access Link */}
+      <Link
+        href={mounted && isLoggedIn ? "/dashboard" : "/login"}
+        className="text-sm hover:opacity-80 flex items-center gap-2"
+        style={{ color: "white" }}
+      >
+        {mounted && isLoggedIn ? (
+          <>
+            <User className="w-4 h-4" />
+            <span>Espace Domaines</span>
+          </>
+        ) : (
+          <>
+            <LogIn className="w-4 h-4" />
+            <span>Connexion</span>
+          </>
+        )}
+      </Link>
+      
       {!isMobile && (
         <div className="flex gap-4">
           {socialLinks.map((social) => {
