@@ -18,7 +18,7 @@ export default function AboutPage() {
         {/* Team Members */}
         <div className="space-y-24">
           {/* Julia Chevalier */}
-          <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+          <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-start">
             <div className="order-2 lg:order-1">
               <div className="flex flex-col items-center">
                 <div className="relative w-64 h-64 md:w-80 md:h-80">
@@ -56,7 +56,7 @@ export default function AboutPage() {
           </div>
 
           {/* Felix Kerr */}
-          <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+          <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-start">
             <div className="order-1">
               <div className="space-y-6 text-gray-600 text-base md:text-lg leading-relaxed">
                 <p>
