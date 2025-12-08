@@ -122,10 +122,13 @@ export default function UserDomainProfile() {
 
             // Load domain profile data
             const profileResponse = await userService.getDomainProfile();
-            if (profileResponse.data) {
+            if (profileResponse?.data) {
                 setDomainProfile(profileResponse.data);
+                
+                // Safely access nested properties with fallbacks
+                const userId = profileResponse.data.userId;
                 setFormData({
-                    domainName: profileResponse.data.userId.domainName || '',
+                    domainName: userId?.domainName || '',
                     domainDescription: profileResponse.data.domainDescription || '',
                     domainType: profileResponse.data.domainType || '',
                     domainTag: profileResponse.data.domainTag || '',
@@ -133,80 +136,88 @@ export default function UserDomainProfile() {
                 });
 
                 // Set existing image previews if available
+                const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || '';
                 if (profileResponse.data.domainProfilePictureUrl) {
-                    setProfilePicturePreview(`${process.env.NEXT_PUBLIC_API_BASE_URL}${profileResponse.data.domainProfilePictureUrl}`);
+                    setProfilePicturePreview(`${baseUrl}${profileResponse.data.domainProfilePictureUrl}`);
                 }
                 if (profileResponse.data.domainLogoUrl) {
-                    setLogoPreview(`${process.env.NEXT_PUBLIC_API_BASE_URL}${profileResponse.data.domainLogoUrl}`);
+                    setLogoPreview(`${baseUrl}${profileResponse.data.domainLogoUrl}`);
                 }
             }
 
             // Load services separately and initialize original settings
             const servicesResponse = await userService.getServices();
-            const servicesWithOriginalSettings = (servicesResponse.data || []).map((service: DomainService) => {
-                try {
-                    // Determine if API already has custom availability
-                    const availability = service.dateAvailability as any;
-                    console.log(`Service "${service.serviceName}" API availability:`, JSON.stringify(availability, null, 2));
-                    const hasAvailability = Array.isArray(availability)
-                        ? availability.length > 0
-                        : availability && typeof availability === 'object'
-                            ? Object.keys(availability).length > 0
-                            : false;
+            if (servicesResponse?.data && Array.isArray(servicesResponse.data)) {
+                const servicesWithOriginalSettings = servicesResponse.data.map((service: DomainService) => {
+                    try {
+                        // Determine if API already has custom availability
+                        const availability = service.dateAvailability as any;
+                        console.log(`Service "${service?.serviceName || 'Unknown'}" API availability:`, JSON.stringify(availability, null, 2));
+                        const hasAvailability = Array.isArray(availability)
+                            ? availability.length > 0
+                            : availability && typeof availability === 'object'
+                                ? Object.keys(availability).length > 0
+                                : false;
 
-                    // Auto-select dates from API availability with safe parsing
-                    let selectedDates: Date[] = [];
-                    if (Array.isArray(availability)) {
-                        selectedDates = availability
-                            .map((a: any) => safeParseDate(a?.date))
-                            .filter((date): date is Date => date !== null);
-                    } else if (availability && typeof availability === 'object') {
-                        selectedDates = Object.keys(availability)
-                            .map((d) => safeParseDate(d))
-                            .filter((date): date is Date => date !== null);
-                    }
+                        // Auto-select dates from API availability with safe parsing
+                        let selectedDates: Date[] = [];
+                        if (Array.isArray(availability)) {
+                            selectedDates = availability
+                                .map((a: any) => safeParseDate(a?.date))
+                                .filter((date): date is Date => date !== null);
+                        } else if (availability && typeof availability === 'object') {
+                            selectedDates = Object.keys(availability)
+                                .map((d) => safeParseDate(d))
+                                .filter((date): date is Date => date !== null);
+                        }
 
-                    const computedHasCustom = service.hasCustomAvailability ?? hasAvailability;
+                        const computedHasCustom = service.hasCustomAvailability ?? hasAvailability;
 
-                    return {
-                        ...service,
-                        // Ensure UI has dates preselected so Calendar and Schedule render
-                        selectedDates,
-                        // Ensure the toggle reflects API data
-                        hasCustomAvailability: computedHasCustom,
-                        hasChanges: false,
-                        originalBookingSettings: {
-                            bookingRestrictionActive: service.bookingRestrictionActive ?? false,
-                            bookingRestrictionTime: service.bookingRestrictionTime ?? "24h",
-                            multipleBookings: service.multipleBookings ?? false,
+                        return {
+                            ...service,
+                            // Ensure UI has dates preselected so Calendar and Schedule render
+                            selectedDates,
+                            // Ensure the toggle reflects API data
                             hasCustomAvailability: computedHasCustom,
-                            dateAvailability: service.dateAvailability ?? []
-                        }
-                    } as EnhancedDomainService;
-                } catch (serviceError) {
-                    console.error(`Error processing service "${service.serviceName}":`, serviceError);
-                    // Return service with safe defaults on error
-                    return {
-                        ...service,
-                        selectedDates: [],
-                        hasCustomAvailability: false,
-                        hasChanges: false,
-                        originalBookingSettings: {
-                            bookingRestrictionActive: false,
-                            bookingRestrictionTime: "24h",
-                            multipleBookings: false,
+                            hasChanges: false,
+                            originalBookingSettings: {
+                                bookingRestrictionActive: service.bookingRestrictionActive ?? false,
+                                bookingRestrictionTime: service.bookingRestrictionTime ?? "24h",
+                                multipleBookings: service.multipleBookings ?? false,
+                                hasCustomAvailability: computedHasCustom,
+                                dateAvailability: service.dateAvailability ?? []
+                            }
+                        } as EnhancedDomainService;
+                    } catch (serviceError) {
+                        console.error(`Error processing service "${service?.serviceName || 'Unknown'}":`, serviceError);
+                        // Return service with safe defaults on error
+                        return {
+                            ...service,
+                            selectedDates: [],
                             hasCustomAvailability: false,
-                            dateAvailability: []
-                        }
-                    } as EnhancedDomainService;
-                }
-            });
-            setServices(servicesWithOriginalSettings as EnhancedDomainService[]);
+                            hasChanges: false,
+                            originalBookingSettings: {
+                                bookingRestrictionActive: false,
+                                bookingRestrictionTime: "24h",
+                                multipleBookings: false,
+                                hasCustomAvailability: false,
+                                dateAvailability: []
+                            }
+                        } as EnhancedDomainService;
+                    }
+                });
+                setServices(servicesWithOriginalSettings);
+            } else {
+                console.warn('No services data received or invalid format');
+                setServices([]);
+            }
 
         } catch (error: any) {
             console.error('Error loading domain profile:', error);
-            if (error.statusCode !== 404) {
-                setError('Failed to load domain profile');
+            const errorMessage = error?.message || error?.statusCode !== 404 ? 'Failed to load domain profile' : null;
+            if (errorMessage) {
+                setError(errorMessage);
+                toast.error(errorMessage);
             }
         } finally {
             setIsLoading(false);
@@ -296,32 +307,36 @@ export default function UserDomainProfile() {
                 Object.keys(files).length > 0 ? files : undefined
             );
 
-            setDomainProfile(response.data.domainProfile);
+            if (response?.data?.domainProfile) {
+                setDomainProfile(response.data.domainProfile);
 
-            // Clear file inputs but keep previews updated with new URLs
-            setDomainProfilePicture(null);
-            setDomainLogo(null);
+                // Clear file inputs but keep previews updated with new URLs
+                setDomainProfilePicture(null);
+                setDomainLogo(null);
 
-            // Update previews with new URLs if uploaded
-            if (response.data.domainProfile.domainProfilePictureUrl) {
-                setProfilePicturePreview(`${process.env.NEXT_PUBLIC_API_BASE_URL}${response.data.domainProfile.domainProfilePictureUrl}`);
+                // Update previews with new URLs if uploaded
+                const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || '';
+                if (response.data.domainProfile.domainProfilePictureUrl) {
+                    setProfilePicturePreview(`${baseUrl}${response.data.domainProfile.domainProfilePictureUrl}`);
+                }
+                if (response.data.domainProfile.domainLogoUrl) {
+                    setLogoPreview(`${baseUrl}${response.data.domainProfile.domainLogoUrl}`);
+                }
+
+                // Clear HTML file inputs
+                const profileInput = document.getElementById('photo-profil') as HTMLInputElement;
+                const logoInput = document.getElementById('logo-domaine') as HTMLInputElement;
+                if (profileInput) profileInput.value = '';
+                if (logoInput) logoInput.value = '';
+
+                // Show success message
+                toast.success(response.message || 'Profil sauvegardé avec succès');
             }
-            if (response.data.domainProfile.domainLogoUrl) {
-                setLogoPreview(`${process.env.NEXT_PUBLIC_API_BASE_URL}${response.data.domainProfile.domainLogoUrl}`);
-            }
-
-            // Clear HTML file inputs
-            const profileInput = document.getElementById('photo-profil') as HTMLInputElement;
-            const logoInput = document.getElementById('logo-domaine') as HTMLInputElement;
-            if (profileInput) profileInput.value = '';
-            if (logoInput) logoInput.value = '';
-
-            // Show success message
-            toast.success(response.message);
         } catch (error: any) {
             console.error('Error saving domain profile:', error);
-            setError(error?.message || 'Échec de la sauvegarde du profil du domaine');
-            toast.error(error?.message || 'Échec de la sauvegarde du profil du domaine');
+            const errorMessage = error?.message || 'Échec de la sauvegarde du profil du domaine';
+            setError(errorMessage);
+            toast.error(errorMessage);
         } finally {
             setIsSaving(false);
         }
@@ -691,9 +706,11 @@ export default function UserDomainProfile() {
             }
 
             // Get the current hostname or use localhost as fallback
-            const hostname = window.location.hostname === 'localhost'
+            const hostname = typeof window !== 'undefined' && window.location.hostname === 'localhost'
                 ? 'http://localhost:3000'
-                : `${window.location.protocol}//${window.location.host}`;
+                : typeof window !== 'undefined' 
+                    ? `${window.location.protocol}//${window.location.host}`
+                    : 'https://rosedesvins.co';
 
             const userId = domainProfile.userId._id;
             const serviceId = service._id; // Use service._id if available, otherwise fallback to index
