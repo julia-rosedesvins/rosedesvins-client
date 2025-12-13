@@ -2,7 +2,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 
 const timeOptions = [
   "08:00", "08:30", "09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
@@ -28,6 +28,16 @@ interface PrestationScheduleConfigProps {
 
 export const PrestationScheduleConfig = ({ selectedDates, onChange, existingAvailability }: PrestationScheduleConfigProps) => {
   const [schedules, setSchedules] = useState<{ [dayOfWeek: string]: ScheduleConfig }>({});
+
+  const isInitializingRef = useRef(false);
+  const lastEmittedRef = useRef<string>("");
+
+  const selectedDateKeys = useMemo(() => {
+    return selectedDates
+      .filter((d) => d instanceof Date && !isNaN(d.getTime()))
+      .map((date) => `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`)
+      .sort();
+  }, [selectedDates]);
 
   // Initialize schedules from existing availability data
   useEffect(() => {
@@ -74,6 +84,7 @@ export const PrestationScheduleConfig = ({ selectedDates, onChange, existingAvai
       });
 
       console.log('Setting schedules from API data (grouped by day):', initialSchedules);
+      isInitializingRef.current = true;
       setSchedules(prevSchedules => {
         if (JSON.stringify(initialSchedules) !== JSON.stringify(prevSchedules)) {
           return initialSchedules;
@@ -82,6 +93,13 @@ export const PrestationScheduleConfig = ({ selectedDates, onChange, existingAvai
       });
     }
   }, [JSON.stringify(existingAvailability)]); // Use JSON.stringify to properly detect changes
+
+  // Clear initialization flag after schedules are applied (effect order matters: this must run before onChange effect)
+  useEffect(() => {
+    if (isInitializingRef.current) {
+      isInitializingRef.current = false;
+    }
+  }, [schedules]);
 
   // Group dates by day of week
   const groupedByDayOfWeek = selectedDates.reduce((acc, date) => {
@@ -131,22 +149,26 @@ export const PrestationScheduleConfig = ({ selectedDates, onChange, existingAvai
   }, [uniqueDays.map(d => d.dayOfWeek).join(',')]);
 
   useEffect(() => {
-    if (onChange) {
-      // Convert day-of-week schedules back to individual dates for API
-      const dateSchedules: { [dateKey: string]: ScheduleConfig } = {};
-      
-      selectedDates.forEach(date => {
-        const dayOfWeek = date.getDay().toString();
-        const dateKey = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
-        
-        if (schedules[dayOfWeek]) {
-          dateSchedules[dateKey] = schedules[dayOfWeek];
-        }
-      });
-      
-      onChange(dateSchedules);
-    }
-  }, [schedules, selectedDates]);
+    if (!onChange) return;
+    if (isInitializingRef.current) return;
+
+    // Convert day-of-week schedules back to individual dates for API
+    const dateSchedules: { [dateKey: string]: ScheduleConfig } = {};
+    selectedDates.forEach(date => {
+      if (!(date instanceof Date) || isNaN(date.getTime())) return;
+      const dayOfWeek = date.getDay().toString();
+      const dateKey = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
+      if (schedules[dayOfWeek]) {
+        dateSchedules[dateKey] = schedules[dayOfWeek];
+      }
+    });
+
+    const payloadKey = JSON.stringify({ selectedDateKeys, schedules: dateSchedules });
+    if (payloadKey === lastEmittedRef.current) return;
+    lastEmittedRef.current = payloadKey;
+
+    onChange(dateSchedules);
+  }, [onChange, schedules, selectedDates, selectedDateKeys]);
 
   const handleDateToggle = (dayOfWeek: string) => {
     setSchedules(prev => ({

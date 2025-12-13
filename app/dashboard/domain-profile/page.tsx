@@ -91,6 +91,78 @@ export default function UserDomainProfile() {
     const [profilePicturePreview, setProfilePicturePreview] = useState<string | null>(null);
     const [logoPreview, setLogoPreview] = useState<string | null>(null);
     const [services, setServices] = useState<EnhancedDomainService[]>([]);
+    const [isReloadingServices, setIsReloadingServices] = useState(false);
+
+    const hydrateServices = (servicesData: DomainService[] | any): EnhancedDomainService[] => {
+        if (!Array.isArray(servicesData)) return [];
+
+        return servicesData.map((service: DomainService) => {
+            try {
+                const availability = service.dateAvailability as any;
+
+                const hasAvailability = Array.isArray(availability)
+                    ? availability.length > 0
+                    : availability && typeof availability === 'object'
+                        ? Object.keys(availability).length > 0
+                        : false;
+
+                let selectedDates: Date[] = [];
+                if (Array.isArray(availability)) {
+                    selectedDates = availability
+                        .map((a: any) => safeParseDate(a?.date))
+                        .filter((date): date is Date => date !== null);
+                } else if (availability && typeof availability === 'object') {
+                    selectedDates = Object.keys(availability)
+                        .map((d) => safeParseDate(d))
+                        .filter((date): date is Date => date !== null);
+                }
+
+                const computedHasCustom = (service as any).hasCustomAvailability ?? hasAvailability;
+
+                return {
+                    ...service,
+                    selectedDates,
+                    hasCustomAvailability: computedHasCustom,
+                    hasChanges: false,
+                    originalBookingSettings: {
+                        bookingRestrictionActive: (service as any).bookingRestrictionActive ?? false,
+                        bookingRestrictionTime: (service as any).bookingRestrictionTime ?? "24h",
+                        multipleBookings: (service as any).multipleBookings ?? false,
+                        hasCustomAvailability: computedHasCustom,
+                        dateAvailability: (service as any).dateAvailability ?? []
+                    }
+                } as EnhancedDomainService;
+            } catch (serviceError) {
+                console.error(`Error processing service "${(service as any)?.serviceName || 'Unknown'}":`, serviceError);
+                return {
+                    ...service,
+                    selectedDates: [],
+                    hasCustomAvailability: false,
+                    hasChanges: false,
+                    originalBookingSettings: {
+                        bookingRestrictionActive: false,
+                        bookingRestrictionTime: "24h",
+                        multipleBookings: false,
+                        hasCustomAvailability: false,
+                        dateAvailability: []
+                    }
+                } as EnhancedDomainService;
+            }
+        });
+    };
+
+    const reloadServices = async () => {
+        try {
+            setIsReloadingServices(true);
+            const servicesResponse = await userService.getServices();
+            setServices(hydrateServices(servicesResponse?.data));
+        } catch (err) {
+            console.error('Error reloading services:', err);
+            toast.error('Échec du rechargement des prestations');
+        } finally {
+            setIsReloadingServices(false);
+        }
+    };
 
     // Load domain profile data on mount
     useEffect(() => {
@@ -147,70 +219,7 @@ export default function UserDomainProfile() {
 
             // Load services separately and initialize original settings
             const servicesResponse = await userService.getServices();
-            if (servicesResponse?.data && Array.isArray(servicesResponse.data)) {
-                const servicesWithOriginalSettings = servicesResponse.data.map((service: DomainService) => {
-                    try {
-                        // Determine if API already has custom availability
-                        const availability = service.dateAvailability as any;
-                        console.log(`Service "${service?.serviceName || 'Unknown'}" API availability:`, JSON.stringify(availability, null, 2));
-                        const hasAvailability = Array.isArray(availability)
-                            ? availability.length > 0
-                            : availability && typeof availability === 'object'
-                                ? Object.keys(availability).length > 0
-                                : false;
-
-                        // Auto-select dates from API availability with safe parsing
-                        let selectedDates: Date[] = [];
-                        if (Array.isArray(availability)) {
-                            selectedDates = availability
-                                .map((a: any) => safeParseDate(a?.date))
-                                .filter((date): date is Date => date !== null);
-                        } else if (availability && typeof availability === 'object') {
-                            selectedDates = Object.keys(availability)
-                                .map((d) => safeParseDate(d))
-                                .filter((date): date is Date => date !== null);
-                        }
-
-                        const computedHasCustom = service.hasCustomAvailability ?? hasAvailability;
-
-                        return {
-                            ...service,
-                            // Ensure UI has dates preselected so Calendar and Schedule render
-                            selectedDates,
-                            // Ensure the toggle reflects API data
-                            hasCustomAvailability: computedHasCustom,
-                            hasChanges: false,
-                            originalBookingSettings: {
-                                bookingRestrictionActive: service.bookingRestrictionActive ?? false,
-                                bookingRestrictionTime: service.bookingRestrictionTime ?? "24h",
-                                multipleBookings: service.multipleBookings ?? false,
-                                hasCustomAvailability: computedHasCustom,
-                                dateAvailability: service.dateAvailability ?? []
-                            }
-                        } as EnhancedDomainService;
-                    } catch (serviceError) {
-                        console.error(`Error processing service "${service?.serviceName || 'Unknown'}":`, serviceError);
-                        // Return service with safe defaults on error
-                        return {
-                            ...service,
-                            selectedDates: [],
-                            hasCustomAvailability: false,
-                            hasChanges: false,
-                            originalBookingSettings: {
-                                bookingRestrictionActive: false,
-                                bookingRestrictionTime: "24h",
-                                multipleBookings: false,
-                                hasCustomAvailability: false,
-                                dateAvailability: []
-                            }
-                        } as EnhancedDomainService;
-                    }
-                });
-                setServices(servicesWithOriginalSettings);
-            } else {
-                console.warn('No services data received or invalid format');
-                setServices([]);
-            }
+            setServices(hydrateServices(servicesResponse?.data));
 
         } catch (error: any) {
             console.error('Error loading domain profile:', error);
@@ -617,9 +626,7 @@ export default function UserDomainProfile() {
 
             const response = await userService.addService(service, serviceBanner || undefined);
 
-            // Reload services to get updated list
-            const servicesResponse = await userService.getServices();
-            setServices(servicesResponse.data || []);
+            await reloadServices();
 
             setIsAddServiceModalOpen(false);
             toast.success('Service ajouté avec succès !');
@@ -653,9 +660,7 @@ export default function UserDomainProfile() {
 
             await userService.updateService(serviceIndex, updateData, serviceBanner || undefined);
 
-            // Reload services to get updated list
-            const servicesResponse = await userService.getServices();
-            setServices(servicesResponse.data || []);
+            await reloadServices();
 
             setIsEditServiceModalOpen(false);
             toast.success('Service mis à jour avec succès !');
@@ -671,9 +676,7 @@ export default function UserDomainProfile() {
             if (serviceIndex === -1) return;
             await userService.toggleServiceActive(serviceIndex);
 
-            // Reload services to get updated list
-            const servicesResponse = await userService.getServices();
-            setServices(servicesResponse.data || []);
+            await reloadServices();
             toast.success('Statut du service mis à jour avec succès !');
         } catch (error: any) {
             console.error('Error toggling service status:', error);
@@ -685,9 +688,7 @@ export default function UserDomainProfile() {
         try {
             await userService.deleteService(serviceIndex);
 
-            // Reload services to get updated list
-            const servicesResponse = await userService.getServices();
-            setServices(servicesResponse.data || []);
+            await reloadServices();
 
             toast.success('Service supprimé avec succès !');
         } catch (error: any) {
@@ -1111,7 +1112,15 @@ export default function UserDomainProfile() {
 
                                 {/* Section Prestations œnotouristiques */}
                                 <div className="border-t pt-4 lg:pt-6">
-                                    <h3 className="text-base lg:text-lg font-semibold mb-4">Mes prestations œnotouristiques</h3>
+                                    <div className="flex items-center justify-between mb-4">
+                                        <h3 className="text-base lg:text-lg font-semibold">Mes prestations œnotouristiques</h3>
+                                        {isReloadingServices && (
+                                            <div className="flex items-center text-sm text-muted-foreground">
+                                                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                                Rechargement...
+                                            </div>
+                                        )}
+                                    </div>
                                     <div className={`grid gap-4 lg:gap-6 ${selectedPrestation ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1'}`}>
                                         {/* Liste des prestations */}
                                         <div className="space-y-3">
