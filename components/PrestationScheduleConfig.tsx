@@ -74,7 +74,12 @@ export const PrestationScheduleConfig = ({ selectedDates, onChange, existingAvai
       });
 
       console.log('Setting schedules from API data (grouped by day):', initialSchedules);
-      setSchedules(initialSchedules);
+      setSchedules(prevSchedules => {
+        if (JSON.stringify(initialSchedules) !== JSON.stringify(prevSchedules)) {
+          return initialSchedules;
+        }
+        return prevSchedules;
+      });
     }
   }, [JSON.stringify(existingAvailability)]); // Use JSON.stringify to properly detect changes
 
