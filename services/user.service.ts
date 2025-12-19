@@ -105,6 +105,25 @@ export interface ChangePasswordResponse {
   message: string;
 }
 
+export interface ForgotPasswordRequest {
+  email: string;
+}
+
+export interface ForgotPasswordResponse {
+  success: boolean;
+  message: string;
+}
+
+export interface ResetPasswordRequest {
+  token: string;
+  newPassword: string;
+}
+
+export interface ResetPasswordResponse {
+  success: boolean;
+  message: string;
+}
+
 export interface ApiError {
   success: boolean;
   message: string;
@@ -329,6 +348,42 @@ class UserService {
       console.error('UserService: Change password error:', error);
       if (axios.isAxiosError(error) && error.response) {
         console.error('UserService: Error response data:', error.response.data);
+        throw error.response.data as ApiError;
+      }
+      throw new Error('Network error occurred');
+    }
+  }
+
+  /**
+   * Request password reset
+   * @param data - Email address
+   * @returns Promise with response message
+   */
+  async forgotPassword(data: ForgotPasswordRequest): Promise<ForgotPasswordResponse> {
+    try {
+      const response = await apiClient.post<ForgotPasswordResponse>('/users/forgot-password', data);
+      return response.data;
+    } catch (error) {
+      console.error('UserService: Forgot password error:', error);
+      if (axios.isAxiosError(error) && error.response) {
+        throw error.response.data as ApiError;
+      }
+      throw new Error('Network error occurred');
+    }
+  }
+
+  /**
+   * Reset password with token
+   * @param data - Token and new password
+   * @returns Promise with response message
+   */
+  async resetPassword(data: ResetPasswordRequest): Promise<ResetPasswordResponse> {
+    try {
+      const response = await apiClient.post<ResetPasswordResponse>('/users/reset-password', data);
+      return response.data;
+    } catch (error) {
+      console.error('UserService: Reset password error:', error);
+      if (axios.isAxiosError(error) && error.response) {
         throw error.response.data as ApiError;
       }
       throw new Error('Network error occurred');
