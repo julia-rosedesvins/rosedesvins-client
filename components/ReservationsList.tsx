@@ -109,7 +109,7 @@ export const ReservationsList = () => {
       people: totalPeople,
       activity: event.eventName,
       language: getLanguageDisplay(event.bookingId?.selectedLanguage),
-      comments: event.bookingId?.additionalNotes || event.eventDescription || 'Aucun commentaire',
+      comments: event.bookingId ? (event.bookingId.additionalNotes || '') : (event.eventDescription || ''),
       serviceName: event.serviceInfo?.name || null,
       date: event.eventDate,
       customerName: event.bookingId ? 
@@ -425,7 +425,7 @@ export const ReservationsList = () => {
                       <span className="text-sm text-gray-600 line-clamp-2">
                         {reservation.comments && reservation.comments.length > 50 
                           ? `${reservation.comments.substring(0, 50)}...` 
-                          : reservation.comments || 'Aucun commentaire'}
+                          : reservation.comments}
                       </span>
                     </div>
                   </div>
@@ -493,7 +493,7 @@ export const ReservationsList = () => {
                       <div className="max-w-[150px] mx-auto truncate" title={reservation.comments}>
                         {reservation.comments && reservation.comments.length > 30 
                           ? `${reservation.comments.substring(0, 30)}...` 
-                          : reservation.comments || '-'}
+                          : reservation.comments}
                       </div>
                     </TableCell>
                     <TableCell className="text-center px-4 py-4">
