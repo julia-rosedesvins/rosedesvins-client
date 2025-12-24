@@ -63,10 +63,36 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
     return isNaN(parsed) ? 10 : parsed; // Default to 10 if parsing fails
   };
 
+  // Get minimum number of participants from service configuration
+  const getMinParticipants = (): number => {
+    const numberOfPeople = widgetData?.service?.numberOfPeople || '2-10';
+    
+    // If it contains a range (e.g., "10-12"), extract the minimum
+    if (numberOfPeople.includes('-')) {
+      const parts = numberOfPeople.split('-');
+      return parseInt(parts[0]) || 1; // Get the first part as min
+    }
+    
+    // If it's just a number, assume min is 1
+    return 1; 
+  };
+
+  // Ensure adults count respects minimum when widget data loads
+  useEffect(() => {
+    if (widgetData) {
+      const min = getMinParticipants();
+      // Only update if we are below minimum
+      if (adults + children < min) {
+        setAdults(Math.max(1, min - children));
+      }
+    }
+  }, [widgetData]);
+
   // Validation function
   const validateBooking = (): boolean => {
     const errors: string[] = [];
     const maxParticipants = getMaxParticipants();
+    const minParticipants = getMinParticipants();
     const totalParticipants = adults + children;
     
     if (!selectedDate) {
@@ -81,6 +107,10 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
       errors.push("Le nombre d'adultes doit être d'au moins 1");
     }
     
+    if (totalParticipants < minParticipants) {
+      errors.push(`Le nombre total de participants doit être d'au moins ${minParticipants} personnes`);
+    }
+
     if (totalParticipants > maxParticipants) {
       errors.push(`Le nombre total de participants ne peut pas dépasser ${maxParticipants} personnes`);
     }
@@ -738,19 +768,25 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
 
   const handleAdultsChange = (increment: boolean) => {
     const maxParticipants = getMaxParticipants();
+    const minParticipants = getMinParticipants();
     
     if (increment) {
       const totalAfterIncrement = adults + 1 + children;
       if (totalAfterIncrement <= maxParticipants) {
         setAdults(prev => prev + 1);
       }
-    } else if (adults > 1) { // Ensure at least 1 adult
-      setAdults(prev => prev - 1);
+    } else {
+      // Ensure at least 1 adult AND total participants >= minParticipants
+      const totalAfterDecrement = adults - 1 + children;
+      if (adults > 1 && totalAfterDecrement >= minParticipants) { 
+        setAdults(prev => prev - 1);
+      }
     }
   };
 
   const handleChildrenChange = (increment: boolean) => {
     const maxParticipants = getMaxParticipants();
+    const minParticipants = getMinParticipants();
     
     if (increment) {
       const totalAfterIncrement = adults + children + 1;
@@ -758,7 +794,11 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
         setChildren(prev => prev + 1);
       }
     } else if (children > 0) {
-      setChildren(prev => prev - 1);
+      // Ensure total participants >= minParticipants
+      const totalAfterDecrement = adults + children - 1;
+      if (totalAfterDecrement >= minParticipants) {
+        setChildren(prev => prev - 1);
+      }
     }
   };
 
@@ -1011,7 +1051,7 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
           {/* Show max participants info */}
           <div className="text-center mb-3 md:mb-4">
             <span className="text-xs md:text-sm text-muted-foreground">
-              Maximum {getMaxParticipants()} personnes • Total actuel: {adults + children}
+              Minimum {getMinParticipants()} - Maximum {getMaxParticipants()} personnes • Total actuel: {adults + children}
             </span>
           </div>
           
@@ -1025,7 +1065,7 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
                   size="icon"
                   className="w-8 h-8 md:w-10 md:h-10 rounded-full"
                   onClick={() => handleAdultsChange(false)}
-                  disabled={adults <= 1} // Minimum 1 adult required
+                  disabled={adults <= 1 || (adults + children) <= getMinParticipants()} // Minimum 1 adult required
                 >
                   <Minus className="w-4 h-4 md:w-5 md:h-5" />
                 </Button>
@@ -1054,7 +1094,7 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
                   size="icon"
                   className="w-8 h-8 md:w-10 md:h-10 rounded-full"
                   onClick={() => handleChildrenChange(false)}
-                  disabled={children <= 0}
+                  disabled={children <= 0 || (adults + children) <= getMinParticipants()}
                 >
                   <Minus className="w-4 h-4 md:w-5 md:h-5" />
                 </Button>
