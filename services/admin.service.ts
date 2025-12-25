@@ -62,6 +62,18 @@ export interface UserActionResponse {
   user?: AdminUser;
 }
 
+export interface UpdateUserRequest {
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  domainName?: string;
+  phoneNumber?: string | null;
+  address?: string | null;
+  codePostal?: string | null;
+  city?: string | null;
+  siteWeb?: string | null;
+}
+
 export interface AdminLoginResponse {
   success: boolean;
   message: string;
@@ -261,8 +273,24 @@ class AdminService {
     }
   }
 
-  /**
-   * Get all support tickets (requires admin authentication)
+  /**   * Update user details (requires admin authentication)
+   * @param userId - User ID
+   * @param data - Data to update
+   * @returns Promise with updated user
+   */
+  async updateUser(userId: string, data: UpdateUserRequest): Promise<{ success: boolean; message: string; data: AdminUser }> {
+    try {
+      const response = await apiClient.put(`/users/admin/users/${userId}`, data);
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response) {
+        throw error.response.data as ApiError;
+      }
+      throw new Error('Network error occurred');
+    }
+  }
+
+  /**   * Get all support tickets (requires admin authentication)
    * @param query - Pagination parameters
    * @returns Promise with paginated support tickets
    */

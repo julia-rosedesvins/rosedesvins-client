@@ -5,7 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { Search, ChevronLeft, ChevronRight, Users, UserCheck, Clock, UserX, Loader2 } from "lucide-react"
+import { Label } from "@/components/ui/label"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { Search, ChevronLeft, ChevronRight, Users, UserCheck, Clock, UserX, Loader2, Pencil } from "lucide-react"
 import DashboardLayout from "@/components/admin/DashboardLayout"
 import { useAdmin } from '@/contexts/AdminContext'
 import { adminService, AdminUser, PaginatedUsersResponse, UserActionRequest } from '@/services/admin.service'
@@ -27,6 +29,50 @@ export default function AdminClients() {
     const [loadingRejected, setLoadingRejected] = useState(false);
     const [actionLoading, setActionLoading] = useState<{[key: string]: 'approve' | 'reject' | null}>({});
     const [searchTerm, setSearchTerm] = useState('');
+    const [editingUser, setEditingUser] = useState<AdminUser | null>(null);
+    const [editForm, setEditForm] = useState({
+        firstName: '',
+        lastName: '',
+        email: '',
+        domainName: ''
+    });
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
+
+    const handleEditClick = (user: AdminUser) => {
+        setEditingUser(user);
+        setEditForm({
+            firstName: user.firstName,
+            lastName: user.lastName,
+            email: user.email,
+            domainName: user.domainName || ''
+        });
+        setIsEditModalOpen(true);
+    };
+
+    const handleSaveEdit = async () => {
+        if (!editingUser) return;
+        
+        setIsSaving(true);
+        try {
+            const response = await adminService.updateUser(editingUser._id, editForm);
+            if (response.success) {
+                toast.success('Utilisateur mis à jour avec succès');
+                setIsEditModalOpen(false);
+                // Refresh lists
+                fetchPendingUsers();
+                fetchApprovedUsers();
+                fetchRejectedUsers();
+            } else {
+                toast.error(response.message || 'Erreur lors de la mise à jour');
+            }
+        } catch (error: any) {
+            console.error('Error updating user:', error);
+            toast.error(error.message || 'Erreur lors de la mise à jour');
+        } finally {
+            setIsSaving(false);
+        }
+    };
 
     const fetchPendingUsers = async (page: number = 1, limit: number = 10) => {
         setLoadingPending(true);
@@ -256,14 +302,27 @@ export default function AdminClients() {
                                                 )}
                                             </Button>
                                         </>
-                                    ) : user.accountStatus === 'rejected' ? (
-                                        <Badge className="bg-red-100 text-red-800 hover:bg-red-100">
-                                            Rejeté
-                                        </Badge>
                                     ) : (
-                                        <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
-                                            {user.accountStatus === 'approved' ? 'Approuvé' : 'Actif'}
-                                        </Badge>
+                                        <>
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                onClick={() => handleEditClick(user)}
+                                                className="mr-2"
+                                            >
+                                                <Pencil className="w-4 h-4 mr-2" />
+                                                Modifier
+                                            </Button>
+                                            {user.accountStatus === 'rejected' ? (
+                                                <Badge className="bg-red-100 text-red-800 hover:bg-red-100">
+                                                    Rejeté
+                                                </Badge>
+                                            ) : (
+                                                <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
+                                                    {user.accountStatus === 'approved' ? 'Approuvé' : 'Actif'}
+                                                </Badge>
+                                            )}
+                                        </>
                                     )}
                                 </div>
                             </td>
@@ -401,6 +460,77 @@ export default function AdminClients() {
                     {!searchTerm && renderPagination()}
                 </CardContent>
             </Card>
+
+            {/* Edit User Modal */}
+            <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+                <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                        <DialogTitle>Modifier l'utilisateur</DialogTitle>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="firstName" className="text-right">
+                                Prénom
+                            </Label>
+                            <Input
+                                id="firstName"
+                                value={editForm.firstName}
+                                onChange={(e) => setEditForm({ ...editForm, firstName: e.target.value })}
+                                className="col-span-3"
+                            />
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="lastName" className="text-right">
+                                Nom
+                            </Label>
+                            <Input
+                                id="lastName"
+                                value={editForm.lastName}
+                                onChange={(e) => setEditForm({ ...editForm, lastName: e.target.value })}
+                                className="col-span-3"
+                            />
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="email" className="text-right">
+                                Email
+                            </Label>
+                            <Input
+                                id="email"
+                                type="email"
+                                value={editForm.email}
+                                onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                                className="col-span-3"
+                            />
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="domainName" className="text-right">
+                                Domaine
+                            </Label>
+                            <Input
+                                id="domainName"
+                                value={editForm.domainName}
+                                onChange={(e) => setEditForm({ ...editForm, domainName: e.target.value })}
+                                className="col-span-3"
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsEditModalOpen(false)}>
+                            Annuler
+                        </Button>
+                        <Button onClick={handleSaveEdit} disabled={isSaving} className="bg-[#3A7B59] hover:bg-[#2d5f43]">
+                            {isSaving ? (
+                                <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Enregistrement...
+                                </>
+                            ) : (
+                                'Enregistrer'
+                            )}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </DashboardLayout>
     )
 }
