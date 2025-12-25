@@ -9,6 +9,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { WidgetProvider, useWidget } from "@/contexts/WidgetContext";
 import { eventsService, PublicScheduleData } from "@/services/events.service";
+import { getHolidays } from "@/services/availability.service";
 
 function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
     const { widgetData, loading, error, colorCode } = useWidget();
@@ -661,6 +662,29 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
     return slotCompletelyFull;
   };
 
+  // Check if a date is a public holiday
+  const isHoliday = (date: Date): boolean => {
+    if (!widgetData?.availability?.publicHolidays) return false;
+    
+    // Get the list of enabled holiday names from the widget data
+    const enabledHolidayNames = widgetData.availability.publicHolidays.map((h: any) => h.name);
+    
+    // Calculate holidays for the year of the checked date
+    const year = date.getFullYear();
+    const holidaysForYear = getHolidays(year);
+    
+    const dateString = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
+    
+    // Check if the date matches any holiday that is enabled (by name)
+    return holidaysForYear.some(holiday => {
+      // Check if this holiday is enabled (its name is in the list)
+      if (!enabledHolidayNames.includes(holiday.name)) return false;
+      
+      // Check if the date matches
+      return holiday.date === dateString;
+    });
+  };
+
   // Get available time slots for the selected date
   const getAvailableTimeSlots = (date: Date | null) => {
     // Check if service is active
@@ -669,6 +693,11 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
     }
 
     if (!date) {
+      return { morning: [], afternoon: [] };
+    }
+
+    // Check if date is a public holiday
+    if (isHoliday(date)) {
       return { morning: [], afternoon: [] };
     }
 
@@ -747,10 +776,17 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
   const morningTimes = allMorningTimes.slice(morningStartIndex, morningStartIndex + visibleSlotsCount);
   const afternoonTimes = allAfternoonTimes.slice(afternoonStartIndex, afternoonStartIndex + visibleSlotsCount);
 
+
+
   // Check if a date has any available time slots (excluding booked ones)
   const isDateAvailable = (date: Date) => {
     // Check if service is active
     if (widgetData?.service?.isActive === false) {
+      return false;
+    }
+
+    // Check if date is a public holiday
+    if (isHoliday(date)) {
       return false;
     }
 

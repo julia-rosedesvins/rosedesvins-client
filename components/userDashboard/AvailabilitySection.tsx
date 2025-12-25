@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ChevronDown, Save, Loader2, AlertCircle } from "lucide-react";
 import { useState, useEffect } from "react";
-import { availabilityService, AvailabilityData, TimeSlot, ApiError } from "@/services/availability.service";
+import { availabilityService, AvailabilityData, TimeSlot, ApiError, getHolidays } from "@/services/availability.service";
 import toast from 'react-hot-toast';
 
 const weekDays = [
@@ -26,19 +26,8 @@ const timeOptions = [
   "20:30", "21:00", "21:30", "22:00", "22:30", "23:00"
 ];
 
-const holidays = [
-  { id: "new-year", name: "1er janvier", date: "2025-01-01" },
-  { id: "easter-monday", name: "Lundi de Pâques", date: "2025-04-21" },
-  { id: "labor-day", name: "1er mai", date: "2025-05-01" },
-  { id: "victory-day", name: "8 mai", date: "2025-05-08" },
-  { id: "ascension", name: "Ascension", date: "2025-05-29" },
-  { id: "whit-monday", name: "Lundi de Pentecôte", date: "2025-06-09" },
-  { id: "bastille-day", name: "14 juillet", date: "2025-07-14" },
-  { id: "assumption", name: "15 août", date: "2025-08-15" },
-  { id: "all-saints", name: "1er novembre", date: "2025-11-01" },
-  { id: "armistice", name: "11 novembre", date: "2025-11-11" },
-  { id: "christmas", name: "25 décembre", date: "2025-12-25" },
-];
+const currentYear = new Date().getFullYear();
+const holidays = getHolidays(currentYear);
 
 export const AvailabilitySection = () => {
   const [schedules, setSchedules] = useState<{[key: string]: {
@@ -132,7 +121,14 @@ export const AvailabilitySection = () => {
                 : new Date(holiday.date).toISOString().split('T')[0];
               
               // Map holiday dates to IDs
-              const foundHoliday = holidays.find(h => h.date === dateStr);
+              // Try to find by date first (exact match for current year)
+              let foundHoliday = holidays.find(h => h.date === dateStr);
+              
+              // If not found by date (might be a different year), try to find by name
+              if (!foundHoliday) {
+                foundHoliday = holidays.find(h => h.name === holiday.name);
+              }
+              
               return foundHoliday?.id;
             } catch (error) {
               console.warn('Invalid holiday date format:', holiday);
