@@ -663,6 +663,11 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
 
   // Get available time slots for the selected date
   const getAvailableTimeSlots = (date: Date | null) => {
+    // Check if service is active
+    if (widgetData?.service?.isActive === false) {
+      return { morning: [], afternoon: [] };
+    }
+
     if (!date) {
       return { morning: [], afternoon: [] };
     }
@@ -744,6 +749,11 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
 
   // Check if a date has any available time slots (excluding booked ones)
   const isDateAvailable = (date: Date) => {
+    // Check if service is active
+    if (widgetData?.service?.isActive === false) {
+      return false;
+    }
+
     // NEW LOGIC: If special date overrides exist, check if this date has overrides
     if (hasActiveSpecialOverrides()) {
       const overrideSlots = getOverrideTimeSlotsForDate(date);
