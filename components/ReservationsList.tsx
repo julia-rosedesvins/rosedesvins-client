@@ -119,7 +119,9 @@ export const ReservationsList = () => {
       customerEmail: event.bookingId?.customerEmail || 'Non disponible',
       eventType: event.eventType,
       eventStatus: event.eventStatus,
-      additionalNotes: event.bookingId?.additionalNotes || undefined
+      additionalNotes: event.bookingId?.additionalNotes || undefined,
+      participantsAdults: event.bookingId?.participantsAdults,
+      participantsChildren: event.bookingId?.participantsEnfants
     };
   };
 
