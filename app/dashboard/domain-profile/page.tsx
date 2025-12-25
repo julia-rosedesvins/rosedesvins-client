@@ -1298,10 +1298,54 @@ export default function UserDomainProfile() {
                                                                             <Calendar
                                                                                 mode="multiple"
                                                                                 selected={prestation.selectedDates}
-                                                                                onSelect={(dates) => {
-                                                                                    if (dates) {
-                                                                                        const selectedDates = Array.isArray(dates) ? dates : [dates];
-                                                                                        updateSelectedDates(prestation.id, selectedDates);
+                                                                                onSelect={(dates, selectedDay, activeModifiers, e) => {
+                                                                                    // If Shift is pressed, we handle it in onDayClick to support range selection
+                                                                                    if (e?.shiftKey) return;
+
+                                                                                    const selectedDates = dates || [];
+                                                                                    updateSelectedDates(prestation.id, selectedDates);
+                                                                                }}
+                                                                                onDayClick={(day, modifiers, e) => {
+                                                                                    // Update last clicked date for range selection
+                                                                                    if (!e.shiftKey) {
+                                                                                        setLastClickedDate(prev => ({ ...prev, [prestation.id]: day }));
+                                                                                    }
+                                                                                    
+                                                                                    // Handle range selection with Shift key
+                                                                                    if (e.shiftKey && lastClickedDate[prestation.id]) {
+                                                                                        const start = lastClickedDate[prestation.id]!;
+                                                                                        const end = day;
+                                                                                        
+                                                                                        // Calculate range
+                                                                                        const range: Date[] = [];
+                                                                                        const startDate = new Date(Math.min(start.getTime(), end.getTime()));
+                                                                                        const endDate = new Date(Math.max(start.getTime(), end.getTime()));
+                                                                                        
+                                                                                        const current = new Date(startDate);
+                                                                                        current.setHours(0,0,0,0);
+                                                                                        endDate.setHours(0,0,0,0);
+                                                                                        
+                                                                                        while (current <= endDate) {
+                                                                                            range.push(new Date(current));
+                                                                                            current.setDate(current.getDate() + 1);
+                                                                                        }
+                                                                                        
+                                                                                        // Merge with existing selected dates
+                                                                                        const existingDates = prestation.selectedDates || [];
+                                                                                        const existingDateStrings = new Set(existingDates.map(d => d.toDateString()));
+                                                                                        
+                                                                                        const newDates = [...existingDates];
+                                                                                        range.forEach(d => {
+                                                                                            if (!existingDateStrings.has(d.toDateString())) {
+                                                                                                newDates.push(d);
+                                                                                            }
+                                                                                        });
+                                                                                        
+                                                                                        // Wrap in setTimeout to avoid "removeChild" errors during event bubbling
+                                                                                        setTimeout(() => {
+                                                                                            updateSelectedDates(prestation.id, newDates);
+                                                                                            setLastClickedDate(prev => ({ ...prev, [prestation.id]: day }));
+                                                                                        }, 0);
                                                                                     }
                                                                                 }}
                                                                                 initialFocus
