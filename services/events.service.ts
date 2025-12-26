@@ -37,6 +37,7 @@ export interface EventData {
   eventName: string;
   eventDate: string;
   eventTime: string;
+  eventEndTime?: string;
   eventDescription?: string;
   eventType: 'booking' | 'personal' | 'external' | 'blocked';
   externalCalendarSource?: string;

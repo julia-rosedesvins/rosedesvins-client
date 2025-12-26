@@ -15,6 +15,7 @@ import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { bookingService, CreateBookingRequest } from "@/services/booking.service";
 import { userService, DomainService } from "@/services/user.service";
+import { eventsService, EventData } from "@/services/events.service";
 import { useUser } from "@/contexts/UserContext";
 import toast from "react-hot-toast";
 
@@ -27,6 +28,7 @@ interface AddBookingModalProps {
 export const AddBookingModal = ({ isOpen, onClose, onBookingCreated }: AddBookingModalProps) => {
   const { user } = useUser();
   const [services, setServices] = useState<DomainService[]>([]);
+  const [events, setEvents] = useState<EventData[]>([]);
   const [servicesLoading, setServicesLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
@@ -46,12 +48,22 @@ export const AddBookingModal = ({ isOpen, onClose, onBookingCreated }: AddBookin
 
   const [errors, setErrors] = useState<{[key: string]: string}>({});
 
-  // Load services when modal opens
+  // Load services and events when modal opens
   useEffect(() => {
     if (isOpen) {
       loadServices();
+      loadEvents();
     }
   }, [isOpen]);
+
+  const loadEvents = async () => {
+    try {
+      const response = await eventsService.getUserEvents();
+      setEvents(response.data || []);
+    } catch (error) {
+      console.error('Failed to load events:', error);
+    }
+  };
 
   const loadServices = async () => {
     try {
@@ -83,6 +95,45 @@ export const AddBookingModal = ({ isOpen, onClose, onBookingCreated }: AddBookin
     setErrors({});
   };
 
+  const selectedService = services.find(s => s._id === formData.serviceId);
+
+  const checkAvailability = (date: Date, time: string, serviceDuration: number) => {
+    const [hours, minutes] = time.split(':').map(Number);
+    const startMinutes = hours * 60 + minutes;
+    const endMinutes = startMinutes + serviceDuration;
+    
+    const dateString = format(date, 'yyyy-MM-dd');
+    
+    // Filter events for the same date
+    const dayEvents = events.filter(event => {
+      const eventDate = new Date(event.eventDate);
+      return format(eventDate, 'yyyy-MM-dd') === dateString && event.eventStatus !== 'cancelled';
+    });
+    
+    for (const event of dayEvents) {
+      const [eventHours, eventMinutes] = event.eventTime.split(':').map(Number);
+      const eventStartMinutes = eventHours * 60 + eventMinutes;
+      
+      let eventEndMinutes;
+      if (event.eventEndTime) {
+        const [endHours, endMinutes] = event.eventEndTime.split(':').map(Number);
+        eventEndMinutes = endHours * 60 + endMinutes;
+        if (eventEndMinutes < eventStartMinutes) eventEndMinutes += 24 * 60;
+      } else {
+        if (event.serviceInfo?.timeOfServiceInMinutes) {
+          eventEndMinutes = eventStartMinutes + event.serviceInfo.timeOfServiceInMinutes;
+        } else {
+           eventEndMinutes = eventStartMinutes + 60;
+        }
+      }
+      
+      if (startMinutes < eventEndMinutes && endMinutes > eventStartMinutes) {
+        return true; // Blocked
+      }
+    }
+    return false;
+  };
+
   const validateForm = () => {
     const newErrors: {[key: string]: string} = {};
 
@@ -96,6 +147,10 @@ export const AddBookingModal = ({ isOpen, onClose, onBookingCreated }: AddBookin
 
     if (!formData.bookingTime) {
       newErrors.bookingTime = "Veuillez sélectionner une heure";
+    } else if (formData.bookingDate && selectedService) {
+       if (checkAvailability(formData.bookingDate, formData.bookingTime, selectedService.timeOfServiceInMinutes)) {
+         newErrors.bookingTime = "Ce créneau n'est pas disponible (conflit avec un autre événement)";
+       }
     }
 
     if (formData.participantsAdults < 1) {
@@ -190,7 +245,7 @@ export const AddBookingModal = ({ isOpen, onClose, onBookingCreated }: AddBookin
     onClose();
   };
 
-  const selectedService = services.find(service => service._id === formData.serviceId);
+
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
@@ -267,7 +322,11 @@ export const AddBookingModal = ({ isOpen, onClose, onBookingCreated }: AddBookin
                     mode="single"
                     selected={formData.bookingDate}
                     onSelect={(date) => setFormData(prev => ({ ...prev, bookingDate: date }))}
-                    disabled={(date) => date < new Date()}
+                    disabled={(date) => {
+                      const today = new Date();
+                      today.setHours(0, 0, 0, 0);
+                      return date < today;
+                    }}
                     initialFocus
                     locale={fr}
                   />
