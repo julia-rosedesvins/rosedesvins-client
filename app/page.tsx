@@ -1,5 +1,6 @@
 "use client"
 
+import ExperiencesSection from "@/components/ExperiencesSection"
 import HeroSection from "@/components/HeroSection"
 import LandingPageLayout from "@/components/LandingPageLayout"
 import RegionSection from "@/components/RegionSection"
@@ -13,6 +14,7 @@ export default function HomePage() {
     <LandingPageLayout>
       <HeroSection />
       <RegionSection />
+      <ExperiencesSection />
     </LandingPageLayout>
   )
 }
