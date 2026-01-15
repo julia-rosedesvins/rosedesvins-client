@@ -7,10 +7,11 @@ import { useRouter, usePathname } from "next/navigation"
 
 // Navigation data structure
 const navLinks = [
-  { href: "#contact", label: "Contact", isSpecial: true },
+  // { href: "#contact", label: "Contact", isSpecial: true },
+  { href: "/", label: "Espace domaines viticoles" },
   { href: "/about", label: "À propos" },
   // { href: "#blog", label: "Blog" },
-  { href: "/faqs", label: "FAQ" },
+  // { href: "/faqs", label: "FAQ" },
 ]
 
 const socialLinks = [
@@ -71,7 +72,7 @@ export default function Navbar() {
           href={link.href}
           className="text-sm hover:opacity-80"
           style={{ color: "white" }}
-          onClick={handleNavClick(link.href, link.isSpecial)}
+          onClick={handleNavClick(link.href, false)}
         >
           {link.label}
         </Link>
@@ -91,12 +92,12 @@ export default function Navbar() {
         ) : (
           <>
             <LogIn className="w-4 h-4" />
-            <span>Connexion</span>
+            <span>Se connecter</span>
           </>
         )}
       </Link>
       
-      {!isMobile && (
+      {/* {!isMobile && (
         <div className="flex gap-4">
           {socialLinks.map((social) => {
             const IconComponent = social.icon
@@ -113,7 +114,7 @@ export default function Navbar() {
             )
           })}
         </div>
-      )}
+      )} */}
     </>
   )
 
@@ -128,7 +129,7 @@ export default function Navbar() {
               className="h-10 w-10 rounded-full cursor-pointer"
             />
           </Link>
-          <div className="hidden sm:block">
+          <div className="sm:block">
             <Link href="/">
               <h1 className="text-white font-serif text-2xl tracking-wider font-medium">
                 ROSE DES VINS
@@ -158,7 +159,7 @@ export default function Navbar() {
             <div className="flex flex-col gap-4" onClick={() => setMobileMenuOpen(false)}>
               <NavigationLinks isMobile />
             </div>
-            <div className="flex gap-4 pt-2">
+            {/* <div className="flex gap-4 pt-2">
               {socialLinks.map((social) => {
                 const IconComponent = social.icon
                 return (
@@ -173,7 +174,7 @@ export default function Navbar() {
                   </Link>
                 )
               })}
-            </div>
+            </div> */}
           </nav>
         </div>
       )}
