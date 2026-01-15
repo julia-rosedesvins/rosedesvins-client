@@ -1,5 +1,6 @@
 "use client"
 
+import BlogSection from "@/components/BlogSection"
 import ExperiencesSection from "@/components/ExperiencesSection"
 import GiftCardSection from "@/components/GiftCardSection"
 import HeroSection from "@/components/HeroSection"
@@ -17,6 +18,7 @@ export default function HomePage() {
       <RegionSection />
       <ExperiencesSection />
       <GiftCardSection />
+      <BlogSection />
     </LandingPageLayout>
   )
 }
