@@ -19,7 +19,7 @@ const RegionCard = ({ title, image, href }: RegionCardProps) => {
           sizes="(max-width: 768px) 100vw, 192px"
         />
       </div>
-      <h3 className="text-lg font-semibold text-wine-text text-center">
+      <h3 className="text-lg font-semibold text-[#264035] text-center">
         {title}
       </h3>
     </div>
