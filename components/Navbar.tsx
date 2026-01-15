@@ -70,8 +70,12 @@ export default function Navbar() {
         <Link
           key={link.href}
           href={link.href}
-          className="text-sm hover:opacity-80"
-          style={{ color: "white" }}
+          className={
+            isMobile
+              ? "text-sm hover:opacity-80"
+              : "bg-white text-[#318160] px-4 py-2 rounded-lg text-sm font-medium hover:bg-opacity-90 transition-colors shadow-sm"
+          }
+          style={isMobile ? { color: "white" } : {}}
           onClick={handleNavClick(link.href, false)}
         >
           {link.label}
@@ -81,8 +85,12 @@ export default function Navbar() {
       {/* Login/Account Access Link */}
       <Link
         href={mounted && isLoggedIn ? "/dashboard" : "/login"}
-        className="text-sm hover:opacity-80 flex items-center gap-2"
-        style={{ color: "white" }}
+        className={
+          isMobile
+            ? "text-sm hover:opacity-80 flex items-center gap-2"
+            : "bg-white text-[#318160] px-4 py-2 rounded-lg text-sm font-medium hover:bg-opacity-90 transition-colors shadow-sm flex items-center gap-2"
+        }
+        style={isMobile ? { color: "white" } : {}}
       >
         {mounted && isLoggedIn ? (
           <>
@@ -142,7 +150,7 @@ export default function Navbar() {
         </div>
 
         {/* Desktop Navigation */}
-        <nav className="hidden lg:flex items-center gap-6">
+        <nav className="hidden lg:flex items-center gap-3">
           <NavigationLinks />
         </nav>
 
