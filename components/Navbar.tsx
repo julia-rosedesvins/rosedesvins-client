@@ -118,7 +118,7 @@ export default function Navbar() {
   )
 
   return (
-    <header className="sticky top-0 z-50 text-white px-4 py-3" style={{ backgroundColor: "#3A7B59" }}>
+    <header className="sticky top-0 z-50 text-white px-4 py-3" style={{ backgroundColor: "#318160" }}>
       <div className="max-w-6xl mx-auto flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Link href="/">
