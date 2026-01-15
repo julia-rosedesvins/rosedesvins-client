@@ -19,7 +19,7 @@ const ExperiencesSection = () => {
 
   return (
     <section className="py-8 px-4 bg-white">
-      <div className="max-w-6xl mx-auto">
+      <div className="max-w-7xl mx-auto">
         <div className="mb-8">
           <Link href="/experiences">
             <h2 className="text-2xl md:text-3xl font-bold text-[#318160] mb-4 text-left hover:text-[#1D6346] transition-colors cursor-pointer">
@@ -39,11 +39,11 @@ const ExperiencesSection = () => {
               align: "start",
               loop: true,
             }}
-            className="w-full max-w-5xl mx-auto"
+            className="w-full max-w-7xl mx-auto"
           >
             <CarouselContent className="-ml-2 md:-ml-4">
               {experiences.map((experience) => (
-                <CarouselItem key={experience.title} className="pl-2 md:pl-4 md:basis-1/3">
+                <CarouselItem key={experience.title} className="pl-2 md:pl-4 md:basis-1/4">
                   <RegionCard 
                     title={experience.title}
                     image={experience.image}

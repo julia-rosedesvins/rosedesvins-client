@@ -14,7 +14,7 @@ const GiftCardSection = () => {
 
   return (
     <section className="py-8 px-4 bg-gradient-to-br from-[#318160]/5 to-[#318160]/10">
-      <div className="max-w-6xl mx-auto">
+      <div className="max-w-7xl mx-auto">
         <div className="mb-6 text-center">
           <Gift className="w-16 h-16 mx-auto mb-4 text-[#318160]" />
           <h2 className="text-3xl md:text-4xl font-bold text-[#318160] mb-4">
@@ -32,11 +32,11 @@ const GiftCardSection = () => {
               align: "start",
               loop: true,
             }}
-            className="w-full max-w-5xl mx-auto"
+            className="w-full max-w-7xl mx-auto"
           >
             <CarouselContent className="-ml-2 md:-ml-4">
               {giftExperiences.map((experience) => (
-                <CarouselItem key={experience.title} className="pl-2 md:pl-4 md:basis-1/3">
+                <CarouselItem key={experience.title} className="pl-2 md:pl-4 md:basis-1/4">
                   <RegionCard 
                     title={experience.title}
                     image={experience.image}

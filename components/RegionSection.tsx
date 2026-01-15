@@ -20,7 +20,7 @@ const RegionsSection = () => {
 
   return (
     <section className="py-8 px-4 bg-white">
-      <div className="max-w-6xl mx-auto">
+      <div className="max-w-7xl mx-auto">
         <div className="mb-8">
           <Link href="/regions" className="hover:text-[#1D6346] transition-colors">
             <h2 className="text-2xl md:text-3xl font-bold text-[#318160] mb-4 text-left">
@@ -40,11 +40,11 @@ const RegionsSection = () => {
               align: "start",
               loop: true,
             }}
-            className="w-full max-w-5xl mx-auto"
+            className="w-full max-w-7xl mx-auto"
           >
             <CarouselContent className="-ml-8 md:-ml-12">
               {regions.map((region) => (
-                <CarouselItem key={region.title} className="pl-8 md:pl-12 basis-1/1 md:basis-1/3">
+                <CarouselItem key={region.title} className="pl-8 md:pl-12 basis-1/1 md:basis-1/4">
                   <RegionCard 
                     title={region.title}
                     image={region.image}

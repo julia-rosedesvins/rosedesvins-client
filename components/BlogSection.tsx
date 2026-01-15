@@ -15,7 +15,7 @@ const BlogSection = () => {
 
   return (
     <section className="py-8 px-4 bg-white">
-      <div className="max-w-6xl mx-auto">
+      <div className="max-w-7xl mx-auto">
         <div className="mb-6">
           <h2 className="text-2xl md:text-3xl font-bold text-[#318160] mb-4 text-left">
             Blog
@@ -29,7 +29,7 @@ const BlogSection = () => {
               align: "start",
               loop: true,
             }}
-            className="w-full max-w-5xl mx-auto"
+            className="w-full max-w-7xl mx-auto"
           >
             <CarouselContent className="-ml-2 md:-ml-4">
               {articles.map((article) => (

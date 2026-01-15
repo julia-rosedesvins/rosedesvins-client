@@ -119,22 +119,24 @@ export default function Navbar() {
 
   return (
     <header className="sticky top-0 z-50 text-white px-4 py-3" style={{ backgroundColor: "#318160" }}>
-      <div className="max-w-6xl mx-auto flex items-center justify-between">
+      <div className="max-w-7xl mx-auto flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Link href="/">
             <img
               src="/assets/logo.png"
               alt="Rose des Vins Logo"
-              className="h-12 w-auto cursor-pointer"
+              className="h-10 w-10 rounded-full cursor-pointer"
             />
           </Link>
           <div className="hidden sm:block">
             <Link href="/">
-              <h1 className="font-semibold text-lg cursor-pointer hover:opacity-80">Rose des Vins</h1>
+              <h1 className="text-white font-serif text-2xl tracking-wider font-medium">
+                ROSE DES VINS
+              </h1>
             </Link>
-            <p className="text-sm" style={{ color: "#8BB5A3" }}>
+            {/* <p className="text-sm" style={{ color: "#8BB5A3" }}>
               La technologie au service de l’œnotourisme
-            </p>
+            </p> */}
           </div>
         </div>
 
