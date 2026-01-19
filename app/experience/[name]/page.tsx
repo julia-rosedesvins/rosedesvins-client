@@ -121,7 +121,7 @@ const Experience = ({ params }: { params: { name: string } }) => {
                             {domaines.map((domaine) => (
                                 <Link
                                     key={domaine.id}
-                                    href={domaine.id === 1 ? "/regions/loire-valley/bourillon-orleans" : "#"}
+                                    href={domaine.id === 1 ? "/experience/loire-valley/bourillon-orleans" : "#"}
                                     className="block hover:shadow-lg transition-shadow"
                                 >
                                     <div className="bg-white rounded-lg shadow-sm overflow-hidden">
