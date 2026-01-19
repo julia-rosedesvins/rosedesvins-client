@@ -98,7 +98,7 @@ const Experiences = () => {
                         {activities.map((activity) => (
                             <Link
                                 key={activity.id}
-                                href={activity.id === 2 ? "/experiences/cave-visits" : "#"}
+                                href={activity.id === 2 ? "/experience/cave-visits" : "#"}
                                 className="text-center block hover:opacity-80 transition-opacity"
                             >
                                 <h3 className="text-xl font-semibold text-[#318160] mb-6">

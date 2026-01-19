@@ -5,7 +5,7 @@ import RegionCard from "./RegionCard";
 
 const ExperiencesSection = () => {
   const experiences = [
-    { title: "Visites de cave", image: "/assets/cave-visite.jpg", href: "/experiences/cave-visits" },
+    { title: "Visites de cave", image: "/assets/cave-visite.jpg", href: "/experience/cave-visits" },
     { title: "Atelier d'œnologie", image: "/assets/atelier-oenologie.jpg" },
     { title: "Vélo & trottinette dans les vignes", image: "/assets/velo-vignes.jpg" },
     { title: "Dégustations de vin", image: "/assets/degustation-vin.jpg" },
@@ -21,7 +21,7 @@ const ExperiencesSection = () => {
     <section className="py-8 px-4 bg-white">
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
-          <Link href="/experiences">
+          <Link href="/experience">
             <h2 className="text-2xl md:text-3xl font-bold text-[#318160] mb-4 text-left hover:text-[#1D6346] transition-colors cursor-pointer">
               Explorer les vignobles, vivez des expériences œnotouristiques inoubliables.
             </h2>
