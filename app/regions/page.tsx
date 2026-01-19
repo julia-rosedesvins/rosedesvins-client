@@ -82,7 +82,7 @@ const Regions = () => {
                         {regions.map((region) => (
                             <div key={region.name} className="flex flex-col items-center text-center">
                                 {region.slug ? (
-                                    <Link href={`/regions/${region.slug}`} className="flex flex-col items-center text-center hover:transform hover:scale-105 transition-transform">
+                                    <Link href={`/region/${region.slug}`} className="flex flex-col items-center text-center hover:transform hover:scale-105 transition-transform">
                                         <div className="w-32 h-32 md:w-40 md:h-40 rounded-full overflow-hidden mb-4 shadow-lg">
                                             <img
                                                 src={region.image}
