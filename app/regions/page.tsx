@@ -2,29 +2,42 @@
 
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useState, useEffect } from "react";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import LandingPageLayout from "@/components/LandingPageLayout";
+import { regionService, Region } from "@/services/region.service";
 
 const Regions = () => {
     const router = useRouter();
-    const regions = [
-        { name: "Vallée de la Loire", image: "/assets/loire-valley-new.jpg", slug: "loire-valley" },
-        { name: "Bordeaux", image: "/assets/bordeaux-new.jpg", slug: "bordeaux" },
-        { name: "Champagne", image: "/assets/champagne-new.jpg", slug: "champagne" },
-        { name: "Bourgogne", image: "/assets/bourgogne.jpg", slug: "bourgogne" },
-        { name: "Languedoc-Roussillon", image: "/assets/languedoc-roussillon.jpg", slug: "languedoc-roussillon" },
-        { name: "Vallée du Rhône", image: "/assets/vallee-rhone.jpg", slug: "vallee-rhone" },
-        { name: "Provence", image: "/assets/provence.jpg", slug: "provence" },
-        { name: "Corse", image: "/assets/corse.jpg", slug: "corse" },
-        { name: "Sud-Ouest", image: "/assets/sud-ouest.jpg", slug: "sud-ouest" },
-        { name: "Beaujolais", image: "/assets/beaujolais.jpg", slug: "beaujolais" },
-        { name: "Alsace", image: "/assets/alsace.jpg", slug: "alsace" },
-        { name: "Lorraine", image: "/assets/lorraine.png", slug: "lorraine" },
-        { name: "Jura", image: "/assets/jura.jpg", slug: "jura" },
-        { name: "Île-de-France", image: "/assets/ile-de-france.jpg", slug: "ile-de-france" },
-        { name: "Savoie", image: "/assets/savoie.jpg", slug: "savoie" },
-    ];
+    const [regions, setRegions] = useState<Region[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [showAll, setShowAll] = useState(false);
+    const [totalRegions, setTotalRegions] = useState(0);
+
+    useEffect(() => {
+        const fetchRegions = async () => {
+            try {
+                setLoading(true);
+                const limit = showAll ? 1000 : 15; // Load all or just 15
+                const response = await regionService.getAllRegions({ page: 1, limit });
+                setRegions(response.data);
+                setTotalRegions(response.total);
+            } catch (err: any) {
+                console.error('Error fetching regions:', err);
+                setError(err.message || 'Failed to load regions');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchRegions();
+    }, [showAll]);
+
+    const handleViewAll = () => {
+        setShowAll(true);
+    };
 
     return (
         <LandingPageLayout>
@@ -78,46 +91,56 @@ const Regions = () => {
                         Les régions viticoles françaises
                     </h2>
 
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-8 md:gap-12">
-                        {regions.map((region) => (
-                            <div key={region.name} className="flex flex-col items-center text-center">
-                                {region.slug ? (
-                                    <Link href={`/region/${region.slug}`} className="flex flex-col items-center text-center hover:transform hover:scale-105 transition-transform">
-                                        <div className="w-32 h-32 md:w-40 md:h-40 rounded-full overflow-hidden mb-4 shadow-lg">
-                                            <img
-                                                src={region.image}
-                                                alt={region.name}
-                                                className="w-full h-full object-cover"
-                                            />
-                                        </div>
-                                        <h3 className="text-[#318160] font-semibold text-lg hover:text-[#1D6346]">
-                                            {region.name}
-                                        </h3>
-                                    </Link>
-                                ) : (
-                                    <>
-                                        <div className="w-32 h-32 md:w-40 md:h-40 rounded-full overflow-hidden mb-4 shadow-lg">
-                                            <img
-                                                src={region.image}
-                                                alt={region.name}
-                                                className="w-full h-full object-cover"
-                                            />
-                                        </div>
-                                        <h3 className="text-[#318160] font-semibold text-lg">
-                                            {region.name}
-                                        </h3>
-                                    </>
+                    {loading ? (
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-8 md:gap-12">
+                            {Array.from({ length: 15 }).map((_, index) => (
+                                <div key={index} className="flex flex-col items-center text-center animate-pulse">
+                                    <div className="w-32 h-32 md:w-40 md:h-40 rounded-full bg-gray-200 mb-4"></div>
+                                    <div className="h-6 bg-gray-200 rounded w-32"></div>
+                                </div>
+                            ))}
+                        </div>
+                    ) : error ? (
+                        <div className="text-center py-12">
+                            <p className="text-lg text-red-600">{error}</p>
+                        </div>
+                    ) : (
+                        <>
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-8 md:gap-12">
+                                {regions.map((region) => (
+                                    <div key={region._id} className="flex flex-col items-center text-center">
+                                        <Link 
+                                            href={`/region/${encodeURIComponent(region.denom)}`} 
+                                            className="flex flex-col items-center text-center hover:transform hover:scale-105 transition-transform"
+                                        >
+                                            <div className="w-32 h-32 md:w-40 md:h-40 rounded-full overflow-hidden mb-4 shadow-lg">
+                                                <img
+                                                    src={region.thumbnailUrl || "/assets/loire-valley-new.jpg"}
+                                                    alt={region.denom}
+                                                    className="w-full h-full object-cover"
+                                                />
+                                            </div>
+                                            <h3 className="text-[#318160] font-semibold text-lg hover:text-[#1D6346]">
+                                                {region.denom}
+                                            </h3>
+                                        </Link>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* CTA Button */}
+                            <div className="text-center mt-16">
+                                {!showAll && totalRegions > 15 && (
+                                    <Button 
+                                        onClick={handleViewAll}
+                                        className="bg-[#318160] hover:bg-[#1D6346] text-white px-8 py-3 rounded-lg font-semibold"
+                                    >
+                                        Voir tous les domaines ({totalRegions})
+                                    </Button>
                                 )}
                             </div>
-                        ))}
-                    </div>
-
-                    {/* CTA Button */}
-                    <div className="text-center mt-16">
-                        <Button className="bg-[#318160] hover:bg-[#1D6346] text-white px-8 py-3 rounded-lg font-semibold">
-                            Voir tous les domaines
-                        </Button>
-                    </div>
+                        </>
+                    )}
                 </div>
             </section>
         </LandingPageLayout>
