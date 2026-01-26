@@ -24,7 +24,8 @@ const LoireValley = ({ params }: { params: { name: string } }) => {
             location: "Vouvray",
             price: "10 €",
             image: "/assets/bourillon-orleans.jpg",
-            description: "Le domaine Bourillon-Orléans cultive depuis trois générations le Chenin sur un terroir argilo-siliceux. Producteur de Vouvray de caractère, il possède aussi des caves troglodytiques du XVe siècle."
+            description: "Le domaine Bourillon-Orléans cultive depuis trois générations le Chenin sur un terroir argilo-siliceux. Producteur de Vouvray de caractère, il possède aussi des caves troglodytiques du XVe siècle.",
+            buttonText: "Réserver"
         },
         {
             id: 2,
@@ -32,7 +33,8 @@ const LoireValley = ({ params }: { params: { name: string } }) => {
             location: "Cléré-sur-Layon",
             price: "Gratuit",
             image: "/assets/famille-denis-new.jpg",
-            description: "Domaine familial du Haut-Layon depuis quatre générations, certifié HVE, la Famille Denis produit des Anjou, Coteaux du Layon et IGP de caractère, et accueille les visiteurs pour des dégustations et visites guidées."
+            description: "Domaine familial du Haut-Layon depuis quatre générations, certifié HVE, la Famille Denis produit des Anjou, Coteaux du Layon et IGP de caractère, et accueille les visiteurs pour des dégustations et visites guidées.",
+            buttonText: "Réserver"
         },
         {
             id: 3,
@@ -40,7 +42,8 @@ const LoireValley = ({ params }: { params: { name: string } }) => {
             location: "Cravant-les-Côteaux",
             price: "10 €",
             image: "/assets/pierre-sourdais.jpg",
-            description: "Domaine familial de Chinon, le Domaine Pierre Sourdais cultives en agriculture biologique. Les dégustations se font dans les célèbres caves Tuffau, reflet d'un savoir-faire transmis de génération en génération."
+            description: "Domaine familial de Chinon, le Domaine Pierre Sourdais cultives en agriculture biologique. Les dégustations se font dans les célèbres caves Tuffau, reflet d'un savoir-faire transmis de génération en génération.",
+            buttonText: "Voir Site"
         }
     ];
 
@@ -97,94 +100,96 @@ const LoireValley = ({ params }: { params: { name: string } }) => {
                 </div>
             </section>
 
-            {/* Filters */}
-            <section className="bg-white py-6 px-4 border-b">
-                <div className="max-w-6xl mx-auto">
-                    <div className="flex flex-wrap gap-3">
-                        {filters.map((filter) => (
-                            <Button
-                                key={filter.name}
-                                variant={filter.active ? "default" : "outline"}
-                                className={`rounded-full ${filter.active
-                                        ? "bg-primary text-white"
-                                        : "border-gray-300 text-gray-700 hover:bg-gray-50"
-                                    }`}
-                            >
-                                {filter.name}
-                            </Button>
-                        ))}
-                    </div>
+            <section className="bg-background py-4 px-4 border-b sticky top-0 z-20">
+                <div className="flex flex-wrap gap-3">
+                    {filters.map((filter) => (
+                        <Button
+                            key={filter.name}
+                            variant={filter.active ? "default" : "outline"}
+                            className={`rounded-full ${filter.active
+                                    ? "bg-primary text-primary-foreground"
+                                    : "border-border text-foreground hover:bg-muted"
+                                }`}
+                        >
+                            {filter.name}
+                        </Button>
+                    ))}
                 </div>
             </section>
 
-            {/* Content */}
-            <section className="py-12 px-4 bg-gray-50">
-                <div className="max-w-6xl mx-auto">
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                        {/* Domaines List */}
-                        <div className="lg:col-span-2 space-y-6">
-                            {domaines.map((domaine) => (
-                                <Link
-                                    key={domaine.id}
-                                    href={domaine.id === 1 ? "/regions/loire-valley/bourillon-orleans" : "#"}
-                                    className="block hover:shadow-lg transition-shadow"
-                                >
-                                    <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-                                        <div className="flex flex-col md:flex-row">
-                                            <div className="md:w-1/3">
-                                                <img
-                                                    src={domaine.image}
-                                                    alt={domaine.name}
-                                                    className="w-full h-48 md:h-full object-cover"
-                                                />
-                                            </div>
-                                            <div className="md:w-2/3 p-6">
-                                                <h3 className="text-xl font-bold text-primary mb-2">
-                                                    {domaine.name}
-                                                </h3>
-                                                <p className="text-gray-600 mb-3">{domaine.location}</p>
-                                                <div className="flex items-center mb-4">
-                                                    <Euro className="w-4 h-4 mr-1 text-gray-500" />
-                                                    <span className="text-gray-700">{domaine.price}</span>
-                                                </div>
-                                                <p className="text-gray-700 text-sm leading-relaxed">
-                                                    {domaine.description}
-                                                </p>
-                                            </div>
+            {/* Split Layout: Map + Listings - fills remaining viewport */}
+            <section className="flex flex-col lg:flex-row" style={{ height: 'calc(100vh - 60px)' }}>
+                {/* Interactive Map - 60% */}
+                <div className="lg:w-[60%] h-[400px] lg:h-full lg:sticky lg:top-[60px]">
+                    <iframe
+                        src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d687904.5851611486!2d-0.2728760499999999!3d47.2780468!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x47fcd3e8b3e0e3d5%3A0x40d37521e0d9c30!2sLoire%20Valley!5e0!3m2!1sen!2sfr!4v1704672000000!5m2!1sen!2sfr"
+                        width="100%"
+                        height="100%"
+                        style={{ border: 0 }}
+                        allowFullScreen
+                        loading="lazy"
+                        referrerPolicy="no-referrer-when-downgrade"
+                        title="Carte de la Vallée de la Loire"
+                    />
+                </div>
+
+                {/* Winemaker Listings - 40% - scrollable */}
+                <div className="lg:w-[40%] bg-muted/30 p-6 overflow-y-auto">
+                    <div className="space-y-4">
+                        {domaines.map((domaine) => (
+                            <Link
+                                key={domaine.id}
+                                href={domaine.id === 1 ? "/regions/loire-valley/bourillon-orleans" : "#"}
+                                className="block hover:shadow-lg transition-shadow"
+                            >
+                                <div className="bg-background rounded-lg shadow-sm overflow-hidden">
+                                    <img
+                                        src={domaine.image}
+                                        alt={domaine.name}
+                                        className="w-full h-40 object-cover"
+                                    />
+                                    <div className="p-4">
+                                        <div className="flex items-start justify-between gap-2">
+                                            <h3 className="text-lg font-bold text-primary">
+                                                {domaine.name}
+                                            </h3>
+                                            <Button
+                                                size="sm"
+                                                className="bg-primary hover:bg-primary/90 text-primary-foreground shrink-0"
+                                                onClick={(e) => e.preventDefault()}
+                                            >
+                                                {domaine.buttonText}
+                                            </Button>
                                         </div>
+                                        <p className="text-muted-foreground text-sm mb-2">{domaine.location}</p>
+                                        <div className="flex items-center mb-3">
+                                            <Euro className="w-4 h-4 mr-1 text-muted-foreground" />
+                                            <span className="text-foreground text-sm">{domaine.price}</span>
+                                        </div>
+                                        <p className="text-foreground/80 text-sm leading-relaxed line-clamp-3">
+                                            {domaine.description}
+                                        </p>
                                     </div>
-                                </Link>
-                            ))}
+                                </div>
+                            </Link>
+                        ))}
 
-                            {/* Pagination */}
-                            <div className="flex justify-center items-center gap-2 pt-6">
+                        {/* Pagination */}
+                        <div className="flex justify-center items-center gap-2 pt-4">
+                            <Button
+                                className="bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg font-semibold"
+                                disabled
+                            >
+                                1
+                            </Button>
+                            <Link href="/regions/loire-valley/page-2">
                                 <Button
-                                    className="bg-primary hover:bg-primary-dark text-white px-4 py-2 rounded-lg font-semibold"
-                                    disabled
+                                    variant="outline"
+                                    className="border-primary text-primary hover:bg-primary hover:text-primary-foreground px-4 py-2 rounded-lg font-semibold"
                                 >
-                                    1
+                                    2
                                 </Button>
-                                <Link href="/regions/loire-valley/page-2">
-                                    <Button
-                                        variant="outline"
-                                        className="border-primary text-primary hover:bg-primary hover:text-white px-4 py-2 rounded-lg font-semibold"
-                                    >
-                                        2
-                                    </Button>
-                                </Link>
-                            </div>
-                        </div>
-
-                        {/* Map */}
-                        <div className="lg:col-span-1">
-                            <div className="bg-white rounded-lg shadow-sm p-4 sticky top-6">
-                                <h3 className="text-lg font-semibold text-primary mb-4">Localisation</h3>
-                                <img
-                                    src="/assets/map-anjou-touraine.png"
-                                    alt="Carte interactive de la région Anjou-Touraine"
-                                    className="w-full h-auto rounded-lg"
-                                />
-                            </div>
+                            </Link>
                         </div>
                     </div>
                 </div>
