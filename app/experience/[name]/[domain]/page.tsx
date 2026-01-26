@@ -115,63 +115,55 @@ const ExperienceDomain = ({ params }: { params: { name: string; domain: string }
                 <section className="mb-12">
                     <h2 className="text-2xl font-bold text-gray-800 mb-8">Les expériences à découvrir</h2>
 
-                    <div className="space-y-8">
-                        {experiences.map((experience, index) => (
-                            <div key={experience.id} className="bg-white rounded-lg shadow-sm border overflow-hidden">
-                                <div className="flex flex-col lg:flex-row">
-                                    <div className="lg:w-1/4">
-                                        <img
-                                            src={experience.image}
-                                            alt={experience.title}
-                                            className={`w-full h-48 lg:h-full ${experience.id >= 2 ? 'object-contain bg-gray-50' : 'object-cover'
-                                                }`}
-                                        />
-                                    </div>
-                                    <div className="lg:w-3/4 p-6">
-                                        <div className="flex justify-between items-start mb-4">
-                                            <h3 className="text-xl font-bold text-primary mb-2">
-                                                {experience.title}
-                                            </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {experiences.map((experience) => (
+                            <div key={experience.id} className="bg-white rounded-lg shadow-sm border overflow-hidden flex flex-col">
+                                <img
+                                    src={experience.image}
+                                    alt={experience.title}
+                                    className={`w-full h-48 ${experience.id >= 2 ? 'object-contain bg-gray-50' : 'object-cover'
+                                        }`}
+                                />
+                                <div className="p-5 flex flex-col flex-1">
+                                    <h3 className="text-lg font-bold text-primary mb-3">
+                                        {experience.title}
+                                    </h3>
+
+                                    <div className="grid grid-cols-2 gap-2 mb-3 text-sm text-gray-600">
+                                        <div className="flex items-center">
+                                            <Euro className="w-4 h-4 mr-1 text-primary" />
+                                            <span>{experience.price}</span>
                                         </div>
-
-                                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4 text-sm text-gray-600">
-                                            <div className="flex items-center">
-                                                <Euro className="w-4 h-4 mr-2 text-primary" />
-                                                <span>{experience.price} / personne</span>
-                                            </div>
-                                            <div className="flex items-center">
-                                                <span className="w-4 h-4 mr-2 text-primary">🍷</span>
-                                                <span>{experience.wines}</span>
-                                            </div>
-                                            <div className="flex items-center">
-                                                <Clock className="w-4 h-4 mr-2 text-primary" />
-                                                <span>{experience.duration}</span>
-                                            </div>
-                                            <div className="flex items-center">
-                                                <Users className="w-4 h-4 mr-2 text-primary" />
-                                                <span>{experience.capacity}</span>
-                                            </div>
+                                        <div className="flex items-center">
+                                            <span className="w-4 h-4 mr-1 text-primary">🍷</span>
+                                            <span>{experience.wines}</span>
                                         </div>
-
-                                        <div className="flex items-center gap-4 mb-4">
-                                            {experience.languages.map((lang, idx) => (
-                                                <div key={idx} className="flex items-center text-sm text-gray-600">
-                                                    <Languages className="w-4 h-4 mr-1" />
-                                                    <span>{lang}</span>
-                                                </div>
-                                            ))}
+                                        <div className="flex items-center">
+                                            <Clock className="w-4 h-4 mr-1 text-primary" />
+                                            <span>{experience.duration}</span>
                                         </div>
-
-                                        <p className="text-gray-700 text-sm leading-relaxed mb-4">
-                                            {experience.description}
-                                        </p>
-
-                                        <div className="flex justify-end">
-                                            <Button className="bg-primary hover:bg-primary-dark text-white px-6">
-                                                Réserver
-                                            </Button>
+                                        <div className="flex items-center">
+                                            <Users className="w-4 h-4 mr-1 text-primary" />
+                                            <span>{experience.capacity}</span>
                                         </div>
                                     </div>
+
+                                    <div className="flex items-center gap-3 mb-3">
+                                        {experience.languages.map((lang, idx) => (
+                                            <div key={idx} className="flex items-center text-xs text-gray-600">
+                                                <Languages className="w-3 h-3 mr-1" />
+                                                <span>{lang}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    <p className="text-gray-700 text-sm leading-relaxed mb-4 flex-1">
+                                        {experience.description}
+                                    </p>
+
+                                    <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground">
+                                        Réserver
+                                    </Button>
                                 </div>
                             </div>
                         ))}
