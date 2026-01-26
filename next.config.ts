@@ -23,6 +23,12 @@ const nextConfig: NextConfig = {
         hostname: 'api.your-domain.com', // Replace with your actual API domain
         pathname: '/uploads/**',
       },
+      // Lovable app preview domain for region thumbnails
+      {
+        protocol: 'https',
+        hostname: 'id-preview--9823886f-7c2e-49c8-a682-c632b326f15e.lovable.app',
+        pathname: '/assets/**',
+      },
     ],
   },
 };

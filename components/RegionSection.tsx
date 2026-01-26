@@ -1,22 +1,67 @@
+"use client";
+
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import RegionCard from "./RegionCard";
 import { Button } from "@/components/ui/button";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
+import { regionService, Region } from "@/services/region.service";
+
 const RegionsSection = () => {
-  const regions = [
-    { title: "Vallée de la Loire", image: "/assets/loire-valley-new.jpg", href: "/regions/loire-valley" },
-    { title: "Bordeaux", image: "/assets/bordeaux-new.jpg" },
-    { title: "Champagne", image: "/assets/champagne-new.jpg" },
-    { title: "Bourgogne", image: "/assets/bourgogne.jpg" },
-    { title: "Languedoc Roussillon", image: "/assets/languedoc-roussillon.jpg" },
-    { title: "Vallée du Rhône", image: "/assets/vallee-rhone.jpg" },
-    { title: "Provence", image: "/assets/provence.jpg" },
-    { title: "Alsace", image: "/assets/alsace.jpg" },
-    { title: "Corse", image: "/assets/corse.jpg" },
-    { title: "Sud-Ouest", image: "/assets/sud-ouest.jpg" },
-    { title: "Beaujolais", image: "/assets/beaujolais.jpg" },
-    { title: "Jura", image: "/assets/jura.jpg" },
-  ];
+  const [regions, setRegions] = useState<Region[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchRegions = async () => {
+      try {
+        setLoading(true);
+        const response = await regionService.getAllRegions({ page: 1, limit: 20 });
+        setRegions(response.data);
+      } catch (err: any) {
+        console.error('Error fetching regions:', err);
+        setError(err.message || 'Failed to load regions');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRegions();
+  }, []);
+
+  if (loading) {
+    return (
+      <section className="py-8 px-4 bg-white">
+        <div className="max-w-7xl mx-auto">
+          <div className="mb-8">
+            <h2 className="text-2xl md:text-3xl font-bold text-[#318160] mb-4 text-left">
+              Un voyage au cœur des régions viticoles.
+            </h2>
+            <p className="text-lg text-[#7B947F] max-w-4xl text-left">
+              Chargement des régions...
+            </p>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  if (error) {
+    return (
+      <section className="py-8 px-4 bg-white">
+        <div className="max-w-7xl mx-auto">
+          <div className="mb-8">
+            <h2 className="text-2xl md:text-3xl font-bold text-[#318160] mb-4 text-left">
+              Un voyage au cœur des régions viticoles.
+            </h2>
+            <p className="text-lg text-red-600 max-w-4xl text-left">
+              {error}
+            </p>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="py-8 px-4 bg-white">
@@ -44,11 +89,11 @@ const RegionsSection = () => {
           >
             <CarouselContent className="-ml-8 md:-ml-12">
               {regions.map((region) => (
-                <CarouselItem key={region.title} className="pl-8 md:pl-12 basis-1/1 md:basis-1/4">
+                <CarouselItem key={region._id} className="pl-8 md:pl-12 basis-1/1 md:basis-1/4">
                   <RegionCard 
-                    title={region.title}
-                    image={region.image}
-                    href={region.href}
+                    title={region.denom}
+                    image={region.thumbnailUrl || "/assets/loire-valley-new.jpg"}
+                    href={`/region/${encodeURIComponent(region.denom)}`}
                   />
                 </CarouselItem>
               ))}

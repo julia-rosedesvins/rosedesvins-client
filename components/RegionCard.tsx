@@ -8,15 +8,15 @@ interface RegionCardProps {
 }
 
 const RegionCard = ({ title, image, href }: RegionCardProps) => {
+  const imageUrl = typeof image === 'string' ? image : image.src;
+  
   const content = (
     <div className="flex flex-col items-center group cursor-pointer">
       <div className="relative w-48 h-48 rounded-full overflow-hidden mb-4 transition-transform duration-300 group-hover:scale-105 shadow-lg">
-        <Image 
-          src={image} 
+        <img 
+          src={imageUrl} 
           alt={title}
-          fill
-          className="object-cover"
-          sizes="(max-width: 768px) 100vw, 192px"
+          className="object-cover w-full h-full"
         />
       </div>
       <h3 className="text-lg font-semibold text-[#264035] text-center">
