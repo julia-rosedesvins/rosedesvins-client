@@ -16,6 +16,25 @@ export interface Region {
   updatedAt?: string;
 }
 
+export interface Domain {
+  domainName: string;
+  domainDescription: string;
+  domainProfilePictureUrl: string | null;
+  producer: 'client' | 'non-client';
+  domainPrice: number | null;
+  siteUrl: string | null;
+  location: string | null;
+}
+
+export interface RegionByNameResponse {
+  region: Region | null;
+  domains: Domain[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
 export interface PaginationQuery {
   page?: number;
   limit?: number;
@@ -66,11 +85,17 @@ class RegionService {
   /**
    * Get region by name
    * @param name - Region name
-   * @returns Promise with region data
+   * @param page - Page number
+   * @param limit - Items per page
+   * @returns Promise with region and domains data
    */
-  async getRegionByName(name: string): Promise<Region> {
+  async getRegionByName(name: string, page: number = 1, limit: number = 20): Promise<RegionByNameResponse> {
     try {
-      const response = await apiClient.get<Region>(`/regions/${name}`);
+      const params = new URLSearchParams();
+      params.append('page', page.toString());
+      params.append('limit', limit.toString());
+      
+      const response = await apiClient.get<RegionByNameResponse>(`/regions/${name}?${params.toString()}`);
       return response.data;
     } catch (error) {
       if (axios.isAxiosError(error) && error.response) {
