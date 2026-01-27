@@ -6,12 +6,13 @@ import { ArrowLeft, MapPin, Home, Euro } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import LandingPageLayout from "@/components/LandingPageLayout";
-import { useEffect, useState } from "react";
+import { useEffect, useState, use } from "react";
 import { regionService, type Domain, type Region } from "@/services/region.service";
 import { toast } from "react-hot-toast";
 
-const LoireValley = ({ params }: { params: { name: string } }) => {
+const LoireValley = ({ params }: { params: Promise<{ name: string }> }) => {
     const router = useRouter();
+    const resolvedParams = use(params);
     const [region, setRegion] = useState<Region | null>(null);
     const [domains, setDomains] = useState<Domain[]>([]);
     const [currentPage, setCurrentPage] = useState(1);
@@ -23,7 +24,7 @@ const LoireValley = ({ params }: { params: { name: string } }) => {
         const fetchRegionData = async () => {
             try {
                 setIsLoading(true);
-                const response = await regionService.getRegionByName(params.name, currentPage, limit);
+                const response = await regionService.getRegionByName(resolvedParams.name, currentPage, limit);
                 setRegion(response.region);
                 setDomains(response.domains);
                 setTotalPages(response.totalPages);
@@ -36,7 +37,7 @@ const LoireValley = ({ params }: { params: { name: string } }) => {
         };
 
         fetchRegionData();
-    }, [params.name, currentPage]);
+    }, [resolvedParams.name, currentPage]);
 
     const filters = [
         { name: "Date", active: true },
@@ -86,21 +87,21 @@ const LoireValley = ({ params }: { params: { name: string } }) => {
                         </Link>
                         <span className="mx-2">&gt;</span>
                         <MapPin className="w-4 h-4 mr-2" />
-                        <span>{region?.denom || params.name}</span>
+                        <span>{region?.denom || resolvedParams.name}</span>
                     </div>
                 </div>
 
                 {/* Content */}
                 <div className="max-w-6xl mx-auto px-4 pb-12">
                     <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6">
-                        {region?.denom || params.name} : sur la route des vins<br />
+                        {region?.denom || resolvedParams.name} : sur la route des vins<br />
                         et des châteaux
                     </h1>
                     <p className="text-lg md:text-xl max-w-4xl leading-relaxed">
                         Au cœur d'un patrimoine exceptionnel, découvrez la diversité des terroirs
-                        de {region?.denom || params.name} et échangez avec des vignerons passionnés. Entre caves
+                        de {region?.denom || resolvedParams.name} et échangez avec des vignerons passionnés. Entre caves
                         troglodytiques, châteaux et paysages inscrits à l'UNESCO, vivez des expériences
-                        œnotouristiques inoubliables dans la région de {region?.denom || params.name}.
+                        œnotouristiques inoubliables dans la région de {region?.denom || resolvedParams.name}.
                     </p>
                 </div>
             </section>
