@@ -21,7 +21,7 @@ const Regions = () => {
             try {
                 setLoading(true);
                 const limit = showAll ? 1000 : 15; // Load all or just 15
-                const response = await regionService.getAllRegions({ page: 1, limit });
+                const response = await regionService.getAllRegions({ page: 1, limit, isParent: true });
                 setRegions(response.data);
                 setTotalRegions(response.total);
             } catch (err: any) {

@@ -10,6 +10,8 @@ export interface Region {
   max_lat: number;
   max_lon: number;
   thumbnailUrl?: string;
+  isParent: boolean;
+  parent: string | null;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -17,6 +19,7 @@ export interface Region {
 export interface PaginationQuery {
   page?: number;
   limit?: number;
+  isParent?: boolean;
 }
 
 export interface PaginatedRegionsResponse {
@@ -48,6 +51,7 @@ class RegionService {
       const params = new URLSearchParams();
       if (query.page) params.append('page', query.page.toString());
       if (query.limit) params.append('limit', query.limit.toString());
+      if (query.isParent !== undefined) params.append('isParent', query.isParent.toString());
       
       const response = await apiClient.get<PaginatedRegionsResponse>(`/regions?${params.toString()}`);
       return response.data;

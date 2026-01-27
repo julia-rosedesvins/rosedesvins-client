@@ -16,7 +16,7 @@ const RegionsSection = () => {
     const fetchRegions = async () => {
       try {
         setLoading(true);
-        const response = await regionService.getAllRegions({ page: 1, limit: 20 });
+        const response = await regionService.getAllRegions({ page: 1, limit: 20, isParent: true });
         setRegions(response.data);
       } catch (err: any) {
         console.error('Error fetching regions:', err);
