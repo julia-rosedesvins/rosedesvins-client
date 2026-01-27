@@ -26,7 +26,9 @@ export default function UserMyAccount() {
         adresse: "",
         codePostal: "",
         ville: "",
-        siteWeb: ""
+        siteWeb: "",
+        domainLatitude: "",
+        domainLongitude: ""
     });
 
     const [isLoading, setIsLoading] = useState(true);
@@ -73,7 +75,9 @@ export default function UserMyAccount() {
                         adresse: data.address || "",
                         codePostal: data.codePostal || "",
                         ville: data.city || "",
-                        siteWeb: data.siteWeb || ""
+                        siteWeb: data.siteWeb || "",
+                        domainLatitude: data.domainLatitude?.toString() || "",
+                        domainLongitude: data.domainLongitude?.toString() || ""
                     });
                 }
             } catch (error: any) {
@@ -103,7 +107,9 @@ export default function UserMyAccount() {
                 address: formData.adresse,
                 codePostal: formData.codePostal,
                 city: formData.ville,
-                siteWeb: formData.siteWeb
+                siteWeb: formData.siteWeb,
+                domainLatitude: formData.domainLatitude ? parseFloat(formData.domainLatitude) : null,
+                domainLongitude: formData.domainLongitude ? parseFloat(formData.domainLongitude) : null
             };
 
             const response = await contactDetailsService.updateContactDetails(updateData);
@@ -309,6 +315,36 @@ export default function UserMyAccount() {
                             onChange={(e) => handleInputChange('siteWeb', e.target.value)}
                             className="flex-1"
                         />
+                    </div>
+
+                    {/* Latitude et Longitude du domaine */}
+                    <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 flex-1">
+                            <Label className="font-medium text-sm sm:min-w-[140px] sm:text-right">
+                                Latitude
+                            </Label>
+                            <Input
+                                type="number"
+                                step="any"
+                                placeholder="47.4144"
+                                value={formData.domainLatitude}
+                                onChange={(e) => handleInputChange('domainLatitude', e.target.value)}
+                                className="flex-1"
+                            />
+                        </div>
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 flex-1">
+                            <Label className="font-medium text-sm sm:min-w-[140px] sm:text-right">
+                                Longitude
+                            </Label>
+                            <Input
+                                type="number"
+                                step="any"
+                                placeholder="0.6930"
+                                value={formData.domainLongitude}
+                                onChange={(e) => handleInputChange('domainLongitude', e.target.value)}
+                                className="flex-1"
+                            />
+                        </div>
                     </div>
 
                     {/* Bouton Enregistrer */}
