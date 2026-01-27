@@ -177,7 +177,7 @@ const LoireValley = ({ params }: { params: { name: string } }) => {
                                     )
                                     : domain.producer === 'client'
                                     ? ({ children }: { children: React.ReactNode }) => (
-                                        <Link href="/" className="block hover:shadow-lg transition-shadow cursor-pointer">
+                                        <Link href={`/experience/${region?.denom}/${domain.domainId}`} className="block hover:shadow-lg transition-shadow cursor-pointer">
                                             {children}
                                         </Link>
                                     )

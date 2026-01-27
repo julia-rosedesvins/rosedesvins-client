@@ -24,6 +24,7 @@ export interface Domain {
   domainPrice: number | null;
   siteUrl: string | null;
   location: string | null;
+  domainId: string | null;
 }
 
 export interface RegionByNameResponse {
