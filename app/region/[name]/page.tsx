@@ -233,19 +233,80 @@ const LoireValley = ({ params }: { params: { name: string } }) => {
                             {/* Pagination */}
                             {totalPages > 1 && (
                                 <div className="flex justify-center items-center gap-2 pt-4 flex-wrap">
-                                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                                        <Button
-                                            key={page}
-                                            onClick={() => handlePageChange(page)}
-                                            variant={currentPage === page ? "default" : "outline"}
-                                            className={currentPage === page 
-                                                ? "bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg font-semibold"
-                                                : "border-primary text-primary hover:bg-primary hover:text-primary-foreground px-4 py-2 rounded-lg font-semibold"
-                                            }
-                                        >
-                                            {page}
-                                        </Button>
-                                    ))}
+                                    {/* Previous Button */}
+                                    <Button
+                                        onClick={() => handlePageChange(currentPage - 1)}
+                                        disabled={currentPage === 1}
+                                        variant="outline"
+                                        className="border-primary text-primary hover:bg-primary hover:text-primary-foreground px-4 py-2 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        Précédent
+                                    </Button>
+
+                                    {/* First Page */}
+                                    {currentPage > 3 && (
+                                        <>
+                                            <Button
+                                                onClick={() => handlePageChange(1)}
+                                                variant="outline"
+                                                className="border-primary text-primary hover:bg-primary hover:text-primary-foreground px-4 py-2 rounded-lg font-semibold"
+                                            >
+                                                1
+                                            </Button>
+                                            {currentPage > 4 && (
+                                                <span className="px-2 text-muted-foreground">...</span>
+                                            )}
+                                        </>
+                                    )}
+
+                                    {/* Page Numbers Around Current Page */}
+                                    {Array.from({ length: totalPages }, (_, i) => i + 1)
+                                        .filter(page => {
+                                            return page === currentPage ||
+                                                   page === currentPage - 1 ||
+                                                   page === currentPage - 2 ||
+                                                   page === currentPage + 1 ||
+                                                   page === currentPage + 2;
+                                        })
+                                        .map((page) => (
+                                            <Button
+                                                key={page}
+                                                onClick={() => handlePageChange(page)}
+                                                variant={currentPage === page ? "default" : "outline"}
+                                                className={currentPage === page 
+                                                    ? "bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg font-semibold"
+                                                    : "border-primary text-primary hover:bg-primary hover:text-primary-foreground px-4 py-2 rounded-lg font-semibold"
+                                                }
+                                            >
+                                                {page}
+                                            </Button>
+                                        ))}
+
+                                    {/* Last Page */}
+                                    {currentPage < totalPages - 2 && (
+                                        <>
+                                            {currentPage < totalPages - 3 && (
+                                                <span className="px-2 text-muted-foreground">...</span>
+                                            )}
+                                            <Button
+                                                onClick={() => handlePageChange(totalPages)}
+                                                variant="outline"
+                                                className="border-primary text-primary hover:bg-primary hover:text-primary-foreground px-4 py-2 rounded-lg font-semibold"
+                                            >
+                                                {totalPages}
+                                            </Button>
+                                        </>
+                                    )}
+
+                                    {/* Next Button */}
+                                    <Button
+                                        onClick={() => handlePageChange(currentPage + 1)}
+                                        disabled={currentPage === totalPages}
+                                        variant="outline"
+                                        className="border-primary text-primary hover:bg-primary hover:text-primary-foreground px-4 py-2 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        Suivant
+                                    </Button>
                                 </div>
                             )}
                         </div>
