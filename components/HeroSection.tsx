@@ -22,7 +22,15 @@ const HeroSection = () => {
 
         try {
             setIsSearching(true)
+            const startTime = Date.now()
             const result = await regionService.unifiedSearch(searchQuery)
+
+            // Ensure minimum loading time of 800ms for better UX
+            const elapsed = Date.now() - startTime
+            const minLoadingTime = 800
+            if (elapsed < minLoadingTime) {
+                await new Promise(resolve => setTimeout(resolve, minLoadingTime - elapsed))
+            }
 
             if (result.data.suggestedRoute) {
                 router.push(result.data.suggestedRoute)
@@ -38,13 +46,23 @@ const HeroSection = () => {
     }
 
     return (
-        <section
-            className="relative min-h-[350px] flex items-center justify-center bg-cover"
-            style={{
-                backgroundImage: `url('/assets/hero.jpg')`,
-                backgroundPosition: 'center 60%'
-            }}
-        >
+        <>
+            {/* Search Loading Overlay */}
+            {isSearching && (
+                <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-[60] flex items-center justify-center">
+                    <div className="bg-white rounded-full p-6 shadow-2xl">
+                        <Loader2 className="h-12 w-12 animate-spin text-[#318160]" />
+                    </div>
+                </div>
+            )}
+
+            <section
+                className="relative min-h-[350px] flex items-center justify-center bg-cover"
+                style={{
+                    backgroundImage: `url('/assets/hero.jpg')`,
+                    backgroundPosition: 'center 60%'
+                }}
+            >
             {/* Overlay */}
             <div className="absolute inset-0 bg-gradient-to-r from-[#318160]/50 to-[#318160]/40"></div>
 
@@ -85,6 +103,7 @@ const HeroSection = () => {
                 </form>
             </div>
         </section>
+        </>
     )
 }
 

@@ -79,7 +79,15 @@ export default function Navbar() {
 
     try {
       setIsSearching(true)
+      const startTime = Date.now()
       const result = await regionService.unifiedSearch(searchQuery)
+
+      // Ensure minimum loading time of 800ms for better UX
+      const elapsed = Date.now() - startTime
+      const minLoadingTime = 800
+      if (elapsed < minLoadingTime) {
+        await new Promise(resolve => setTimeout(resolve, minLoadingTime - elapsed))
+      }
 
       if (result.data.suggestedRoute) {
         router.push(result.data.suggestedRoute)
@@ -163,8 +171,18 @@ export default function Navbar() {
   )
 
   return (
-    <header className="sticky top-0 z-50 text-white px-4 py-3" style={{ backgroundColor: "#318160" }}>
-      <div className="max-w-7xl mx-auto flex items-center justify-between">
+    <>
+      {/* Search Loading Overlay */}
+      {isSearching && (
+        <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-[60] flex items-center justify-center">
+          <div className="bg-white rounded-full p-6 shadow-2xl">
+            <Loader2 className="h-12 w-12 animate-spin text-[#318160]" />
+          </div>
+        </div>
+      )}
+
+      <header className="sticky top-0 z-50 text-white px-4 py-3" style={{ backgroundColor: "#318160" }}>
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Link href="/">
             <img
@@ -271,5 +289,6 @@ export default function Navbar() {
         </div>
       )}
     </header>
+    </>
   )
 }
