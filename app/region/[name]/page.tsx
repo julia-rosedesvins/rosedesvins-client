@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, MapPin, Home, Euro } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,8 @@ const RegionMap = dynamic(() => import('@/components/RegionMap'), {
 
 const LoireValley = ({ params }: { params: Promise<{ name: string }> }) => {
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const searchQuery = searchParams.get('q');
     const resolvedParams = use(params);
     const [region, setRegion] = useState<Region | null>(null);
     const [domains, setDomains] = useState<Domain[]>([]);
@@ -31,7 +33,12 @@ const LoireValley = ({ params }: { params: Promise<{ name: string }> }) => {
         const fetchRegionData = async () => {
             try {
                 setIsLoading(true);
-                const response = await regionService.getRegionByName(resolvedParams.name, currentPage, limit);
+                const response = await regionService.getRegionByName(
+                    resolvedParams.name, 
+                    currentPage, 
+                    limit,
+                    searchQuery || undefined
+                );
                 setRegion(response.region);
                 setDomains(response.domains);
                 setTotalPages(response.totalPages);
@@ -44,7 +51,7 @@ const LoireValley = ({ params }: { params: Promise<{ name: string }> }) => {
         };
 
         fetchRegionData();
-    }, [resolvedParams.name, currentPage]);
+    }, [resolvedParams.name, currentPage, searchQuery]);
 
     const filters = [
         { name: "Date", active: true },
@@ -100,6 +107,14 @@ const LoireValley = ({ params }: { params: Promise<{ name: string }> }) => {
 
                 {/* Content */}
                 <div className="max-w-6xl mx-auto px-4 pb-12">
+                    {searchQuery && (
+                        <div className="mb-4">
+                            <p className="text-white/90 text-lg">
+                                Résultats de recherche pour : <span className="font-semibold">&quot;{searchQuery}&quot;</span>
+                            </p>
+                        </div>
+                    )}
+                    
                     <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6">
                         {region?.denom || resolvedParams.name} : sur la route des vins<br />
                         et des châteaux
@@ -207,15 +222,23 @@ const LoireValley = ({ params }: { params: Promise<{ name: string }> }) => {
                                                     <h3 className="text-lg font-bold text-primary">
                                                         {domain.domainName}
                                                     </h3>
-                                                    {domain.producer === 'client' && (
+                                                    {domain.producer === 'client' ? (
                                                         <Button
                                                             size="sm"
-                                                            className="bg-primary hover:bg-primary/90 text-primary-foreground shrink-0"
+                                                            className="bg-primary hover:bg-primary/90 text-white shrink-0"
                                                             onClick={(e) => e.stopPropagation()}
                                                         >
                                                             Réserver
                                                         </Button>
-                                                    )}
+                                                    ) : domain.producer === 'non-client' && domain.siteUrl ? (
+                                                        <Button
+                                                            size="sm"
+                                                            className="bg-secondary hover:bg-secondary/90 text-white shrink-0"
+                                                            onClick={(e) => e.stopPropagation()}
+                                                        >
+                                                            Visiter
+                                                        </Button>
+                                                    ) : null}
                                                 </div>
                                                 {domain.location && (
                                                     <p className="text-muted-foreground text-sm mb-2">{domain.location}</p>

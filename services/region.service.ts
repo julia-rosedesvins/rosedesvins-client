@@ -65,12 +65,13 @@ export interface ApiError {
 export interface UnifiedSearchResult {
   success: boolean;
   data: {
-    type: 'service' | 'domain' | 'region' | 'mixed' | null;
+    type: 'service' | 'domain' | 'region' | 'static-experience' | 'mixed' | null;
     services?: Array<{
       serviceId: string;
       serviceName: string;
       serviceDescription: string;
       pricePerPerson: number;
+      languagesOffered: string[];
       serviceBannerUrl: string | null;
       domain: {
         domainId: string;
@@ -104,6 +105,19 @@ export interface UnifiedSearchResult {
       max_lon: number;
       thumbnailUrl: string | null;
       isParent: boolean;
+    }>;
+    staticExperiences?: Array<{
+      name: string;
+      category: string | null;
+      address: string | null;
+      city: string | null;
+      latitude: number | null;
+      longitude: number | null;
+      rating: number | null;
+      website: string | null;
+      mainImage: string | null;
+      about: string | null;
+      type: 'static-experience';
     }>;
     suggestedRoute?: string;
   };
@@ -139,11 +153,14 @@ class RegionService {
    * @param limit - Items per page
    * @returns Promise with region and domains data
    */
-  async getRegionByName(name: string, page: number = 1, limit: number = 20): Promise<RegionByNameResponse> {
+  async getRegionByName(name: string, page: number = 1, limit: number = 20, searchQuery?: string): Promise<RegionByNameResponse> {
     try {
       const params = new URLSearchParams();
       params.append('page', page.toString());
       params.append('limit', limit.toString());
+      if (searchQuery) {
+        params.append('q', searchQuery);
+      }
       
       const response = await apiClient.get<RegionByNameResponse>(`/regions/${name}?${params.toString()}`);
       return response.data;
