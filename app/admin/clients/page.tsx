@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
-import { Search, ChevronLeft, ChevronRight, Mail, UserCheck, Clock, UserX, Loader2, CheckCircle, XCircle } from "lucide-react"
+import { Search, ChevronLeft, ChevronRight, Mail, UserCheck, Clock, UserX, Loader2, CheckCircle, XCircle, Pencil } from "lucide-react"
 import DashboardLayout from "@/components/admin/DashboardLayout"
 import { useAdmin } from '@/contexts/AdminContext'
 import { newsletterService, NewsletterSubscription } from '@/services/newsletter.service'
@@ -29,6 +29,17 @@ export default function AdminClients() {
     const [loadingRejected, setLoadingRejected] = useState(false);
     const [actionLoading, setActionLoading] = useState<{[key: string]: 'approve' | 'reject' | null}>({});
     const [searchTerm, setSearchTerm] = useState('');
+    
+    // Edit modal state
+    const [editingUser, setEditingUser] = useState<AdminUser | null>(null);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [editForm, setEditForm] = useState({
+        firstName: '',
+        lastName: '',
+        email: '',
+        domainName: ''
+    });
+    const [isSaving, setIsSaving] = useState(false);
     
     // Approve modal state
     const [approvingSubscription, setApprovingSubscription] = useState<NewsletterSubscription | null>(null);
@@ -60,6 +71,39 @@ export default function AdminClients() {
         setRejectingSubscription(subscription);
         setRejectionReason('');
         setIsRejectModalOpen(true);
+    };
+
+    const handleEditClick = (user: AdminUser) => {
+        setEditingUser(user);
+        setEditForm({
+            firstName: user.firstName,
+            lastName: user.lastName,
+            email: user.email,
+            domainName: user.domainName || ''
+        });
+        setIsEditModalOpen(true);
+    };
+
+    const handleSaveEdit = async () => {
+        if (!editingUser) return;
+        
+        setIsSaving(true);
+        try {
+            const response = await adminService.updateUser(editingUser._id, editForm);
+            if (response.success) {
+                toast.success('Utilisateur mis à jour avec succès');
+                setIsEditModalOpen(false);
+                // Refresh approved users list
+                fetchApprovedUsers();
+            } else {
+                toast.error(response.message || 'Erreur lors de la mise à jour');
+            }
+        } catch (error: any) {
+            console.error('Error updating user:', error);
+            toast.error(error.message || 'Erreur lors de la mise à jour');
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     const handleApproveSubmit = async () => {
@@ -263,6 +307,7 @@ export default function AdminClients() {
                                 <th className="text-left py-3 px-4 font-medium text-gray-900">Nom</th>
                                 <th className="text-left py-3 px-4 font-medium text-gray-900">Domaine</th>
                                 <th className="text-left py-3 px-4 font-medium text-gray-900">Date de création</th>
+                                <th className="text-center py-3 px-4 font-medium text-gray-900">Actions</th>
                             </>
                         )}
                         {activeTab !== 'approved' && (
@@ -298,6 +343,18 @@ export default function AdminClients() {
                                         month: '2-digit',
                                         year: 'numeric'
                                     }) : '-'}
+                                </td>
+                                <td className="py-3 px-4">
+                                    <div className="flex items-center justify-center">
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={() => handleEditClick(user)}
+                                        >
+                                            <Pencil className="h-4 w-4 mr-1" />
+                                            Modifier
+                                        </Button>
+                                    </div>
                                 </td>
                             </tr>
                         ))
@@ -614,6 +671,73 @@ export default function AdminClients() {
                                 </>
                             ) : (
                                 'Rejeter'
+                            )}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Edit User Modal */}
+            <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+                <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                        <DialogTitle>Modifier l'utilisateur</DialogTitle>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <div className="grid gap-2">
+                            <Label htmlFor="edit-firstName">Prénom</Label>
+                            <Input
+                                id="edit-firstName"
+                                value={editForm.firstName}
+                                onChange={(e) => setEditForm({ ...editForm, firstName: e.target.value })}
+                            />
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="edit-lastName">Nom de famille</Label>
+                            <Input
+                                id="edit-lastName"
+                                value={editForm.lastName}
+                                onChange={(e) => setEditForm({ ...editForm, lastName: e.target.value })}
+                            />
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="edit-email">Email</Label>
+                            <Input
+                                id="edit-email"
+                                type="email"
+                                value={editForm.email}
+                                onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                            />
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="edit-domainName">Nom du domaine</Label>
+                            <Input
+                                id="edit-domainName"
+                                value={editForm.domainName}
+                                onChange={(e) => setEditForm({ ...editForm, domainName: e.target.value })}
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => setIsEditModalOpen(false)}
+                            disabled={isSaving}
+                        >
+                            Annuler
+                        </Button>
+                        <Button
+                            onClick={handleSaveEdit}
+                            disabled={isSaving}
+                            className="bg-[#3A7B59] hover:bg-[#2d5f46]"
+                        >
+                            {isSaving ? (
+                                <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Enregistrement...
+                                </>
+                            ) : (
+                                'Enregistrer'
                             )}
                         </Button>
                     </DialogFooter>
