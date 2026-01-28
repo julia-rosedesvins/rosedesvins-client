@@ -557,9 +557,11 @@ export default function AdminSubscriptions() {
                                             <div>
                                                 <span className="font-medium">Fin:</span> {formatDate(subscription.endDate)}
                                             </div>
-                                            <div>
-                                                <span className="font-medium">Créé par:</span> {subscription.adminId.firstName} {subscription.adminId.lastName}
-                                            </div>
+                                            {subscription.adminId && (
+                                                <div>
+                                                    <span className="font-medium">Créé par:</span> {subscription.adminId.firstName} {subscription.adminId.lastName}
+                                                </div>
+                                            )}
                                             <div>
                                                 <span className="font-medium">Statut:</span> 
                                                 <span className={subscription.isActive ? 'text-green-600' : 'text-red-600'}>
