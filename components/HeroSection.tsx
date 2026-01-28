@@ -35,7 +35,7 @@ const HeroSection = () => {
             if (result.data.suggestedRoute) {
                 router.push(result.data.suggestedRoute)
             } else {
-                toast.error("Aucun résultat trouvé")
+                router.push(`/no-results?q=${encodeURIComponent(searchQuery)}`)
             }
         } catch (error: any) {
             console.error("Search error:", error)

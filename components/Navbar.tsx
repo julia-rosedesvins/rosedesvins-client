@@ -94,7 +94,9 @@ export default function Navbar() {
         setSearchQuery("") // Clear search after navigation
         setMobileMenuOpen(false) // Close mobile menu
       } else {
-        toast.error("Aucun résultat trouvé")
+        router.push(`/no-results?q=${encodeURIComponent(searchQuery)}`)
+        setSearchQuery("") // Clear search after navigation
+        setMobileMenuOpen(false) // Close mobile menu
       }
     } catch (error: any) {
       console.error("Search error:", error)
