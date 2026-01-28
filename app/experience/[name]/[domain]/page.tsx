@@ -8,6 +8,13 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import LandingPageLayout from "@/components/LandingPageLayout";
 import { domainProfileService, DomainProfile, DomainLocation } from "@/services/domain-profile.service";
+import dynamic from "next/dynamic";
+
+// Dynamically import the map component to avoid SSR issues
+const DomainMap = dynamic(() => import('@/components/DomainMap'), {
+    ssr: false,
+    loading: () => <div className="w-full h-96 bg-gray-200 flex items-center justify-center rounded-lg">Chargement de la carte...</div>
+});
 
 const ExperienceDomain = ({ params }: { params: Promise<{ name: string; domain: string }> }) => {
     const router = useRouter();
@@ -237,16 +244,21 @@ const ExperienceDomain = ({ params }: { params: Promise<{ name: string; domain: 
                 )}
 
                 {/* Location Section */}
-                <section className="mb-12">
-                    <h2 className="text-2xl font-bold text-gray-800 mb-6">Localisation</h2>
-                    <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-                        <img
-                            src="/assets/maps-bourillon-orleans.png"
-                            alt="Carte de localisation du Domaine"
-                            className="w-full h-auto"
-                        />
-                    </div>
-                </section>
+                {location && location.domainLatitude && location.domainLongitude && (
+                    <section className="mb-12">
+                        <h2 className="text-2xl font-bold text-gray-800 mb-6">Localisation</h2>
+                        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+                            <DomainMap
+                                latitude={location.domainLatitude}
+                                longitude={location.domainLongitude}
+                                domainName={domainProfile.domainName}
+                                address={location.address || undefined}
+                                city={location.city || undefined}
+                                codePostal={location.codePostal || undefined}
+                            />
+                        </div>
+                    </section>
+                )}
 
                 {/* Practical Information */}
                 <section className="mb-12">
