@@ -10,8 +10,7 @@ import { Search, ChevronLeft, ChevronRight, Mail, UserCheck, Clock, UserX, Loade
 import DashboardLayout from "@/components/admin/DashboardLayout"
 import { useAdmin } from '@/contexts/AdminContext'
 import { newsletterService, NewsletterSubscription } from '@/services/newsletter.service'
-import { adminService } from '@/services/admin.service'
-import { UserProfile } from '@/services/user.service'
+import { adminService, AdminUser } from '@/services/admin.service'
 import toast from 'react-hot-toast'
 
 type TabType = 'pending' | 'approved' | 'rejected'
@@ -20,7 +19,7 @@ export default function AdminClients() {
     const { admin, isLoading } = useAdmin();
     const [activeTab, setActiveTab] = useState<TabType>('pending');
     const [pendingSubs, setPendingSubs] = useState<NewsletterSubscription[]>([]);
-    const [approvedUsers, setApprovedUsers] = useState<UserProfile[]>([]);
+    const [approvedUsers, setApprovedUsers] = useState<AdminUser[]>([]);
     const [rejectedSubs, setRejectedSubs] = useState<NewsletterSubscription[]>([]);
     const [pendingPagination, setPendingPagination] = useState<any>(null);
     const [approvedPagination, setApprovedPagination] = useState<any>(null);
@@ -137,11 +136,12 @@ export default function AdminClients() {
         setLoadingApproved(true);
         try {
             const response = await adminService.getApprovedUsers({ page, limit });
-            setApprovedUsers(response.data.users);
-            setApprovedPagination(response.data.pagination);
+            console.log('Approved users response:', JSON.stringify(response, null, 2));
+            setApprovedUsers(response.data || []);
+            setApprovedPagination(response.pagination || null);
         } catch (error: any) {
             console.error('Error fetching approved users:', error);
-            toast.error('Erreur lors du chargement des utilisateurs approuvés');
+            toast.error(error.message || 'Erreur lors du chargement des utilisateurs approuvés');
         } finally {
             setLoadingApproved(false);
         }
@@ -200,7 +200,7 @@ export default function AdminClients() {
         user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
         user.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         user.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.domainName.toLowerCase().includes(searchTerm.toLowerCase())
+        (user.domainName || '').toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     const filteredRejectedSubs = (rejectedSubs || []).filter(sub =>
@@ -221,8 +221,8 @@ export default function AdminClients() {
             <div className="flex items-center justify-between mt-6">
                 <div className="text-sm text-gray-600">
                     Affichage de {((currentPagination.currentPage - 1) * currentPagination.limit) + 1} à{' '}
-                    {Math.min(currentPagination.currentPage * currentPagination.limit, currentPagination.total || currentPagination.totalSubscriptions)} sur{' '}
-                    {currentPagination.total || currentPagination.totalSubscriptions} résultats
+                    {Math.min(currentPagination.currentPage * currentPagination.limit, currentPagination.totalUsers || currentPagination.totalSubscriptions)} sur{' '}
+                    {currentPagination.totalUsers || currentPagination.totalSubscriptions} résultats
                 </div>
                 <div className="flex items-center space-x-2">
                     <Button
@@ -281,7 +281,7 @@ export default function AdminClients() {
                 </thead>
                 <tbody>
                     {activeTab === 'approved' ? (
-                        (currentData as UserProfile[]).map((user) => (
+                        (currentData as AdminUser[]).map((user) => (
                             <tr key={user._id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                                 <td className="py-3 px-4">
                                     <div className="flex items-center gap-2">
@@ -291,7 +291,7 @@ export default function AdminClients() {
                                 </td>
                                 <td className="py-3 px-4 text-gray-600">{user.firstName}</td>
                                 <td className="py-3 px-4 text-gray-600">{user.lastName}</td>
-                                <td className="py-3 px-4 text-gray-600">{user.domainName}</td>
+                                <td className="py-3 px-4 text-gray-600">{user.domainName || '-'}</td>
                                 <td className="py-3 px-4 text-gray-600">
                                     {user.createdAt ? new Date(user.createdAt).toLocaleDateString('fr-FR', {
                                         day: '2-digit',
@@ -407,7 +407,7 @@ export default function AdminClients() {
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold text-green-600">
-                            {approvedPagination?.total || 0}
+                            {approvedPagination?.totalUsers || 0}
                         </div>
                         <p className="text-xs text-muted-foreground">
                             Comptes créés avec succès
@@ -449,7 +449,7 @@ export default function AdminClients() {
                                 className={activeTab === 'approved' ? 'bg-[#3A7B59] text-white' : ''}
                             >
                                 <UserCheck className="h-4 w-4 mr-2" />
-                                Approuvées ({approvedPagination?.total || 0})
+                                Approuvées ({approvedPagination?.totalUsers || 0})
                             </Button>
                             <Button
                                 variant={activeTab === 'rejected' ? 'default' : 'outline'}
