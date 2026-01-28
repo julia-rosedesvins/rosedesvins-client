@@ -25,6 +25,8 @@ export interface Domain {
   siteUrl: string | null;
   location: string | null;
   domainId: string | null;
+  latitude: number | null;
+  longitude: number | null;
 }
 
 export interface RegionByNameResponse {

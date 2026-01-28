@@ -9,6 +9,13 @@ import LandingPageLayout from "@/components/LandingPageLayout";
 import { useEffect, useState, use } from "react";
 import { regionService, type Domain, type Region } from "@/services/region.service";
 import { toast } from "react-hot-toast";
+import dynamic from "next/dynamic";
+
+// Dynamically import the map component to avoid SSR issues
+const RegionMap = dynamic(() => import('@/components/RegionMap'), {
+    ssr: false,
+    loading: () => <div className="w-full h-full bg-gray-200 flex items-center justify-center">Chargement de la carte...</div>
+});
 
 const LoireValley = ({ params }: { params: Promise<{ name: string }> }) => {
     const router = useRouter();
@@ -127,16 +134,13 @@ const LoireValley = ({ params }: { params: Promise<{ name: string }> }) => {
             <section className="flex flex-col lg:flex-row" style={{ height: 'calc(100vh - 60px)' }}>
                 {/* Interactive Map - 60% */}
                 <div className="lg:w-[60%] h-[400px] lg:h-full lg:sticky lg:top-[60px]">
-                    <iframe
-                        src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d687904.5851611486!2d-0.2728760499999999!3d47.2780468!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x47fcd3e8b3e0e3d5%3A0x40d37521e0d9c30!2sLoire%20Valley!5e0!3m2!1sen!2sfr!4v1704672000000!5m2!1sen!2sfr"
-                        width="100%"
-                        height="100%"
-                        style={{ border: 0 }}
-                        allowFullScreen
-                        loading="lazy"
-                        referrerPolicy="no-referrer-when-downgrade"
-                        title="Carte de la Vallée de la Loire"
-                    />
+                    {region && (
+                        <RegionMap
+                            centerLat={(region.min_lat + region.max_lat) / 2}
+                            centerLon={(region.min_lon + region.max_lon) / 2}
+                            domains={domains}
+                        />
+                    )}
                 </div>
 
                 {/* Winemaker Listings - 40% - scrollable */}
