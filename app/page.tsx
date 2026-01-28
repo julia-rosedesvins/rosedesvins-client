@@ -18,8 +18,8 @@ export default function HomePage() {
       <HeroSection />
       <RegionSection />
       <ExperiencesSection />
-      <GiftCardSection />
-      <BlogSection />
+      {/* <GiftCardSection /> */}
+      {/* <BlogSection /> */}
       <NewsletterSection />
     </LandingPageLayout>
   )
