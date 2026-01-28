@@ -48,13 +48,20 @@ const ExperiencesSection = () => {
         {/* Carousel */}
         <div className="relative px-16">
           {loading ? (
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              {Array.from({ length: 4 }).map((_, index) => (
-                <div key={index} className="space-y-2">
-                  <Skeleton className="h-48 w-full rounded-lg" />
-                  <Skeleton className="h-4 w-3/4" />
-                </div>
-              ))}
+            <div className="w-full max-w-7xl mx-auto">
+              <div className="flex gap-8 md:gap-12 overflow-hidden">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="flex-shrink-0 w-full md:w-1/4">
+                    <div className="relative rounded-xl overflow-hidden shadow-lg animate-pulse">
+                      <div className="bg-gray-300 h-64 w-full"></div>
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                      <div className="absolute bottom-0 left-0 right-0 p-4">
+                        <div className="h-6 bg-gray-400 rounded w-3/4"></div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           ) : error ? (
             <div className="text-center py-8">
