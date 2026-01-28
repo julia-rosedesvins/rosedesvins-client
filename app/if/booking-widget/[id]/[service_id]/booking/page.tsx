@@ -6,7 +6,7 @@ import { DatePicker } from "@/components/DatePicker";
 import { ChevronLeft, ChevronRight, Plus, Minus, Clock, Euro, Wine, Users, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { WidgetProvider, useWidget } from "@/contexts/WidgetContext";
 import { eventsService, PublicScheduleData } from "@/services/events.service";
 import { getHolidays } from "@/services/availability.service";
@@ -14,6 +14,8 @@ import { getHolidays } from "@/services/availability.service";
 function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
     const { widgetData, loading, error, colorCode } = useWidget();
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const withLayout = searchParams.get('withLayout') === 'true';
     
     // State declarations - must come before any useEffect hooks
     const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -298,6 +300,10 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
         language: selectedLanguage,
         widgetId: id,
       });
+      
+      if (withLayout) {
+        query.append('withLayout', 'true');
+      }
       
       router.push(`/if/booking-widget/${id}/${serviceId}/booking-confirmation?${query.toString()}`);
     } catch (error) {
@@ -877,7 +883,7 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
       <div className="container mx-auto px-3 md:px-4 py-4 md:py-8 max-w-2xl">
         {/* Header */}
         <div className="flex items-center mb-4 md:mb-6 lg:mb-8">
-          <Link href={`/if/booking-widget/${id}/${serviceId}/reservation`} className="flex items-center text-muted-foreground hover:opacity-75" style={{ color: colorCode }}>
+          <Link href={`/if/booking-widget/${id}/${serviceId}/reservation${withLayout ? '?withLayout=true' : ''}`} className="flex items-center text-muted-foreground hover:opacity-75" style={{ color: colorCode }}>
             <ChevronLeft className="w-5 h-5 mr-1" />
             <span className="text-sm md:text-base">Retour</span>
           </Link>

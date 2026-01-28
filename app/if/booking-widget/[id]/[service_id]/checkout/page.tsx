@@ -32,6 +32,7 @@ function CheckoutContent({ id, serviceId }: { id: string, serviceId: string }) {
   const { widgetData, loading, error, colorCode } = useWidget();
   const searchParams = useSearchParams();
   const router = useRouter();
+  const withLayout = searchParams.get('withLayout');
   
   // Extract booking data from URL parameters
   const bookingData: BookingData = {
@@ -151,7 +152,10 @@ function CheckoutContent({ id, serviceId }: { id: string, serviceId: string }) {
       if (result.success || result.data || (result as any)._id) {
         toast.success("Réservation créée avec succès !");
         const bookingId = result.data?._id || (result as any)._id || 'unknown';
-        router.push(`/if/booking-widget/${id}/${serviceId}/confirmation-success?bookingId=${bookingId}&${searchParams.toString()}`);
+        const params = new URLSearchParams(searchParams);
+        params.set('bookingId', bookingId);
+        if (withLayout) params.set('withLayout', withLayout);
+        router.push(`/if/booking-widget/${id}/${serviceId}/confirmation-success?${params.toString()}`);
       } else {
         console.error('Unexpected response structure:', result);
         toast.error(result.message || "Erreur lors de la création de la réservation");
@@ -165,7 +169,10 @@ function CheckoutContent({ id, serviceId }: { id: string, serviceId: string }) {
         console.log('201 response detected in error handler:', error.response.data);
         toast.success("Réservation créée avec succès !");
         const bookingId = error.response.data._id || error.response.data.data?._id || 'unknown';
-        router.push(`/if/booking-widget/${id}/${serviceId}/confirmation-success?bookingId=${bookingId}&${searchParams.toString()}`);
+        const params = new URLSearchParams(searchParams);
+        params.set('bookingId', bookingId);
+        if (withLayout) params.set('withLayout', withLayout);
+        router.push(`/if/booking-widget/${id}/${serviceId}/confirmation-success?${params.toString()}`);
         return;
       }
       

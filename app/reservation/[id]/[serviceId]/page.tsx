@@ -1,37 +1,28 @@
+'use client';
 
-import LandingPageLayout from "@/components/LandingPageLayout";
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { use } from 'react';
 
-const Reservation = () => {
-    
+export default function ReservationRedirect({ 
+  params 
+}: { 
+  params: Promise<{ id: string; serviceId: string }> 
+}) {
+  const router = useRouter();
+  const { id, serviceId } = use(params);
 
-    return (
-        <LandingPageLayout>
+  useEffect(() => {
+    // Redirect to widget with layout flag
+    router.replace(`/if/booking-widget/${id}/${serviceId}/reservation?withLayout=true`);
+  }, [id, serviceId, router]);
 
-            {/* Hero Section */}
-            <section
-                className="relative bg-cover bg-center text-white py-20"
-                style={{
-                    backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.4)), url(/assets/wine-cellar.jpg)`,
-                    backgroundSize: 'cover',
-                    backgroundPosition: 'center center',
-                    backgroundRepeat: 'no-repeat'
-                }}
-            >
-                <div className="max-w-6xl mx-auto px-4">
-                    <h1 className="text-4xl md:text-5xl font-bold mb-6 max-w-3xl">
-                        Des expériences façonnées par la passion des vignerons.
-                    </h1>
-                    <p className="text-lg md:text-xl max-w-4xl leading-relaxed">
-                        Visites de cave, dégustations, cours d'œnologie, balades à vélo, pique-nique
-                        dans les vignes... : découvrez le vin directement auprès de ceux qui le créent
-                        et vivez des moments authentiques. Chaque activité est une rencontre avec
-                        un vigneron passionné et une façon unique de découvrir son univers.
-                    </p>
-                </div>
-            </section>
-
-        </LandingPageLayout>
-    );
-};
-
-export default Reservation;
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+        <p className="text-lg">Chargement...</p>
+      </div>
+    </div>
+  );
+}

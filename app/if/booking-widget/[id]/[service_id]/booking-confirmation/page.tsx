@@ -26,6 +26,7 @@ function BookingConfirmationContent({ id, serviceId }: { id: string, serviceId: 
   const { widgetData, loading, error, colorCode } = useWidget();
   const searchParams = useSearchParams();
   const router = useRouter();
+  const withLayout = searchParams.get('withLayout') === 'true';
 
   // Extract booking data from URL parameters
   const bookingData: BookingData = {
@@ -122,6 +123,10 @@ function BookingConfirmationContent({ id, serviceId }: { id: string, serviceId: 
         phone: phone,
         additionalInfo: additionalInfo,
       });
+      
+      if (withLayout) {
+        query.append('withLayout', 'true');
+      }
 
       router.push(`/if/booking-widget/${id}/${serviceId}/checkout?${query.toString()}`);
     } catch (error) {

@@ -19,6 +19,7 @@ interface BookingData {
 function ConfirmationSuccessContent({ id, serviceId }: { id: string, serviceId: string }) {
   const { widgetData, loading, error, colorCode } = useWidget();
   const searchParams = useSearchParams();
+  const withLayout = searchParams.get('withLayout');
   
   // Get payment methods from widget data
   const acceptedPaymentMethods = widgetData?.paymentMethods?.methods || ['cash_on_onsite'];
@@ -155,7 +156,7 @@ function ConfirmationSuccessContent({ id, serviceId }: { id: string, serviceId: 
 
           {/* Bouton retour à l'accueil */}
           <div className="flex justify-center mt-8">
-            <Link href={`/if/booking-widget/${id}/${serviceId}/reservation`}>
+            <Link href={`/if/booking-widget/${id}/${serviceId}/reservation${withLayout ? '?withLayout=true' : ''}`}>
               <Button 
                 className="hover:opacity-90 text-white px-8 py-3 flex items-center gap-2"
                 style={{ backgroundColor: colorCode }}
