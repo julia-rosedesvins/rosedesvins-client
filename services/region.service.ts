@@ -62,6 +62,53 @@ export interface ApiError {
   statusCode: number;
 }
 
+export interface UnifiedSearchResult {
+  success: boolean;
+  data: {
+    type: 'service' | 'domain' | 'region' | 'mixed' | null;
+    services?: Array<{
+      serviceId: string;
+      serviceName: string;
+      serviceDescription: string;
+      pricePerPerson: number;
+      serviceBannerUrl: string | null;
+      domain: {
+        domainId: string;
+        userId: string | null;
+        domainName: string | null;
+        domainDescription: string;
+        colorCode: string;
+      };
+    }>;
+    domains?: Array<{
+      domainId: string;
+      userId: string | null;
+      domainName: string | null;
+      domainDescription: string;
+      colorCode: string;
+      domainProfilePictureUrl: string | null;
+      domainLogoUrl: string | null;
+      location: {
+        latitude: number | null;
+        longitude: number | null;
+        address: string | null;
+        city: string | null;
+        region: string | null;
+      };
+    }>;
+    regions?: Array<{
+      denom: string;
+      min_lat: number;
+      min_lon: number;
+      max_lat: number;
+      max_lon: number;
+      thumbnailUrl: string | null;
+      isParent: boolean;
+    }>;
+    suggestedRoute?: string;
+  };
+}
+
 class RegionService {
   /**
    * Get all regions with pagination
@@ -116,6 +163,23 @@ class RegionService {
   async searchRegions(query: string): Promise<Region[]> {
     try {
       const response = await apiClient.get<Region[]>(`/regions/search?q=${encodeURIComponent(query)}`);
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response) {
+        throw error.response.data as ApiError;
+      }
+      throw new Error('Network error occurred');
+    }
+  }
+
+  /**
+   * Unified search across services, domains, and regions
+   * @param query - Search query
+   * @returns Promise with search results and suggested route
+   */
+  async unifiedSearch(query: string): Promise<UnifiedSearchResult> {
+    try {
+      const response = await apiClient.get<UnifiedSearchResult>(`/regions/unified-search?q=${encodeURIComponent(query)}`);
       return response.data;
     } catch (error) {
       if (axios.isAxiosError(error) && error.response) {

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import LandingPageLayout from "@/components/LandingPageLayout";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -8,6 +9,9 @@ import Link from "next/link";
 import { domainProfileService, PublicService } from "@/services/domain-profile.service";
 
 const Page = () => {
+  const searchParams = useSearchParams();
+  const searchQuery = searchParams.get('q');
+  
   const [services, setServices] = useState<PublicService[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -21,7 +25,18 @@ const Page = () => {
       try {
         setLoading(true);
         const response = await domainProfileService.getAllPublicServices(page, limit);
-        setServices(response.data.services);
+        let filteredServices = response.data.services;
+        
+        // Filter by search query if provided
+        if (searchQuery) {
+          filteredServices = filteredServices.filter(service =>
+            service.serviceName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            service.serviceDescription.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            service.domain.domainName?.toLowerCase().includes(searchQuery.toLowerCase())
+          );
+        }
+        
+        setServices(filteredServices);
         setTotalPages(response.data.pagination.totalPages);
         setHasMore(page < response.data.pagination.totalPages);
       } catch (err: any) {
@@ -33,7 +48,7 @@ const Page = () => {
     };
 
     fetchServices();
-  }, [page]);
+  }, [page, searchQuery]);
 
   const handleLoadMore = () => {
     if (page < totalPages) {
@@ -83,6 +98,14 @@ const Page = () => {
       {/* Activities Section */}
       <section className="py-16 px-4 bg-white">
         <div className="max-w-6xl mx-auto">
+          {searchQuery && (
+            <div className="mb-8 text-center">
+              <p className="text-lg text-gray-600">
+                Résultats de recherche pour : <span className="font-semibold text-[#318160]">&quot;{searchQuery}&quot;</span>
+              </p>
+            </div>
+          )}
+          
           <h2 className="text-3xl md:text-4xl font-bold text-[#318160] text-center mb-16">
             Les activités œnotouristiques
           </h2>

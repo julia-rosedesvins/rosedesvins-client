@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { ArrowLeft } from "lucide-react";
@@ -10,6 +10,9 @@ import { regionService, Region } from "@/services/region.service";
 
 const Regions = () => {
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const searchQuery = searchParams.get('q');
+    
     const [regions, setRegions] = useState<Region[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -22,8 +25,18 @@ const Regions = () => {
                 setLoading(true);
                 const limit = showAll ? 1000 : 15; // Load all or just 15
                 const response = await regionService.getAllRegions({ page: 1, limit, isParent: true });
-                setRegions(response.data);
-                setTotalRegions(response.total);
+                
+                let filteredRegions = response.data;
+                
+                // Filter by search query if provided
+                if (searchQuery) {
+                    filteredRegions = filteredRegions.filter(region =>
+                        region.denom.toLowerCase().includes(searchQuery.toLowerCase())
+                    );
+                }
+                
+                setRegions(filteredRegions);
+                setTotalRegions(searchQuery ? filteredRegions.length : response.total);
             } catch (err: any) {
                 console.error('Error fetching regions:', err);
                 setError(err.message || 'Failed to load regions');
@@ -33,7 +46,7 @@ const Regions = () => {
         };
 
         fetchRegions();
-    }, [showAll]);
+    }, [showAll, searchQuery]);
 
     const handleViewAll = () => {
         setShowAll(true);
@@ -87,6 +100,14 @@ const Regions = () => {
             {/* Regions Grid */}
             <section className="py-16 px-4 bg-white">
                 <div className="max-w-6xl mx-auto">
+                    {searchQuery && (
+                        <div className="mb-8 text-center">
+                            <p className="text-lg text-gray-600">
+                                Résultats de recherche pour : <span className="font-semibold text-[#318160]">&quot;{searchQuery}&quot;</span>
+                            </p>
+                        </div>
+                    )}
+                    
                     <h2 className="text-2xl md:text-3xl font-bold text-[#318160] mb-12 text-center">
                         Les régions viticoles françaises
                     </h2>
@@ -103,6 +124,12 @@ const Regions = () => {
                     ) : error ? (
                         <div className="text-center py-12">
                             <p className="text-lg text-red-600">{error}</p>
+                        </div>
+                    ) : regions.length === 0 ? (
+                        <div className="text-center py-12">
+                            <p className="text-lg text-gray-600">
+                                {searchQuery ? `Aucune région trouvée pour "${searchQuery}"` : 'Aucune région disponible'}
+                            </p>
                         </div>
                     ) : (
                         <>
