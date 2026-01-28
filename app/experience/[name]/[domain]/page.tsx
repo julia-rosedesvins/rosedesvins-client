@@ -42,42 +42,6 @@ const ExperienceDomain = ({ params }: { params: Promise<{ name: string; domain: 
         }
     }, [unwrappedParams.domain]);
 
-    const experiences = [
-        {
-            id: 1,
-            title: "Visite libre + dégustation des cuvées Tradition",
-            price: "10 €",
-            duration: "60 minutes",
-            wines: "5 vins",
-            capacity: "1 à 10 personnes",
-            languages: ["Français", "English"],
-            description: "Une expérience unique avec la visite libre de notre cave troglodytique sculptée, suivie d'une dégustation commentée de 5 vins de nos cuvées Tradition dans notre caveau à l'ambiance feutrée, éclairé à la bougie.",
-            image: "/assets/bourillon-orleans.jpg"
-        },
-        {
-            id: 2,
-            title: "Visite libre + dégustation des cuvées Premium",
-            price: "10 €",
-            duration: "60 minutes",
-            wines: "8 vins",
-            capacity: "1 à 10 personnes",
-            languages: ["Français", "English"],
-            description: "Une expérience unique avec la visite libre de notre cave troglodytique sculptée, suivie d'une dégustation commentée de 8 vins de nos cuvées Premium dans notre caveau à l'ambiance feutrée, éclairé à la bougie.",
-            image: "/assets/bourillon-orleans.jpg"
-        },
-        {
-            id: 3,
-            title: "Dégustation accords vins & fromages",
-            price: "25 - 40 €",
-            duration: "60 minutes",
-            wines: "5 vins",
-            capacity: "1 à 10 personnes",
-            languages: ["Français", "English"],
-            description: "Partagez un moment unique autour de 5 fromages de caractère provenant des Halles de Tours, accompagnés de 5 vins qui révèlent toute leurs arômes.",
-            image: "/assets/bourillon-orleans.jpg"
-        }
-    ];
-
     if (loading) {
         return (
             <LandingPageLayout>
@@ -233,7 +197,10 @@ const ExperienceDomain = ({ params }: { params: Promise<{ name: string; domain: 
                                                 {service.description}
                                             </p>
 
-                                            <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground">
+                                            <Button 
+                                                onClick={() => router.push(`/reservation/${domainProfile.userId}/${service._id}`)}
+                                                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
+                                            >
                                                 Réserver
                                             </Button>
                                         </div>

@@ -22,6 +22,7 @@ export interface Service {
 
 export interface DomainProfile {
   _id: string;
+  userId: string;
   domainDescription: string;
   domainProfilePictureUrl: string | null;
   domainLogoUrl: string | null;
