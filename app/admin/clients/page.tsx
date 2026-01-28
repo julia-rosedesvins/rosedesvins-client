@@ -3,14 +3,15 @@
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
-import { Search, ChevronLeft, ChevronRight, Users, UserCheck, Clock, UserX, Loader2, Pencil } from "lucide-react"
+import { Search, ChevronLeft, ChevronRight, Mail, UserCheck, Clock, UserX, Loader2, CheckCircle, XCircle } from "lucide-react"
 import DashboardLayout from "@/components/admin/DashboardLayout"
 import { useAdmin } from '@/contexts/AdminContext'
-import { adminService, AdminUser, PaginatedUsersResponse, UserActionRequest } from '@/services/admin.service'
+import { newsletterService, NewsletterSubscription } from '@/services/newsletter.service'
+import { adminService } from '@/services/admin.service'
+import { UserProfile } from '@/services/user.service'
 import toast from 'react-hot-toast'
 
 type TabType = 'pending' | 'approved' | 'rejected'
@@ -18,9 +19,9 @@ type TabType = 'pending' | 'approved' | 'rejected'
 export default function AdminClients() {
     const { admin, isLoading } = useAdmin();
     const [activeTab, setActiveTab] = useState<TabType>('pending');
-    const [pendingUsers, setPendingUsers] = useState<AdminUser[]>([]);
-    const [approvedUsers, setApprovedUsers] = useState<AdminUser[]>([]);
-    const [rejectedUsers, setRejectedUsers] = useState<AdminUser[]>([]);
+    const [pendingSubs, setPendingSubs] = useState<NewsletterSubscription[]>([]);
+    const [approvedUsers, setApprovedUsers] = useState<UserProfile[]>([]);
+    const [rejectedSubs, setRejectedSubs] = useState<NewsletterSubscription[]>([]);
     const [pendingPagination, setPendingPagination] = useState<any>(null);
     const [approvedPagination, setApprovedPagination] = useState<any>(null);
     const [rejectedPagination, setRejectedPagination] = useState<any>(null);
@@ -29,60 +30,104 @@ export default function AdminClients() {
     const [loadingRejected, setLoadingRejected] = useState(false);
     const [actionLoading, setActionLoading] = useState<{[key: string]: 'approve' | 'reject' | null}>({});
     const [searchTerm, setSearchTerm] = useState('');
-    const [editingUser, setEditingUser] = useState<AdminUser | null>(null);
-    const [editForm, setEditForm] = useState({
+    
+    // Approve modal state
+    const [approvingSubscription, setApprovingSubscription] = useState<NewsletterSubscription | null>(null);
+    const [isApproveModalOpen, setIsApproveModalOpen] = useState(false);
+    const [approveForm, setApproveForm] = useState({
         firstName: '',
         lastName: '',
-        email: '',
         domainName: ''
     });
-    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-    const [isSaving, setIsSaving] = useState(false);
+    const [isApproving, setIsApproving] = useState(false);
 
-    const handleEditClick = (user: AdminUser) => {
-        setEditingUser(user);
-        setEditForm({
-            firstName: user.firstName,
-            lastName: user.lastName,
-            email: user.email,
-            domainName: user.domainName || ''
+    // Reject modal state
+    const [rejectingSubscription, setRejectingSubscription] = useState<NewsletterSubscription | null>(null);
+    const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
+    const [rejectionReason, setRejectionReason] = useState('');
+    const [isRejecting, setIsRejecting] = useState(false);
+
+    const handleApproveClick = (subscription: NewsletterSubscription) => {
+        setApprovingSubscription(subscription);
+        setApproveForm({
+            firstName: '',
+            lastName: '',
+            domainName: ''
         });
-        setIsEditModalOpen(true);
+        setIsApproveModalOpen(true);
     };
 
-    const handleSaveEdit = async () => {
-        if (!editingUser) return;
+    const handleRejectClick = (subscription: NewsletterSubscription) => {
+        setRejectingSubscription(subscription);
+        setRejectionReason('');
+        setIsRejectModalOpen(true);
+    };
+
+    const handleApproveSubmit = async () => {
+        if (!approvingSubscription) return;
         
-        setIsSaving(true);
+        if (!approveForm.firstName || !approveForm.lastName || !approveForm.domainName) {
+            toast.error('Veuillez remplir tous les champs');
+            return;
+        }
+
+        setIsApproving(true);
         try {
-            const response = await adminService.updateUser(editingUser._id, editForm);
+            const response = await newsletterService.approveAndCreateUser({
+                subscriptionId: approvingSubscription._id,
+                ...approveForm
+            });
+            
             if (response.success) {
-                toast.success('Utilisateur mis à jour avec succès');
-                setIsEditModalOpen(false);
+                toast.success('Souscription approuvée et compte créé avec succès');
+                setIsApproveModalOpen(false);
                 // Refresh lists
-                fetchPendingUsers();
+                fetchPendingSubscriptions();
                 fetchApprovedUsers();
-                fetchRejectedUsers();
-            } else {
-                toast.error(response.message || 'Erreur lors de la mise à jour');
             }
         } catch (error: any) {
-            console.error('Error updating user:', error);
-            toast.error(error.message || 'Erreur lors de la mise à jour');
+            console.error('Error approving subscription:', error);
+            toast.error(error.message || 'Erreur lors de l\'approbation');
         } finally {
-            setIsSaving(false);
+            setIsApproving(false);
         }
     };
 
-    const fetchPendingUsers = async (page: number = 1, limit: number = 10) => {
+    const handleRejectSubmit = async () => {
+        if (!rejectingSubscription) return;
+
+        setIsRejecting(true);
+        try {
+            const response = await newsletterService.rejectSubscription({
+                subscriptionId: rejectingSubscription._id,
+                rejectionReason: rejectionReason || undefined
+            });
+            
+            if (response.success) {
+                toast.success('Souscription rejetée');
+                setIsRejectModalOpen(false);
+                // Refresh lists
+                fetchPendingSubscriptions();
+                fetchRejectedSubscriptions();
+            }
+        } catch (error: any) {
+            console.error('Error rejecting subscription:', error);
+            toast.error(error.message || 'Erreur lors du rejet');
+        } finally {
+            setIsRejecting(false);
+        }
+    };
+
+    const fetchPendingSubscriptions = async (page: number = 1, limit: number = 10) => {
         setLoadingPending(true);
         try {
-            const response = await adminService.getPendingApprovalUsers({ page, limit });
-            setPendingUsers(response.data);
-            setPendingPagination(response.pagination);
+            const response = await newsletterService.getPendingSubscriptions(page, limit);
+            console.log('Newsletter service response:', JSON.stringify(response, null, 2));
+            setPendingSubs(response.data || []);
+            setPendingPagination(response.pagination || null);
         } catch (error: any) {
-            console.error('Error fetching pending users:', error);
-            toast.error('Erreur lors du chargement des demandes en attente');
+            console.error('Error fetching pending subscriptions:', error);
+            toast.error(error.message || 'Erreur lors du chargement des souscriptions en attente');
         } finally {
             setLoadingPending(false);
         }
@@ -92,8 +137,8 @@ export default function AdminClients() {
         setLoadingApproved(true);
         try {
             const response = await adminService.getApprovedUsers({ page, limit });
-            setApprovedUsers(response.data);
-            setApprovedPagination(response.pagination);
+            setApprovedUsers(response.data.users);
+            setApprovedPagination(response.data.pagination);
         } catch (error: any) {
             console.error('Error fetching approved users:', error);
             toast.error('Erreur lors du chargement des utilisateurs approuvés');
@@ -102,54 +147,26 @@ export default function AdminClients() {
         }
     };
 
-    const fetchRejectedUsers = async (page: number = 1, limit: number = 10) => {
+    const fetchRejectedSubscriptions = async (page: number = 1, limit: number = 10) => {
         setLoadingRejected(true);
         try {
-            const response = await adminService.getRejectedUsers({ page, limit });
-            setRejectedUsers(response.data);
-            setRejectedPagination(response.pagination);
+            const response = await newsletterService.getRejectedSubscriptions(page, limit);
+            setRejectedSubs(response.data || []);
+            setRejectedPagination(response.pagination || null);
         } catch (error: any) {
-            console.error('Error fetching rejected users:', error);
-            toast.error('Erreur lors du chargement des utilisateurs rejetés');
+            console.error('Error fetching rejected subscriptions:', error);
+            toast.error('Erreur lors du chargement des souscriptions rejetées');
         } finally {
             setLoadingRejected(false);
         }
     };
 
-    const handleUserAction = async (userId: string, action: 'approve' | 'reject') => {
-        // Set loading state for this specific user and action
-        setActionLoading(prev => ({ ...prev, [userId]: action }));
-        
-        try {
-            const request: UserActionRequest = { userId, action };
-            const response = await adminService.performUserAction(request);
-            
-            if (response.success) {
-                toast.success(response.message);
-                
-                // Refresh all lists to reflect the changes
-                fetchPendingUsers();
-                fetchApprovedUsers();
-                fetchRejectedUsers();
-            } else {
-                toast.error(response.message || 'Erreur lors de l\'action utilisateur');
-            }
-        } catch (error: any) {
-            console.error('Error performing user action:', error);
-            toast.error(error.message || 'Erreur lors de l\'action utilisateur');
-        } finally {
-            // Clear loading state for this user
-            setActionLoading(prev => ({ ...prev, [userId]: null }));
-        }
-    };
-
     useEffect(() => {
-        fetchPendingUsers();
+        fetchPendingSubscriptions();
         fetchApprovedUsers();
-        fetchRejectedUsers();
+        fetchRejectedSubscriptions();
     }, []);
 
-    // Show loading state while checking authentication
     if (isLoading) {
         return (
             <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -161,44 +178,37 @@ export default function AdminClients() {
         );
     }
 
-    // If not authenticated, return null (AdminContext will handle redirect)
     if (!admin) {
         return null;
     }
 
     const handlePageChange = (type: TabType, page: number) => {
         if (type === 'pending') {
-            fetchPendingUsers(page);
+            fetchPendingSubscriptions(page);
         } else if (type === 'approved') {
             fetchApprovedUsers(page);
         } else {
-            fetchRejectedUsers(page);
+            fetchRejectedSubscriptions(page);
         }
     };
 
-    const filteredPendingUsers = pendingUsers.filter(user =>
-        user.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.domainName?.toLowerCase().includes(searchTerm.toLowerCase())
+    const filteredPendingSubs = (pendingSubs || []).filter(sub =>
+        sub.email.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    const filteredApprovedUsers = approvedUsers.filter(user =>
+    const filteredApprovedUsers = (approvedUsers || []).filter(user =>
+        user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
         user.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         user.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.domainName?.toLowerCase().includes(searchTerm.toLowerCase())
+        user.domainName.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    const filteredRejectedUsers = rejectedUsers.filter(user =>
-        user.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.domainName?.toLowerCase().includes(searchTerm.toLowerCase())
+    const filteredRejectedSubs = (rejectedSubs || []).filter(sub =>
+        sub.email.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    const currentUsers = activeTab === 'pending' ? filteredPendingUsers : 
-                        activeTab === 'approved' ? filteredApprovedUsers : filteredRejectedUsers;
+    const currentData = activeTab === 'pending' ? filteredPendingSubs : 
+                        activeTab === 'approved' ? filteredApprovedUsers : filteredRejectedSubs;
     const currentPagination = activeTab === 'pending' ? pendingPagination : 
                              activeTab === 'approved' ? approvedPagination : rejectedPagination;
     const currentLoading = activeTab === 'pending' ? loadingPending : 
@@ -211,8 +221,8 @@ export default function AdminClients() {
             <div className="flex items-center justify-between mt-6">
                 <div className="text-sm text-gray-600">
                     Affichage de {((currentPagination.currentPage - 1) * currentPagination.limit) + 1} à{' '}
-                    {Math.min(currentPagination.currentPage * currentPagination.limit, currentPagination.totalUsers)} sur{' '}
-                    {currentPagination.totalUsers} résultats
+                    {Math.min(currentPagination.currentPage * currentPagination.limit, currentPagination.total || currentPagination.totalSubscriptions)} sur{' '}
+                    {currentPagination.total || currentPagination.totalSubscriptions} résultats
                 </div>
                 <div className="flex items-center space-x-2">
                     <Button
@@ -241,93 +251,127 @@ export default function AdminClients() {
         );
     };
 
-    const renderUserTable = () => (
+    const renderTable = () => (
         <div className="overflow-x-auto">
             <table className="w-full">
                 <thead>
                     <tr className="border-b border-gray-200">
-                        <th className="text-left py-3 px-4 font-medium text-gray-900">Nom complet</th>
                         <th className="text-left py-3 px-4 font-medium text-gray-900">Email</th>
-                        <th className="text-left py-3 px-4 font-medium text-gray-900">Nom du domaine</th>
-                        <th className="text-center py-3 px-4 font-medium text-gray-900">Actions</th>
+                        {activeTab === 'approved' && (
+                            <>
+                                <th className="text-left py-3 px-4 font-medium text-gray-900">Prénom</th>
+                                <th className="text-left py-3 px-4 font-medium text-gray-900">Nom</th>
+                                <th className="text-left py-3 px-4 font-medium text-gray-900">Domaine</th>
+                                <th className="text-left py-3 px-4 font-medium text-gray-900">Date de création</th>
+                            </>
+                        )}
+                        {activeTab !== 'approved' && (
+                            <th className="text-left py-3 px-4 font-medium text-gray-900">Date de soumission</th>
+                        )}
+                        {activeTab === 'rejected' && (
+                            <>
+                                <th className="text-left py-3 px-4 font-medium text-gray-900">Date de rejet</th>
+                                <th className="text-left py-3 px-4 font-medium text-gray-900">Raison</th>
+                            </>
+                        )}
+                        {activeTab === 'pending' && (
+                            <th className="text-center py-3 px-4 font-medium text-gray-900">Actions</th>
+                        )}
                     </tr>
                 </thead>
                 <tbody>
-                    {currentUsers.map((user) => (
-                        <tr key={user._id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                            <td className="py-4 px-4">
-                                <div className="font-medium text-gray-900">
-                                    {user.firstName} {user.lastName}
-                                </div>
-                            </td>
-                            <td className="py-4 px-4">
-                                <div className="text-gray-600">{user.email}</div>
-                            </td>
-                            <td className="py-4 px-4">
-                                <div className="text-gray-600">{user.domainName}</div>
-                            </td>
-                            <td className="py-4 px-4">
-                                <div className="flex justify-center space-x-2">
-                                    {user.accountStatus === 'pending_approval' ? (
-                                        <>
-                                            <Button 
-                                                size="sm"
-                                                className="bg-[#3A7B59] hover:bg-[#2d5f43] text-white"
-                                                onClick={() => handleUserAction(user._id, 'approve')}
-                                                disabled={actionLoading[user._id] !== undefined && actionLoading[user._id] !== null}
-                                            >
-                                                {actionLoading[user._id] === 'approve' ? (
-                                                    <>
-                                                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                                        Traitement...
-                                                    </>
-                                                ) : (
-                                                    'Approuver'
-                                                )}
-                                            </Button>
-                                            <Button 
-                                                size="sm"
-                                                variant="outline"
-                                                className="text-red-600 border-red-600 hover:bg-red-600 hover:text-white"
-                                                onClick={() => handleUserAction(user._id, 'reject')}
-                                                disabled={actionLoading[user._id] !== undefined && actionLoading[user._id] !== null}
-                                            >
-                                                {actionLoading[user._id] === 'reject' ? (
-                                                    <>
-                                                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                                        Traitement...
-                                                    </>
-                                                ) : (
-                                                    'Rejeter'
-                                                )}
-                                            </Button>
-                                        </>
-                                    ) : (
-                                        <>
+                    {activeTab === 'approved' ? (
+                        (currentData as UserProfile[]).map((user) => (
+                            <tr key={user._id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                                <td className="py-3 px-4">
+                                    <div className="flex items-center gap-2">
+                                        <Mail className="h-4 w-4 text-gray-400" />
+                                        <span className="font-medium text-gray-900">{user.email}</span>
+                                    </div>
+                                </td>
+                                <td className="py-3 px-4 text-gray-600">{user.firstName}</td>
+                                <td className="py-3 px-4 text-gray-600">{user.lastName}</td>
+                                <td className="py-3 px-4 text-gray-600">{user.domainName}</td>
+                                <td className="py-3 px-4 text-gray-600">
+                                    {user.createdAt ? new Date(user.createdAt).toLocaleDateString('fr-FR', {
+                                        day: '2-digit',
+                                        month: '2-digit',
+                                        year: 'numeric'
+                                    }) : '-'}
+                                </td>
+                            </tr>
+                        ))
+                    ) : (
+                        (currentData as NewsletterSubscription[]).map((sub) => (
+                            <tr key={sub._id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                                <td className="py-3 px-4">
+                                    <div className="flex items-center gap-2">
+                                        <Mail className="h-4 w-4 text-gray-400" />
+                                        <span className="font-medium text-gray-900">{sub.email}</span>
+                                    </div>
+                                </td>
+                                <td className="py-3 px-4 text-gray-600">
+                                    {new Date(sub.createdAt).toLocaleDateString('fr-FR', {
+                                        day: '2-digit',
+                                        month: '2-digit',
+                                        year: 'numeric',
+                                        hour: '2-digit',
+                                        minute: '2-digit'
+                                    })}
+                                </td>
+                                {activeTab === 'rejected' && (
+                                    <>
+                                        <td className="py-3 px-4 text-gray-600">
+                                            {sub.rejectedAt ? new Date(sub.rejectedAt).toLocaleDateString('fr-FR', {
+                                                day: '2-digit',
+                                                month: '2-digit',
+                                                year: 'numeric'
+                                            }) : '-'}
+                                        </td>
+                                        <td className="py-3 px-4 text-gray-600">
+                                            {sub.rejectionReason || '-'}
+                                        </td>
+                                    </>
+                                )}
+                                {activeTab === 'pending' && (
+                                    <td className="py-3 px-4">
+                                        <div className="flex items-center justify-center gap-2">
                                             <Button
                                                 size="sm"
-                                                variant="outline"
-                                                onClick={() => handleEditClick(user)}
-                                                className="mr-2"
+                                                onClick={() => handleApproveClick(sub)}
+                                                disabled={actionLoading[sub._id] === 'approve'}
+                                                className="bg-green-600 hover:bg-green-700 text-white"
                                             >
-                                                <Pencil className="w-4 h-4 mr-2" />
-                                                Modifier
+                                                {actionLoading[sub._id] === 'approve' ? (
+                                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                                ) : (
+                                                    <>
+                                                        <CheckCircle className="h-4 w-4 mr-1" />
+                                                        Approuver
+                                                    </>
+                                                )}
                                             </Button>
-                                            {user.accountStatus === 'rejected' ? (
-                                                <Badge className="bg-red-100 text-red-800 hover:bg-red-100">
-                                                    Rejeté
-                                                </Badge>
-                                            ) : (
-                                                <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
-                                                    {user.accountStatus === 'approved' ? 'Approuvé' : 'Actif'}
-                                                </Badge>
-                                            )}
-                                        </>
-                                    )}
-                                </div>
-                            </td>
-                        </tr>
-                    ))}
+                                            <Button
+                                                size="sm"
+                                                variant="destructive"
+                                                onClick={() => handleRejectClick(sub)}
+                                                disabled={actionLoading[sub._id] === 'reject'}
+                                            >
+                                                {actionLoading[sub._id] === 'reject' ? (
+                                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                                ) : (
+                                                    <>
+                                                        <XCircle className="h-4 w-4 mr-1" />
+                                                        Rejeter
+                                                    </>
+                                                )}
+                                            </Button>
+                                        </div>
+                                    </td>
+                                )}
+                            </tr>
+                        ))
+                    )}
                 </tbody>
             </table>
         </div>
@@ -335,53 +379,52 @@ export default function AdminClients() {
 
     return (
         <DashboardLayout title="Gestion des Clients">
-            {/* Header Section */}
             <div className="mb-8">
-                <h1 className="text-2xl font-bold text-foreground mb-2">Gestion des Clients</h1>
-                <p className="text-muted-foreground">Gérez les demandes d'inscription et les utilisateurs approuvés</p>
+                <h1 className="text-2xl font-bold text-foreground mb-2">Gestion des Inscriptions</h1>
+                <p className="text-muted-foreground">Gérez les souscriptions newsletter et créez les comptes utilisateurs</p>
             </div>
 
             {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Demandes en attente</CardTitle>
+                        <CardTitle className="text-sm font-medium">Souscriptions en attente</CardTitle>
                         <Clock className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold text-yellow-600">
-                            {pendingPagination?.totalUsers || 0}
+                            {pendingPagination?.totalSubscriptions || 0}
                         </div>
                         <p className="text-xs text-muted-foreground">
-                            Nouvelles demandes à traiter
+                            Nouvelles souscriptions à traiter
                         </p>
                     </CardContent>
                 </Card>
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Utilisateurs approuvés</CardTitle>
+                        <CardTitle className="text-sm font-medium">Souscriptions approuvées</CardTitle>
                         <UserCheck className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold text-green-600">
-                            {approvedPagination?.totalUsers || 0}
+                            {approvedPagination?.total || 0}
                         </div>
                         <p className="text-xs text-muted-foreground">
-                            Clients actifs et approuvés
+                            Comptes créés avec succès
                         </p>
                     </CardContent>
                 </Card>
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Utilisateurs rejetés</CardTitle>
+                        <CardTitle className="text-sm font-medium">Souscriptions rejetées</CardTitle>
                         <UserX className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold text-red-600">
-                            {rejectedPagination?.totalUsers || 0}
+                            {rejectedPagination?.totalSubscriptions || 0}
                         </div>
                         <p className="text-xs text-muted-foreground">
-                            Demandes rejetées
+                            Souscriptions refusées
                         </p>
                     </CardContent>
                 </Card>
@@ -395,33 +438,33 @@ export default function AdminClients() {
                             <Button
                                 variant={activeTab === 'pending' ? 'default' : 'outline'}
                                 onClick={() => setActiveTab('pending')}
-                                className={activeTab === 'pending' ? 'bg-[#3A7B59] hover:bg-[#2d5f43]' : ''}
+                                className={activeTab === 'pending' ? 'bg-[#3A7B59] text-white' : ''}
                             >
-                                <Clock className="w-4 h-4 mr-2" />
-                                En attente ({pendingPagination?.totalUsers || 0})
+                                <Clock className="h-4 w-4 mr-2" />
+                                En attente ({pendingPagination?.totalSubscriptions || 0})
                             </Button>
                             <Button
                                 variant={activeTab === 'approved' ? 'default' : 'outline'}
                                 onClick={() => setActiveTab('approved')}
-                                className={activeTab === 'approved' ? 'bg-[#3A7B59] hover:bg-[#2d5f43]' : ''}
+                                className={activeTab === 'approved' ? 'bg-[#3A7B59] text-white' : ''}
                             >
-                                <UserCheck className="w-4 h-4 mr-2" />
-                                Approuvés ({approvedPagination?.totalUsers || 0})
+                                <UserCheck className="h-4 w-4 mr-2" />
+                                Approuvées ({approvedPagination?.total || 0})
                             </Button>
                             <Button
                                 variant={activeTab === 'rejected' ? 'default' : 'outline'}
                                 onClick={() => setActiveTab('rejected')}
-                                className={activeTab === 'rejected' ? 'bg-[#3A7B59] hover:bg-[#2d5f43]' : ''}
+                                className={activeTab === 'rejected' ? 'bg-[#3A7B59] text-white' : ''}
                             >
-                                <UserX className="w-4 h-4 mr-2" />
-                                Rejetés ({rejectedPagination?.totalUsers || 0})
+                                <UserX className="h-4 w-4 mr-2" />
+                                Rejetées ({rejectedPagination?.totalSubscriptions || 0})
                             </Button>
                         </div>
                         
                         <div className="relative w-full sm:w-64">
                             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                             <Input
-                                placeholder="Rechercher par nom, email, domaine..."
+                                placeholder="Rechercher par email..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 className="pl-10"
@@ -433,99 +476,144 @@ export default function AdminClients() {
                 <CardContent>
                     {currentLoading ? (
                         <div className="flex items-center justify-center py-12">
-                            <div className="w-8 h-8 border-2 border-[#3A7B59] border-t-transparent rounded-full animate-spin"></div>
-                            <span className="ml-3 text-gray-600">Chargement...</span>
+                            <Loader2 className="h-8 w-8 animate-spin text-[#3A7B59]" />
                         </div>
-                    ) : currentUsers.length === 0 ? (
+                    ) : currentData.length === 0 ? (
                         <div className="text-center py-12">
-                            <Users className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                            <h3 className="text-lg font-medium text-gray-900 mb-2">
-                                {searchTerm ? 'Aucun résultat trouvé' : 'Aucun utilisateur'}
+                            <Mail className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                                {searchTerm
+                                    ? 'Aucun résultat trouvé'
+                                    : activeTab === 'pending'
+                                    ? 'Aucune souscription en attente'
+                                    : activeTab === 'approved'
+                                    ? 'Aucun utilisateur approuvé'
+                                    : 'Aucune souscription rejetée'
+                                }
                             </h3>
                             <p className="text-gray-600">
-                                {searchTerm 
-                                    ? 'Essayez de modifier vos critères de recherche' 
-                                    : activeTab === 'pending' 
-                                        ? 'Aucune demande en attente pour le moment'
-                                        : activeTab === 'approved'
-                                            ? 'Aucun utilisateur approuvé pour le moment'
-                                            : 'Aucun utilisateur rejeté pour le moment'
-                                }
+                                {searchTerm
+                                    ? 'Essayez avec un autre terme de recherche'
+                                    : activeTab === 'approved'
+                                    ? 'Les utilisateurs approuvés apparaîtront ici'
+                                    : 'Les nouvelles souscriptions apparaîtront ici'}
                             </p>
                         </div>
                     ) : (
-                        renderUserTable()
+                        renderTable()
                     )}
                     
                     {!searchTerm && renderPagination()}
                 </CardContent>
             </Card>
 
-            {/* Edit User Modal */}
-            <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+            {/* Approve Modal */}
+            <Dialog open={isApproveModalOpen} onOpenChange={setIsApproveModalOpen}>
                 <DialogContent className="sm:max-w-[425px]">
                     <DialogHeader>
-                        <DialogTitle>Modifier l'utilisateur</DialogTitle>
+                        <DialogTitle>Approuver et créer le compte</DialogTitle>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="firstName" className="text-right">
-                                Prénom
-                            </Label>
+                        <div className="grid gap-2">
+                            <Label>Email</Label>
+                            <Input value={approvingSubscription?.email || ''} disabled />
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="firstName">Prénom *</Label>
                             <Input
                                 id="firstName"
-                                value={editForm.firstName}
-                                onChange={(e) => setEditForm({ ...editForm, firstName: e.target.value })}
-                                className="col-span-3"
+                                value={approveForm.firstName}
+                                onChange={(e) => setApproveForm({ ...approveForm, firstName: e.target.value })}
+                                placeholder="Prénom"
                             />
                         </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="lastName" className="text-right">
-                                Nom
-                            </Label>
+                        <div className="grid gap-2">
+                            <Label htmlFor="lastName">Nom de famille *</Label>
                             <Input
                                 id="lastName"
-                                value={editForm.lastName}
-                                onChange={(e) => setEditForm({ ...editForm, lastName: e.target.value })}
-                                className="col-span-3"
+                                value={approveForm.lastName}
+                                onChange={(e) => setApproveForm({ ...approveForm, lastName: e.target.value })}
+                                placeholder="Nom de famille"
                             />
                         </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="email" className="text-right">
-                                Email
-                            </Label>
-                            <Input
-                                id="email"
-                                type="email"
-                                value={editForm.email}
-                                onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
-                                className="col-span-3"
-                            />
-                        </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="domainName" className="text-right">
-                                Domaine
-                            </Label>
+                        <div className="grid gap-2">
+                            <Label htmlFor="domainName">Nom du domaine *</Label>
                             <Input
                                 id="domainName"
-                                value={editForm.domainName}
-                                onChange={(e) => setEditForm({ ...editForm, domainName: e.target.value })}
-                                className="col-span-3"
+                                value={approveForm.domainName}
+                                onChange={(e) => setApproveForm({ ...approveForm, domainName: e.target.value })}
+                                placeholder="Nom du domaine"
                             />
                         </div>
                     </div>
                     <DialogFooter>
-                        <Button variant="outline" onClick={() => setIsEditModalOpen(false)}>
+                        <Button
+                            variant="outline"
+                            onClick={() => setIsApproveModalOpen(false)}
+                            disabled={isApproving}
+                        >
                             Annuler
                         </Button>
-                        <Button onClick={handleSaveEdit} disabled={isSaving} className="bg-[#3A7B59] hover:bg-[#2d5f43]">
-                            {isSaving ? (
+                        <Button
+                            onClick={handleApproveSubmit}
+                            disabled={isApproving}
+                            className="bg-[#3A7B59] hover:bg-[#2d5f46]"
+                        >
+                            {isApproving ? (
                                 <>
                                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    Enregistrement...
+                                    Création en cours...
                                 </>
                             ) : (
-                                'Enregistrer'
+                                'Approuver et créer le compte'
+                            )}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Reject Modal */}
+            <Dialog open={isRejectModalOpen} onOpenChange={setIsRejectModalOpen}>
+                <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                        <DialogTitle>Rejeter la souscription</DialogTitle>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <div className="grid gap-2">
+                            <Label>Email</Label>
+                            <Input value={rejectingSubscription?.email || ''} disabled />
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="rejectionReason">Raison du rejet (optionnel)</Label>
+                            <textarea
+                                id="rejectionReason"
+                                value={rejectionReason}
+                                onChange={(e) => setRejectionReason(e.target.value)}
+                                placeholder="Raison du rejet..."
+                                className="min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => setIsRejectModalOpen(false)}
+                            disabled={isRejecting}
+                        >
+                            Annuler
+                        </Button>
+                        <Button
+                            variant="destructive"
+                            onClick={handleRejectSubmit}
+                            disabled={isRejecting}
+                        >
+                            {isRejecting ? (
+                                <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Rejet en cours...
+                                </>
+                            ) : (
+                                'Rejeter'
                             )}
                         </Button>
                     </DialogFooter>

@@ -1,18 +1,34 @@
-'use client";'
+'use client';
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "react-hot-toast";
-import { Mail } from "lucide-react";
+import { Mail, Loader2 } from "lucide-react";
+import { newsletterService } from "@/services/newsletter.service";
 
 const NewsletterSection = () => {
   const [email, setEmail] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (email) {
-      toast.success("Merci pour votre inscription !");
-      setEmail("");
+    if (!email) {
+      toast.error("Veuillez entrer votre adresse email");
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      const response = await newsletterService.subscribe(email);
+      if (response.success) {
+        toast.success(response.message || "Merci pour votre inscription !");
+        setEmail("");
+      }
+    } catch (error: any) {
+      console.error('Subscription error:', error);
+      toast.error(error.message || "Erreur lors de l'inscription");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -39,11 +55,24 @@ const NewsletterSection = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                disabled={isSubmitting}
                 className="pl-10"
               />
             </div>
-            <Button type="submit" size="lg" className="bg-[#318160] hover:bg-[#1D6346] text-white">
-              S'abonner
+            <Button 
+              type="submit" 
+              size="lg" 
+              disabled={isSubmitting}
+              className="bg-[#318160] hover:bg-[#1D6346] text-white disabled:opacity-50"
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Envoi...
+                </>
+              ) : (
+                "S'abonner"
+              )}
             </Button>
           </form>
         </div>
