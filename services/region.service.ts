@@ -50,6 +50,7 @@ export interface FilterParams {
   minPrice?: number;
   maxPrice?: number;
   languages?: string[]; // Array of language codes
+  categories?: string[]; // Array of category names
 }
 
 export interface PaginatedRegionsResponse {
@@ -182,6 +183,9 @@ class RegionService {
       }
       if (filters?.languages && filters.languages.length > 0) {
         params.append('languages', filters.languages.join(','));
+      }
+      if (filters?.categories && filters.categories.length > 0) {
+        params.append('categories', filters.categories.join(','));
       }
       
       const response = await apiClient.get<RegionByNameResponse>(`/regions/${name}?${params.toString()}`);

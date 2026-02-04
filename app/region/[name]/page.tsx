@@ -72,6 +72,9 @@ const LoireValley = ({ params }: { params: Promise<{ name: string }> }) => {
                 if (selectedLanguages.length > 0) {
                     filters.languages = selectedLanguages;
                 }
+                if (selectedExperiences.length > 0) {
+                    filters.categories = selectedExperiences;
+                }
                 
                 const response = await regionService.getRegionByName(
                     resolvedParams.name, 
@@ -92,7 +95,7 @@ const LoireValley = ({ params }: { params: Promise<{ name: string }> }) => {
         };
 
         fetchRegionData();
-    }, [resolvedParams.name, currentPage, searchQuery, selectedDays, priceRange, selectedLanguages]);
+    }, [resolvedParams.name, currentPage, searchQuery, selectedDays, priceRange, selectedLanguages, selectedExperiences]);
 
     const toggleFilter = (filterName: string) => {
         setExpandedFilter(expandedFilter === filterName ? null : filterName);
@@ -110,9 +113,9 @@ const LoireValley = ({ params }: { params: Promise<{ name: string }> }) => {
         );
     };
 
-    const toggleExperience = (experience: string) => {
+    const toggleExperience = (categoryId: string) => {
         setSelectedExperiences(prev => 
-            prev.includes(experience) ? prev.filter(e => e !== experience) : [...prev, experience]
+            prev.includes(categoryId) ? prev.filter(e => e !== categoryId) : [...prev, categoryId]
         );
     };
 
@@ -363,8 +366,8 @@ const LoireValley = ({ params }: { params: Promise<{ name: string }> }) => {
                                             <div key={category._id} className="flex items-center space-x-2">
                                                 <Checkbox
                                                     id={`exp-${category._id}`}
-                                                    checked={selectedExperiences.includes(category.category_name)}
-                                                    onCheckedChange={() => toggleExperience(category.category_name)}
+                                                    checked={selectedExperiences.includes(category._id)}
+                                                    onCheckedChange={() => toggleExperience(category._id)}
                                                 />
                                                 <label
                                                     htmlFor={`exp-${category._id}`}
