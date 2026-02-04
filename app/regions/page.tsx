@@ -2,13 +2,13 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import LandingPageLayout from "@/components/LandingPageLayout";
 import { regionService, Region } from "@/services/region.service";
 
-const Regions = () => {
+function RegionsContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const searchQuery = searchParams.get('q');
@@ -53,8 +53,7 @@ const Regions = () => {
     };
 
     return (
-        <LandingPageLayout>
-
+        <>
             {/* Hero Section */}
             <section
                 className="relative bg-cover text-white min-h-[300px]"
@@ -170,8 +169,20 @@ const Regions = () => {
                     )}
                 </div>
             </section>
+        </>
+    );
+}
+
+export default function Regions() {
+    return (
+        <LandingPageLayout>
+            <Suspense fallback={
+                <div className="min-h-screen flex items-center justify-center">
+                    <p className="text-gray-600">Chargement...</p>
+                </div>
+            }>
+                <RegionsContent />
+            </Suspense>
         </LandingPageLayout>
     );
-};
-
-export default Regions;
+}

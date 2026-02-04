@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import LandingPageLayout from "@/components/LandingPageLayout";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 import { domainProfileService, PublicService } from "@/services/domain-profile.service";
 
-const Page = () => {
+function ExperiencesContent() {
   const searchParams = useSearchParams();
   const searchQuery = searchParams.get('q');
   
@@ -71,7 +71,7 @@ const Page = () => {
     }
   };
     return (
-        <LandingPageLayout>
+        <>
                   {/* Hero Section */}
       <section 
         className="relative bg-cover bg-center text-white py-20"
@@ -189,8 +189,20 @@ const Page = () => {
           )}
         </div>
       </section>
-        </LandingPageLayout>
+        </>
     )
-};
+}
 
-export default Page;
+export default function Page() {
+    return (
+        <LandingPageLayout>
+            <Suspense fallback={
+                <div className="min-h-screen flex items-center justify-center">
+                    <p className="text-gray-600">Chargement...</p>
+                </div>
+            }>
+                <ExperiencesContent />
+            </Suspense>
+        </LandingPageLayout>
+    );
+}

@@ -5,9 +5,11 @@ import Link from "next/link";
 import { ArrowLeft, Grape, Euro } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import LandingPageLayout from "@/components/LandingPageLayout";
+import { use } from "react";
 
-const Experience = ({ params }: { params: { name: string } }) => {
+const Experience = ({ params }: { params: Promise<{ name: string }> }) => {
     const router = useRouter();
+    const { name } = use(params);
 
     const filters = [
         { name: "Localisation", active: false },
