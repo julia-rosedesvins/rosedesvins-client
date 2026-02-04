@@ -4,8 +4,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useState } from "react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useState, useEffect } from "react";
 import { X, Wine, Users, Clock, Euro, Upload, Image as ImageIcon } from "lucide-react";
+import { adminExperienceCategoriesService, ExperienceCategory } from "@/services/admin-experience-categories.service";
 
 interface AddServiceModalProps {
   isOpen: boolean;
@@ -14,6 +16,9 @@ interface AddServiceModalProps {
 }
 
 export const AddServiceModal = ({ isOpen, onClose, onSave }: AddServiceModalProps) => {
+  const [categories, setCategories] = useState<ExperienceCategory[]>([]);
+  const [loadingCategories, setLoadingCategories] = useState(false);
+  
   const [formData, setFormData] = useState({
     nom: "",
     description: "",
@@ -21,6 +26,7 @@ export const AddServiceModal = ({ isOpen, onClose, onSave }: AddServiceModalProp
     prix: "",
     temps: "",
     vinsDesgustes: "",
+    category: "",
     langues: {
       francais: true,
       anglais: false,
@@ -35,6 +41,24 @@ export const AddServiceModal = ({ isOpen, onClose, onSave }: AddServiceModalProp
   const [bannerPreview, setBannerPreview] = useState<string | null>(null);
 
   const [errors, setErrors] = useState<{[key: string]: string}>({});
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchCategories();
+    }
+  }, [isOpen]);
+
+  const fetchCategories = async () => {
+    try {
+      setLoadingCategories(true);
+      const activeCategories = await adminExperienceCategoriesService.getActiveCategories();
+      setCategories(activeCategories);
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+    } finally {
+      setLoadingCategories(false);
+    }
+  };
 
   const handleBannerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -150,6 +174,7 @@ export const AddServiceModal = ({ isOpen, onClose, onSave }: AddServiceModalProp
       timeOfServiceInMinutes: parseInt(formData.temps) || 30,
       numberOfWinesTasted: parseInt(formData.vinsDesgustes) || 0,
       languagesOffered: selectedLanguages,
+      category: formData.category || undefined,
       isActive: true
     };
     
@@ -166,6 +191,7 @@ export const AddServiceModal = ({ isOpen, onClose, onSave }: AddServiceModalProp
       prix: "",
       temps: "",
       vinsDesgustes: "",
+      category: "",
       langues: {
         francais: true,
         anglais: false,
@@ -224,6 +250,32 @@ export const AddServiceModal = ({ isOpen, onClose, onSave }: AddServiceModalProp
                 className={`w-full text-sm sm:text-base border-2 focus:border-[#3A7B59] rounded-lg resize-none ${errors.description ? 'border-red-300 focus:border-red-500' : ''}`}
               />
               {errors.description && <p className="text-red-500 text-xs sm:text-sm">{errors.description}</p>}
+            </div>
+
+            {/* Category */}
+            <div className="space-y-2 w-full">
+              <Label className="text-sm font-semibold text-gray-700">Catégorie</Label>
+              <Select
+                value={formData.category}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}
+              >
+                <SelectTrigger className="w-full text-sm sm:text-base border-2 focus:border-[#3A7B59] rounded-lg h-11">
+                  <SelectValue placeholder="Sélectionner une catégorie" />
+                </SelectTrigger>
+                <SelectContent>
+                  {loadingCategories ? (
+                    <SelectItem value="loading" disabled>Chargement...</SelectItem>
+                  ) : categories.length === 0 ? (
+                    <SelectItem value="empty" disabled>Aucune catégorie disponible</SelectItem>
+                  ) : (
+                    categories.map((cat) => (
+                      <SelectItem key={cat._id} value={cat._id}>
+                        {cat.category_name}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Service Banner Upload */}

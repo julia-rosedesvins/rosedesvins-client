@@ -43,6 +43,16 @@ class AdminExperienceCategoriesService {
     }
   }
 
+  async getActiveCategories(): Promise<ExperienceCategory[]> {
+    try {
+      const response = await apiClient.get<ExperienceCategory[]>('/experience-categories/active');
+      return response.data;
+    } catch (error: any) {
+      console.error('Error fetching active categories:', error);
+      throw error;
+    }
+  }
+
   async getById(id: string): Promise<ExperienceCategory> {
     try {
       const response = await apiClient.get<ExperienceCategory>(`/experience-categories/admin/${id}`);

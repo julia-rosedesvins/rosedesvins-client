@@ -4,8 +4,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState, useEffect } from "react";
 import { Wine, Users, Clock, Euro, Upload, Image as ImageIcon, X } from "lucide-react";
+import { adminExperienceCategoriesService, ExperienceCategory } from "@/services/admin-experience-categories.service";
 
 interface Prestation {
   id: number;
@@ -15,6 +17,7 @@ interface Prestation {
   duration: string;
   numberOfPeople?: string;
   winesTasted?: string;
+  category?: string;
   languages?: {
     francais: boolean;
     anglais: boolean;
@@ -34,6 +37,9 @@ interface EditServiceModalProps {
 }
 
 export const EditServiceModal = ({ isOpen, onClose, prestation, onSave }: EditServiceModalProps) => {
+  const [categories, setCategories] = useState<ExperienceCategory[]>([]);
+  const [loadingCategories, setLoadingCategories] = useState(false);
+  
   const [formData, setFormData] = useState({
     nom: "",
     description: "",
@@ -41,6 +47,7 @@ export const EditServiceModal = ({ isOpen, onClose, prestation, onSave }: EditSe
     prix: "",
     temps: "",
     vinsDesgustes: "",
+    category: "",
     langues: {
       francais: true,
       anglais: false,
@@ -54,6 +61,24 @@ export const EditServiceModal = ({ isOpen, onClose, prestation, onSave }: EditSe
   const [errors, setErrors] = useState<{[key: string]: string}>({});
   const [serviceBanner, setServiceBanner] = useState<File | null>(null);
   const [bannerPreview, setBannerPreview] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchCategories();
+    }
+  }, [isOpen]);
+
+  const fetchCategories = async () => {
+    try {
+      setLoadingCategories(true);
+      const activeCategories = await adminExperienceCategoriesService.getActiveCategories();
+      setCategories(activeCategories);
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+    } finally {
+      setLoadingCategories(false);
+    }
+  };
 
   const handleBannerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -111,6 +136,7 @@ export const EditServiceModal = ({ isOpen, onClose, prestation, onSave }: EditSe
       prix: "",
       temps: "",
       vinsDesgustes: "",
+      category: "",
       langues: {
         francais: true,
         anglais: false,
@@ -237,6 +263,7 @@ export const EditServiceModal = ({ isOpen, onClose, prestation, onSave }: EditSe
         prix: priceValue,
         temps: timeValue,
         vinsDesgustes: prestation.winesTasted || "5",
+        category: prestation.category || "",
         langues: languagesState,
         autreLangue: prestation.otherLanguage || ""
       });
@@ -306,6 +333,7 @@ export const EditServiceModal = ({ isOpen, onClose, prestation, onSave }: EditSe
         timeOfServiceInMinutes: Math.max(15, parseInt(formData.temps) || 60), // Min 15 minutes as per schema
         numberOfWinesTasted: Math.max(0, parseInt(formData.vinsDesgustes) || 0),
         languagesOffered: selectedLanguages.length > 0 ? selectedLanguages : ['French'], // Ensure at least one language
+        category: formData.category && formData.category.trim() !== '' ? formData.category : undefined,
         isActive: true
       };
       
@@ -378,6 +406,32 @@ export const EditServiceModal = ({ isOpen, onClose, prestation, onSave }: EditSe
                 className={`w-full text-sm sm:text-base border-2 focus:border-[#3A7B59] rounded-lg resize-none ${errors.description ? 'border-red-300 focus:border-red-500' : ''}`}
               />
               {errors.description && <p className="text-red-500 text-xs sm:text-sm">{errors.description}</p>}
+            </div>
+
+            {/* Category */}
+            <div className="space-y-2 w-full">
+              <Label className="text-sm font-semibold text-gray-700">Catégorie</Label>
+              <Select
+                value={formData.category}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}
+              >
+                <SelectTrigger className="w-full text-sm sm:text-base border-2 focus:border-[#3A7B59] rounded-lg h-11">
+                  <SelectValue placeholder="Sélectionner une catégorie" />
+                </SelectTrigger>
+                <SelectContent>
+                  {loadingCategories ? (
+                    <SelectItem value="loading" disabled>Chargement...</SelectItem>
+                  ) : categories.length === 0 ? (
+                    <SelectItem value="empty" disabled>Aucune catégorie disponible</SelectItem>
+                  ) : (
+                    categories.map((cat) => (
+                      <SelectItem key={cat._id} value={cat._id}>
+                        {cat.category_name}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Service Banner Upload */}

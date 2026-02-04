@@ -601,6 +601,7 @@ export default function UserDomainProfile() {
             serviceId: service._id, // Use _id instead of index
             numberOfPeople: service.numberOfPeople,
             winesTasted: service.numberOfWinesTasted.toString(),
+            category: service.category,
             languages: languagesState,
             otherLanguage: otherLanguage
         };
@@ -621,6 +622,7 @@ export default function UserDomainProfile() {
                 timeOfServiceInMinutes: newService.timeOfServiceInMinutes || 60,
                 numberOfWinesTasted: newService.numberOfWinesTasted || 0,
                 languagesOffered: newService.languagesOffered || ['French'],
+                category: newService.category || undefined,
                 isActive: newService.isActive !== undefined ? newService.isActive : true
             };
 
@@ -655,8 +657,11 @@ export default function UserDomainProfile() {
                 timeOfServiceInMinutes: updatedService.timeOfServiceInMinutes || 60,
                 numberOfWinesTasted: updatedService.numberOfWinesTasted || 0,
                 languagesOffered: updatedService.languagesOffered || ['French'],
+                category: updatedService.category !== undefined ? updatedService.category : undefined,
                 isActive: updatedService.isActive !== undefined ? updatedService.isActive : true
             };
+
+            console.log('Update service data with category:', updateData);
 
             await userService.updateService(serviceIndex, updateData, serviceBanner || undefined);
 
