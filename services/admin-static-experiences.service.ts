@@ -4,6 +4,7 @@ export interface StaticExperience {
   _id: string;
   name: string;
   category?: string;
+  category_ref?: string;
   address?: string;
   city?: string;
   latitude?: number;
@@ -30,6 +31,7 @@ export interface PaginatedStaticExperiences {
 export interface CreateStaticExperienceDto {
   name: string;
   category?: string;
+  category_ref?: string;
   address?: string;
   city?: string;
   latitude?: number;
@@ -46,6 +48,7 @@ export interface CreateStaticExperienceDto {
 export interface UpdateStaticExperienceDto {
   name?: string;
   category?: string;
+  category_ref?: string;
   address?: string;
   city?: string;
   latitude?: number;

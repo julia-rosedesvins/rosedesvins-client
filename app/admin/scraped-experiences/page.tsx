@@ -40,7 +40,9 @@ import {
   CreateStaticExperienceDto, 
   UpdateStaticExperienceDto 
 } from '@/services/admin-static-experiences.service'
+import { adminExperienceCategoriesService, ExperienceCategory } from '@/services/admin-experience-categories.service'
 import toast from 'react-hot-toast'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 export default function AdminScrapedExperiencesPage() {
   const { admin, isLoading } = useAdmin();
@@ -50,6 +52,9 @@ export default function AdminScrapedExperiencesPage() {
   const [totalPages, setTotalPages] = useState(0);
   const [total, setTotal] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
+  const [categories, setCategories] = useState<ExperienceCategory[]>([]);
+  const [categoryMode, setCategoryMode] = useState<'select' | 'manual'>('select');
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>('');
   const limit = 10;
 
   // Modals
@@ -62,6 +67,7 @@ export default function AdminScrapedExperiencesPage() {
   const [formData, setFormData] = useState<CreateStaticExperienceDto | UpdateStaticExperienceDto>({
     name: '',
     category: '',
+    category_ref: undefined,
     address: '',
     city: '',
     latitude: 0,
@@ -123,8 +129,18 @@ export default function AdminScrapedExperiencesPage() {
   useEffect(() => {
     if (admin) {
       fetchExperiences();
+      fetchCategories();
     }
   }, [admin, page, searchTerm]);
+
+  const fetchCategories = async () => {
+    try {
+      const activeCategories = await adminExperienceCategoriesService.getActiveCategories();
+      setCategories(activeCategories);
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+    }
+  };
 
   // Reset to page 1 when search term changes
   useEffect(() => {
@@ -206,9 +222,16 @@ export default function AdminScrapedExperiencesPage() {
 
   const openEditModal = (experience: StaticExperience) => {
     setSelectedExperience(experience);
+    
+    // Check if this experience has a category_ref (selected from dropdown)
+    const hasRef = !!(experience as any).category_ref;
+    setCategoryMode(hasRef ? 'select' : 'manual');
+    setSelectedCategoryId(hasRef ? (experience as any).category_ref : '');
+    
     setFormData({
       name: experience.name,
       category: experience.category || '',
+      category_ref: (experience as any).category_ref || undefined,
       address: experience.address || '',
       city: experience.city || '',
       latitude: experience.latitude || 0,
@@ -233,6 +256,7 @@ export default function AdminScrapedExperiencesPage() {
     setFormData({
       name: '',
       category: '',
+      category_ref: undefined,
       address: '',
       city: '',
       latitude: 0,
@@ -247,6 +271,8 @@ export default function AdminScrapedExperiencesPage() {
     setSelectedFile(null);
     setPreviewUrl(null);
     setSelectedExperience(null);
+    setCategoryMode('select');
+    setSelectedCategoryId('');
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -269,6 +295,27 @@ export default function AdminScrapedExperiencesPage() {
         ? parseFloat(value) || 0 
         : value
     }));
+  };
+
+  const handleCategorySelect = (categoryId: string) => {
+    if (categoryId === 'manual') {
+      setCategoryMode('manual');
+      setSelectedCategoryId('');
+      setFormData(prev => ({
+        ...prev,
+        category: '',
+        category_ref: undefined
+      }));
+    } else {
+      setCategoryMode('select');
+      setSelectedCategoryId(categoryId);
+      const selectedCat = categories.find(cat => cat._id === categoryId);
+      setFormData(prev => ({
+        ...prev,
+        category: selectedCat?.category_name || '',
+        category_ref: categoryId
+      }));
+    }
   };
 
   // Pagination
@@ -542,12 +589,30 @@ export default function AdminScrapedExperiencesPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label htmlFor="category">Catégorie</Label>
-                <Input
-                  id="category"
-                  name="category"
-                  value={formData.category}
-                  onChange={handleInputChange}
-                />
+                <Select
+                  value={categoryMode === 'select' ? selectedCategoryId : 'manual'}
+                  onValueChange={handleCategorySelect}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sélectionner ou saisir manuellement" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map((cat) => (
+                      <SelectItem key={cat._id} value={cat._id}>
+                        {cat.category_name}
+                      </SelectItem>
+                    ))}
+                    <SelectItem value="manual">✏️ Saisir manuellement</SelectItem>
+                  </SelectContent>
+                </Select>
+                {categoryMode === 'manual' && (
+                  <Input
+                    className="mt-2"
+                    placeholder="Saisir la catégorie"
+                    value={formData.category}
+                    onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
+                  />
+                )}
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="city">Ville</Label>
@@ -714,12 +779,30 @@ export default function AdminScrapedExperiencesPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label htmlFor="edit-category">Catégorie</Label>
-                <Input
-                  id="edit-category"
-                  name="category"
-                  value={formData.category}
-                  onChange={handleInputChange}
-                />
+                <Select
+                  value={categoryMode === 'select' ? selectedCategoryId : 'manual'}
+                  onValueChange={handleCategorySelect}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sélectionner ou saisir manuellement" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map((cat) => (
+                      <SelectItem key={cat._id} value={cat._id}>
+                        {cat.category_name}
+                      </SelectItem>
+                    ))}
+                    <SelectItem value="manual">✏️ Saisir manuellement</SelectItem>
+                  </SelectContent>
+                </Select>
+                {categoryMode === 'manual' && (
+                  <Input
+                    className="mt-2"
+                    placeholder="Saisir la catégorie"
+                    value={formData.category}
+                    onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
+                  />
+                )}
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="edit-city">Ville</Label>
