@@ -399,7 +399,7 @@ const LoireValley = ({ params }: { params: Promise<{ name: string }> }) => {
             {/* Split Layout: Map + Listings - fills remaining viewport */}
             <section className="flex flex-col lg:flex-row" style={{ height: 'calc(100vh - 60px)' }}>
                 {/* Interactive Map - 60% */}
-                <div className="lg:w-[60%] h-[400px] lg:h-full lg:sticky lg:top-[60px]">
+                <div className="lg:w-[60%] h-[600px] lg:h-full lg:sticky lg:top-[60px] relative z-10">
                     {region && (
                         <RegionMap
                             centerLat={(region.min_lat + region.max_lat) / 2}
@@ -484,7 +484,7 @@ const LoireValley = ({ params }: { params: Promise<{ name: string }> }) => {
                                                     ) : domain.producer === 'non-client' && domain.siteUrl ? (
                                                         <Button
                                                             size="sm"
-                                                            className="bg-secondary hover:bg-secondary/90 text-white shrink-0"
+                                                            className="bg-primary hover:bg-primary/90 text-white shrink-0"
                                                             onClick={(e) => e.stopPropagation()}
                                                         >
                                                             Visiter
