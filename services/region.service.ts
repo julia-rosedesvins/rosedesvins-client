@@ -24,6 +24,7 @@ export interface Domain {
   domainPrice: number | null;
   siteUrl: string | null;
   location: string | null;
+  category: string | null;
   domainId: string | null;
   latitude: number | null;
   longitude: number | null;

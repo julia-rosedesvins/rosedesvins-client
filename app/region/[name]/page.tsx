@@ -481,8 +481,8 @@ const LoireValley = ({ params }: { params: Promise<{ name: string }> }) => {
                                                         </Button>
                                                     ) : null}
                                                 </div>
-                                                {domain.location && (
-                                                    <p className="text-muted-foreground text-sm mb-2">{domain.location}</p>
+                                                {domain.category && (
+                                                    <p className="text-muted-foreground text-sm mb-2">{domain.category}</p>
                                                 )}
                                                 {domain.domainPrice !== null && (
                                                     <div className="flex items-center mb-3">
