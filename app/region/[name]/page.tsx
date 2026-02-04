@@ -53,11 +53,25 @@ const LoireValley = ({ params }: { params: Promise<{ name: string }> }) => {
         const fetchRegionData = async () => {
             try {
                 setIsLoading(true);
+                
+                // Build filter params
+                const filters: any = {};
+                if (selectedDays.length > 0) {
+                    filters.days = selectedDays;
+                }
+                if (priceRange > 0) {
+                    filters.maxPrice = priceRange;
+                }
+                if (selectedLanguages.length > 0) {
+                    filters.languages = selectedLanguages;
+                }
+                
                 const response = await regionService.getRegionByName(
                     resolvedParams.name, 
                     currentPage, 
                     limit,
-                    searchQuery || undefined
+                    searchQuery || undefined,
+                    Object.keys(filters).length > 0 ? filters : undefined
                 );
                 setRegion(response.region);
                 setDomains(response.domains);
@@ -71,7 +85,7 @@ const LoireValley = ({ params }: { params: Promise<{ name: string }> }) => {
         };
 
         fetchRegionData();
-    }, [resolvedParams.name, currentPage, searchQuery]);
+    }, [resolvedParams.name, currentPage, searchQuery, selectedDays, priceRange, selectedLanguages]);
 
     const toggleFilter = (filterName: string) => {
         setExpandedFilter(expandedFilter === filterName ? null : filterName);
@@ -101,9 +115,17 @@ const LoireValley = ({ params }: { params: Promise<{ name: string }> }) => {
         setSelectedLanguages([]);
         setSelectedExperiences([]);
         setExpandedFilter(null);
+        setCurrentPage(1); // Reset to first page when clearing filters
     };
 
     const hasActiveFilters = selectedDays.length > 0 || priceRange > 0 || selectedLanguages.length > 0 || selectedExperiences.length > 0;
+
+    // Reset to page 1 when filters change
+    useEffect(() => {
+        if (hasActiveFilters) {
+            setCurrentPage(1);
+        }
+    }, [selectedDays, priceRange, selectedLanguages, selectedExperiences]);
 
     // Close filter dropdown when clicking outside
     useEffect(() => {

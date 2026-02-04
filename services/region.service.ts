@@ -44,6 +44,13 @@ export interface PaginationQuery {
   isParent?: boolean;
 }
 
+export interface FilterParams {
+  days?: string[]; // Array of day names in French: Lundi, Mardi, etc.
+  minPrice?: number;
+  maxPrice?: number;
+  languages?: string[]; // Array of language codes
+}
+
 export interface PaginatedRegionsResponse {
   data: Region[];
   total: number;
@@ -151,15 +158,29 @@ class RegionService {
    * @param name - Region name
    * @param page - Page number
    * @param limit - Items per page
+   * @param searchQuery - Search query
+   * @param filters - Filter parameters
    * @returns Promise with region and domains data
    */
-  async getRegionByName(name: string, page: number = 1, limit: number = 20, searchQuery?: string): Promise<RegionByNameResponse> {
+  async getRegionByName(name: string, page: number = 1, limit: number = 20, searchQuery?: string, filters?: FilterParams): Promise<RegionByNameResponse> {
     try {
       const params = new URLSearchParams();
       params.append('page', page.toString());
       params.append('limit', limit.toString());
       if (searchQuery) {
         params.append('q', searchQuery);
+      }
+      if (filters?.days && filters.days.length > 0) {
+        params.append('days', filters.days.join(','));
+      }
+      if (filters?.minPrice !== undefined) {
+        params.append('minPrice', filters.minPrice.toString());
+      }
+      if (filters?.maxPrice !== undefined && filters.maxPrice > 0) {
+        params.append('maxPrice', filters.maxPrice.toString());
+      }
+      if (filters?.languages && filters.languages.length > 0) {
+        params.append('languages', filters.languages.join(','));
       }
       
       const response = await apiClient.get<RegionByNameResponse>(`/regions/${name}?${params.toString()}`);
