@@ -144,6 +144,7 @@ export interface DomainService {
   timeOfServiceInMinutes: number;
   numberOfWinesTasted: number;
   languagesOffered: string[];
+  category?: string;
   serviceBannerUrl?: string;
   isActive: boolean;
   // New booking settings fields
