@@ -2,9 +2,10 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, MapPin, Home, Euro } from "lucide-react";
+import { ArrowLeft, MapPin, Home, Euro, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Checkbox } from "@/components/ui/checkbox";
 import LandingPageLayout from "@/components/LandingPageLayout";
 import { useEffect, useState, use } from "react";
 import { regionService, type Domain, type Region } from "@/services/region.service";
@@ -28,6 +29,25 @@ const LoireValley = ({ params }: { params: Promise<{ name: string }> }) => {
     const [totalPages, setTotalPages] = useState(0);
     const [isLoading, setIsLoading] = useState(true);
     const limit = 5;
+
+    // Filter states
+    const [expandedFilter, setExpandedFilter] = useState<string | null>(null);
+    const [selectedDays, setSelectedDays] = useState<string[]>([]);
+    const [priceRange, setPriceRange] = useState<number>(0);
+    const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
+    const [selectedExperiences, setSelectedExperiences] = useState<string[]>([]);
+
+    const daysOfWeek = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
+    const languages = ['Français', 'English', 'Deutsch', 'Español', 'Italiano'];
+    const experienceTypes = [
+        'Visite et dégustation',
+        'Dégustation uniquement',
+        'Visite de cave',
+        'Atelier œnologique',
+        'Pique-nique dans les vignes',
+        'Vendanges'
+    ];
+    const priceOptions = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50];
 
     useEffect(() => {
         const fetchRegionData = async () => {
@@ -53,13 +73,52 @@ const LoireValley = ({ params }: { params: Promise<{ name: string }> }) => {
         fetchRegionData();
     }, [resolvedParams.name, currentPage, searchQuery]);
 
-    const filters = [
-        { name: "Date", active: true },
-        { name: "Visiteurs", active: false },
-        { name: "Prix", active: false },
-        { name: "Langues", active: false },
-        { name: "Expériences", active: false },
-    ];
+    const toggleFilter = (filterName: string) => {
+        setExpandedFilter(expandedFilter === filterName ? null : filterName);
+    };
+
+    const toggleDay = (day: string) => {
+        setSelectedDays(prev => 
+            prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day]
+        );
+    };
+
+    const toggleLanguage = (language: string) => {
+        setSelectedLanguages(prev => 
+            prev.includes(language) ? prev.filter(l => l !== language) : [...prev, language]
+        );
+    };
+
+    const toggleExperience = (experience: string) => {
+        setSelectedExperiences(prev => 
+            prev.includes(experience) ? prev.filter(e => e !== experience) : [...prev, experience]
+        );
+    };
+
+    const clearFilters = () => {
+        setSelectedDays([]);
+        setPriceRange(0);
+        setSelectedLanguages([]);
+        setSelectedExperiences([]);
+        setExpandedFilter(null);
+    };
+
+    const hasActiveFilters = selectedDays.length > 0 || priceRange > 0 || selectedLanguages.length > 0 || selectedExperiences.length > 0;
+
+    // Close filter dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            const target = event.target as HTMLElement;
+            if (!target.closest('.filter-dropdown-container')) {
+                setExpandedFilter(null);
+            }
+        };
+
+        if (expandedFilter) {
+            document.addEventListener('mousedown', handleClickOutside);
+            return () => document.removeEventListener('mousedown', handleClickOutside);
+        }
+    }, [expandedFilter]);
 
     const handlePageChange = (page: number) => {
         setCurrentPage(page);
@@ -129,19 +188,179 @@ const LoireValley = ({ params }: { params: Promise<{ name: string }> }) => {
             </section>
 
             <section className="bg-background py-4 px-4 border-b sticky top-0 z-20">
-                <div className="flex flex-wrap gap-3">
-                    {filters.map((filter) => (
-                        <Button
-                            key={filter.name}
-                            variant={filter.active ? "default" : "outline"}
-                            className={`rounded-full ${filter.active
-                                    ? "bg-primary text-primary-foreground"
-                                    : "border-border text-foreground hover:bg-muted"
+                <div className="space-y-2">
+                    <div className="flex flex-wrap gap-3">
+                        {/* Date Filter - Quand? */}
+                        <div className="relative filter-dropdown-container">
+                            <Button
+                                variant={selectedDays.length > 0 ? "default" : "outline"}
+                                className={`rounded-full ${
+                                    selectedDays.length > 0
+                                        ? "bg-primary text-primary-foreground"
+                                        : "border-border text-foreground hover:bg-muted"
                                 }`}
-                        >
-                            {filter.name}
-                        </Button>
-                    ))}
+                                onClick={() => toggleFilter('date')}
+                            >
+                                Quand ?
+                                <ChevronDown className={`ml-2 h-4 w-4 transition-transform ${
+                                    expandedFilter === 'date' ? 'rotate-180' : ''
+                                }`} />
+                            </Button>
+                            {expandedFilter === 'date' && (
+                                <div className="absolute top-full mt-2 bg-white border border-gray-200 rounded-lg shadow-lg p-4 z-30 min-w-[250px]">
+                                    <p className="text-sm font-semibold mb-3 text-gray-700">Jours de la semaine</p>
+                                    <div className="space-y-2">
+                                        {daysOfWeek.map((day) => (
+                                            <div key={day} className="flex items-center space-x-2">
+                                                <Checkbox
+                                                    id={`day-${day}`}
+                                                    checked={selectedDays.includes(day)}
+                                                    onCheckedChange={() => toggleDay(day)}
+                                                />
+                                                <label
+                                                    htmlFor={`day-${day}`}
+                                                    className="text-sm cursor-pointer select-none"
+                                                >
+                                                    {day}
+                                                </label>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Price Filter - Prix */}
+                        <div className="relative filter-dropdown-container">
+                            <Button
+                                variant={priceRange > 0 ? "default" : "outline"}
+                                className={`rounded-full ${
+                                    priceRange > 0
+                                        ? "bg-primary text-primary-foreground"
+                                        : "border-border text-foreground hover:bg-muted"
+                                }`}
+                                onClick={() => toggleFilter('price')}
+                            >
+                                Prix
+                                <ChevronDown className={`ml-2 h-4 w-4 transition-transform ${
+                                    expandedFilter === 'price' ? 'rotate-180' : ''
+                                }`} />
+                            </Button>
+                            {expandedFilter === 'price' && (
+                                <div className="absolute top-full mt-2 bg-white border border-gray-200 rounded-lg shadow-lg p-4 z-30 min-w-[250px]">
+                                    <p className="text-sm font-semibold mb-3 text-gray-700">Prix maximum (€)</p>
+                                    <div className="space-y-2">
+                                        {priceOptions.map((price) => (
+                                            <div key={price} className="flex items-center space-x-2">
+                                                <Checkbox
+                                                    id={`price-${price}`}
+                                                    checked={priceRange === price}
+                                                    onCheckedChange={() => setPriceRange(price)}
+                                                />
+                                                <label
+                                                    htmlFor={`price-${price}`}
+                                                    className="text-sm cursor-pointer select-none"
+                                                >
+                                                    {price === 0 ? 'Tous les prix' : `Jusqu'à ${price}€`}
+                                                </label>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Languages Filter - Langues */}
+                        <div className="relative filter-dropdown-container">
+                            <Button
+                                variant={selectedLanguages.length > 0 ? "default" : "outline"}
+                                className={`rounded-full ${
+                                    selectedLanguages.length > 0
+                                        ? "bg-primary text-primary-foreground"
+                                        : "border-border text-foreground hover:bg-muted"
+                                }`}
+                                onClick={() => toggleFilter('languages')}
+                            >
+                                Langues
+                                <ChevronDown className={`ml-2 h-4 w-4 transition-transform ${
+                                    expandedFilter === 'languages' ? 'rotate-180' : ''
+                                }`} />
+                            </Button>
+                            {expandedFilter === 'languages' && (
+                                <div className="absolute top-full mt-2 bg-white border border-gray-200 rounded-lg shadow-lg p-4 z-30 min-w-[250px]">
+                                    <p className="text-sm font-semibold mb-3 text-gray-700">Langues disponibles</p>
+                                    <div className="space-y-2">
+                                        {languages.map((language) => (
+                                            <div key={language} className="flex items-center space-x-2">
+                                                <Checkbox
+                                                    id={`lang-${language}`}
+                                                    checked={selectedLanguages.includes(language)}
+                                                    onCheckedChange={() => toggleLanguage(language)}
+                                                />
+                                                <label
+                                                    htmlFor={`lang-${language}`}
+                                                    className="text-sm cursor-pointer select-none"
+                                                >
+                                                    {language}
+                                                </label>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Experience Type Filter - Expérience */}
+                        <div className="relative filter-dropdown-container">
+                            <Button
+                                variant={selectedExperiences.length > 0 ? "default" : "outline"}
+                                className={`rounded-full ${
+                                    selectedExperiences.length > 0
+                                        ? "bg-primary text-primary-foreground"
+                                        : "border-border text-foreground hover:bg-muted"
+                                }`}
+                                onClick={() => toggleFilter('experience')}
+                            >
+                                Expérience
+                                <ChevronDown className={`ml-2 h-4 w-4 transition-transform ${
+                                    expandedFilter === 'experience' ? 'rotate-180' : ''
+                                }`} />
+                            </Button>
+                            {expandedFilter === 'experience' && (
+                                <div className="absolute top-full mt-2 bg-white border border-gray-200 rounded-lg shadow-lg p-4 z-30 min-w-[250px]">
+                                    <p className="text-sm font-semibold mb-3 text-gray-700">Type d&apos;expérience</p>
+                                    <div className="space-y-2">
+                                        {experienceTypes.map((experience) => (
+                                            <div key={experience} className="flex items-center space-x-2">
+                                                <Checkbox
+                                                    id={`exp-${experience}`}
+                                                    checked={selectedExperiences.includes(experience)}
+                                                    onCheckedChange={() => toggleExperience(experience)}
+                                                />
+                                                <label
+                                                    htmlFor={`exp-${experience}`}
+                                                    className="text-sm cursor-pointer select-none"
+                                                >
+                                                    {experience}
+                                                </label>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Clear Filters Button */}
+                        {hasActiveFilters && (
+                            <Button
+                                variant="ghost"
+                                className="rounded-full text-muted-foreground hover:text-foreground hover:bg-muted"
+                                onClick={clearFilters}
+                            >
+                                Effacer les filtres
+                            </Button>
+                        )}
+                    </div>
                 </div>
             </section>
 
