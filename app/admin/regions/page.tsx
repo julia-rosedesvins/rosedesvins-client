@@ -44,6 +44,7 @@ export default function AdminRegionsPage() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
   const [total, setTotal] = useState(0);
+  const [searchTerm, setSearchTerm] = useState('');
   const limit = 10;
 
   // Modals
@@ -71,10 +72,33 @@ export default function AdminRegionsPage() {
   const fetchRegions = async () => {
     try {
       setLoading(true);
-      const response = await adminRegionsService.getAllRegions(page, limit);
-      setRegions(response.data);
-      setTotal(response.total);
-      setTotalPages(response.totalPages);
+      
+      // If searching, fetch all regions to search across all records
+      const fetchLimit = searchTerm.trim() ? 1000 : limit;
+      const fetchPage = searchTerm.trim() ? 1 : page;
+      
+      const response = await adminRegionsService.getAllRegions(fetchPage, fetchLimit);
+      
+      let filteredData = response.data;
+      if (searchTerm.trim()) {
+        // Filter by search term
+        filteredData = response.data.filter(region => 
+          region.denom.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+        
+        // Apply pagination to filtered results
+        const startIndex = (page - 1) * limit;
+        const endIndex = startIndex + limit;
+        const paginatedData = filteredData.slice(startIndex, endIndex);
+        
+        setRegions(paginatedData);
+        setTotal(filteredData.length);
+        setTotalPages(Math.ceil(filteredData.length / limit));
+      } else {
+        setRegions(response.data);
+        setTotal(response.total);
+        setTotalPages(response.totalPages);
+      }
     } catch (error: any) {
       console.error('Error fetching regions:', error);
       toast.error('Erreur lors du chargement des régions');
@@ -87,11 +111,29 @@ export default function AdminRegionsPage() {
     if (admin) {
       fetchRegions();
     }
-  }, [admin, page]);
+  }, [admin, page, searchTerm]);
+
+  // Reset to page 1 when search term changes
+  useEffect(() => {
+    if (searchTerm !== '') {
+      setPage(1);
+    }
+  }, [searchTerm]);
 
   const handleCreate = async () => {
     try {
-      await adminRegionsService.createRegion(formData as CreateRegionData);
+      // First create the region
+      const response = await adminRegionsService.createRegion(formData as CreateRegionData);
+      
+      // If a thumbnail file is selected, upload it
+      if (selectedFile && response.data._id) {
+        try {
+          await adminRegionsService.uploadThumbnail(response.data._id, selectedFile);
+        } catch (error: any) {
+          toast.error('Région créée mais erreur lors du téléchargement de la miniature');
+        }
+      }
+      
       toast.success('Région créée avec succès');
       setIsCreateModalOpen(false);
       resetForm();
@@ -244,6 +286,29 @@ export default function AdminRegionsPage() {
             Nouvelle Région
           </Button>
         </div>
+
+        {/* Search Bar */}
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2">
+              <Input
+                placeholder="Rechercher une région par nom..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="max-w-md"
+              />
+              {searchTerm && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSearchTerm('')}
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Regions Table */}
         <Card>
@@ -440,6 +505,40 @@ export default function AdminRegionsPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
+            {/* Thumbnail Upload */}
+            <div>
+              <Label>Miniature (optionnel)</Label>
+              <div className="mt-2 space-y-2">
+                {previewUrl && (
+                  <div className="relative inline-block">
+                    <img
+                      src={previewUrl}
+                      alt="Preview"
+                      className="w-32 h-32 object-cover rounded"
+                    />
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      className="absolute top-1 right-1"
+                      onClick={() => { setSelectedFile(null); setPreviewUrl(null); }}
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                )}
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileSelect}
+                />
+                {selectedFile && (
+                  <p className="text-sm text-gray-600">
+                    La miniature sera téléchargée après la création de la région
+                  </p>
+                )}
+              </div>
+            </div>
+
             <div>
               <Label htmlFor="denom">Nom de la Région *</Label>
               <Input
