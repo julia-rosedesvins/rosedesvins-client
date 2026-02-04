@@ -9,6 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import LandingPageLayout from "@/components/LandingPageLayout";
 import { useEffect, useState, use } from "react";
 import { regionService, type Domain, type Region } from "@/services/region.service";
+import { adminExperienceCategoriesService, ExperienceCategory } from "@/services/admin-experience-categories.service";
 import { toast } from "react-hot-toast";
 import dynamic from "next/dynamic";
 
@@ -36,18 +37,24 @@ const LoireValley = ({ params }: { params: Promise<{ name: string }> }) => {
     const [priceRange, setPriceRange] = useState<number>(0);
     const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
     const [selectedExperiences, setSelectedExperiences] = useState<string[]>([]);
+    const [experienceCategories, setExperienceCategories] = useState<ExperienceCategory[]>([]);
 
     const daysOfWeek = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
     const languages = ['Français', 'English', 'Deutsch', 'Español', 'Italiano'];
-    const experienceTypes = [
-        'Visite et dégustation',
-        'Dégustation uniquement',
-        'Visite de cave',
-        'Atelier œnologique',
-        'Pique-nique dans les vignes',
-        'Vendanges'
-    ];
     const priceOptions = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50];
+
+    // Fetch experience categories on mount
+    useEffect(() => {
+        const fetchCategories = async () => {
+            try {
+                const activeCategories = await adminExperienceCategoriesService.getActiveCategories();
+                setExperienceCategories(activeCategories);
+            } catch (error) {
+                console.error('Error fetching categories:', error);
+            }
+        };
+        fetchCategories();
+    }, []);
 
     useEffect(() => {
         const fetchRegionData = async () => {
@@ -352,18 +359,18 @@ const LoireValley = ({ params }: { params: Promise<{ name: string }> }) => {
                                 <div className="absolute top-full mt-2 bg-white border border-gray-200 rounded-lg shadow-lg p-4 z-30 min-w-[250px]">
                                     <p className="text-sm font-semibold mb-3 text-gray-700">Type d&apos;expérience</p>
                                     <div className="space-y-2">
-                                        {experienceTypes.map((experience) => (
-                                            <div key={experience} className="flex items-center space-x-2">
+                                        {experienceCategories.map((category) => (
+                                            <div key={category._id} className="flex items-center space-x-2">
                                                 <Checkbox
-                                                    id={`exp-${experience}`}
-                                                    checked={selectedExperiences.includes(experience)}
-                                                    onCheckedChange={() => toggleExperience(experience)}
+                                                    id={`exp-${category._id}`}
+                                                    checked={selectedExperiences.includes(category.category_name)}
+                                                    onCheckedChange={() => toggleExperience(category.category_name)}
                                                 />
                                                 <label
-                                                    htmlFor={`exp-${experience}`}
+                                                    htmlFor={`exp-${category._id}`}
                                                     className="text-sm cursor-pointer select-none"
                                                 >
-                                                    {experience}
+                                                    {category.category_name}
                                                 </label>
                                             </div>
                                         ))}
