@@ -12,6 +12,7 @@ import { regionService, type Domain, type Region } from "@/services/region.servi
 import { adminExperienceCategoriesService, ExperienceCategory } from "@/services/admin-experience-categories.service";
 import { toast } from "react-hot-toast";
 import dynamic from "next/dynamic";
+import { DatePicker } from "@/components/DatePicker";
 
 // Dynamically import the map component to avoid SSR issues
 const RegionMap = dynamic(() => import('@/components/RegionMap'), {
@@ -33,13 +34,12 @@ const LoireValley = ({ params }: { params: Promise<{ name: string }> }) => {
 
     // Filter states
     const [expandedFilter, setExpandedFilter] = useState<string | null>(null);
-    const [selectedDays, setSelectedDays] = useState<string[]>([]);
+    const [selectedDate, setSelectedDate] = useState<Date | null>(null);
     const [priceRange, setPriceRange] = useState<number>(0);
     const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
     const [selectedExperiences, setSelectedExperiences] = useState<string[]>([]);
     const [experienceCategories, setExperienceCategories] = useState<ExperienceCategory[]>([]);
 
-    const daysOfWeek = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
     const languages = ['Français', 'English', 'Deutsch', 'Español', 'Italiano'];
     const priceOptions = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50];
 
@@ -63,8 +63,8 @@ const LoireValley = ({ params }: { params: Promise<{ name: string }> }) => {
                 
                 // Build filter params
                 const filters: any = {};
-                if (selectedDays.length > 0) {
-                    filters.days = selectedDays;
+                if (selectedDate) {
+                    filters.date = selectedDate.toISOString();
                 }
                 if (priceRange > 0) {
                     filters.maxPrice = priceRange;
@@ -95,16 +95,10 @@ const LoireValley = ({ params }: { params: Promise<{ name: string }> }) => {
         };
 
         fetchRegionData();
-    }, [resolvedParams.name, currentPage, searchQuery, selectedDays, priceRange, selectedLanguages, selectedExperiences]);
+    }, [resolvedParams.name, currentPage, searchQuery, selectedDate, priceRange, selectedLanguages, selectedExperiences]);
 
     const toggleFilter = (filterName: string) => {
         setExpandedFilter(expandedFilter === filterName ? null : filterName);
-    };
-
-    const toggleDay = (day: string) => {
-        setSelectedDays(prev => 
-            prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day]
-        );
     };
 
     const toggleLanguage = (language: string) => {
@@ -120,7 +114,7 @@ const LoireValley = ({ params }: { params: Promise<{ name: string }> }) => {
     };
 
     const clearFilters = () => {
-        setSelectedDays([]);
+        setSelectedDate(null);
         setPriceRange(0);
         setSelectedLanguages([]);
         setSelectedExperiences([]);
@@ -128,14 +122,14 @@ const LoireValley = ({ params }: { params: Promise<{ name: string }> }) => {
         setCurrentPage(1); // Reset to first page when clearing filters
     };
 
-    const hasActiveFilters = selectedDays.length > 0 || priceRange > 0 || selectedLanguages.length > 0 || selectedExperiences.length > 0;
+    const hasActiveFilters = selectedDate !== null || priceRange > 0 || selectedLanguages.length > 0 || selectedExperiences.length > 0;
 
     // Reset to page 1 when filters change
     useEffect(() => {
         if (hasActiveFilters) {
             setCurrentPage(1);
         }
-    }, [selectedDays, priceRange, selectedLanguages, selectedExperiences]);
+    }, [selectedDate, priceRange, selectedLanguages, selectedExperiences]);
 
     // Close filter dropdown when clicking outside
     useEffect(() => {
@@ -225,39 +219,26 @@ const LoireValley = ({ params }: { params: Promise<{ name: string }> }) => {
                         {/* Date Filter - Quand? */}
                         <div className="relative filter-dropdown-container">
                             <Button
-                                variant={selectedDays.length > 0 ? "default" : "outline"}
+                                variant={selectedDate !== null ? "default" : "outline"}
                                 className={`rounded-full ${
-                                    selectedDays.length > 0
+                                    selectedDate !== null
                                         ? "bg-primary text-primary-foreground"
                                         : "border-border text-foreground hover:bg-muted"
                                 }`}
                                 onClick={() => toggleFilter('date')}
                             >
-                                Quand ?
+                                {selectedDate ? selectedDate.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' }) : 'Quand ?'}
                                 <ChevronDown className={`ml-2 h-4 w-4 transition-transform ${
                                     expandedFilter === 'date' ? 'rotate-180' : ''
                                 }`} />
                             </Button>
                             {expandedFilter === 'date' && (
-                                <div className="absolute top-full mt-2 bg-white border border-gray-200 rounded-lg shadow-lg p-4 z-30 min-w-[250px]">
-                                    <p className="text-sm font-semibold mb-3 text-gray-700">Jours de la semaine</p>
-                                    <div className="space-y-2">
-                                        {daysOfWeek.map((day) => (
-                                            <div key={day} className="flex items-center space-x-2">
-                                                <Checkbox
-                                                    id={`day-${day}`}
-                                                    checked={selectedDays.includes(day)}
-                                                    onCheckedChange={() => toggleDay(day)}
-                                                />
-                                                <label
-                                                    htmlFor={`day-${day}`}
-                                                    className="text-sm cursor-pointer select-none"
-                                                >
-                                                    {day}
-                                                </label>
-                                            </div>
-                                        ))}
-                                    </div>
+                                <div className="absolute top-full left-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg z-30 w-[340px] sm:w-[380px]">
+                                    <DatePicker
+                                        selectedDate={selectedDate}
+                                        onDateSelect={setSelectedDate}
+                                        colorCode="#3A7E53"
+                                    />
                                 </div>
                             )}
                         </div>

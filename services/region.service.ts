@@ -47,6 +47,7 @@ export interface PaginationQuery {
 
 export interface FilterParams {
   days?: string[]; // Array of day names in French: Lundi, Mardi, etc.
+  date?: string; // ISO date string for specific date filter
   minPrice?: number;
   maxPrice?: number;
   languages?: string[]; // Array of language codes
@@ -171,6 +172,9 @@ class RegionService {
       params.append('limit', limit.toString());
       if (searchQuery) {
         params.append('q', searchQuery);
+      }
+      if (filters?.date) {
+        params.append('date', filters.date);
       }
       if (filters?.days && filters.days.length > 0) {
         params.append('days', filters.days.join(','));
