@@ -14,6 +14,19 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
 });
 
+// Custom wine glass icon (white rounded background)
+const wineGlassIcon = L.divIcon({
+  className: 'wine-glass-marker',
+  html: `
+    <div class="wine-marker">
+      <img src="https://api.rosedesvins.co/v1/web/image/wine-glass" alt="wine glass" />
+    </div>
+  `,
+  iconSize: [40, 40],
+  iconAnchor: [20, 40],
+  popupAnchor: [0, -34],
+});
+
 // Add custom styles for the popup
 const popupStyles = `
   .leaflet-popup-content-wrapper {
@@ -62,6 +75,26 @@ const popupStyles = `
   .custom-popup a:visited {
     color: #ffffff !important;
     text-decoration: none;
+  }
+
+  /* Custom marker */
+  .wine-marker {
+    width: 40px;
+    height: 40px;
+    background: #ffffff;
+    border: 2px solid #3A7E53;
+    border-radius: 9999px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+  .wine-marker img {
+    width: 22px;
+    height: 22px;
+    object-fit: contain;
+    display: block;
   }
 `;
 
@@ -112,7 +145,7 @@ export default function RegionMap({ centerLat, centerLon, domains }: RegionMapPr
       {domains
         .filter(d => d.latitude && d.longitude)
         .map((domain, index) => (
-          <Marker key={index} position={[domain.latitude!, domain.longitude!]}>
+          <Marker key={index} position={[domain.latitude!, domain.longitude!]} icon={wineGlassIcon}> 
             <Popup maxWidth={500} minWidth={500} className="custom-popup">
               <div className="bg-white">
                 {/* Hero Image */}
