@@ -1,7 +1,7 @@
 "use client"
 
-import { Instagram, Linkedin, Menu, X, LogIn, User, Search, Loader2 } from "lucide-react"
-import { useState, useEffect } from "react"
+import { Instagram, Linkedin, Menu, X, LogIn, User, Search, Loader2, MapPin, Wine, Building2 } from "lucide-react"
+import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
 import { useRouter, usePathname } from "next/navigation"
 import { Input } from "@/components/ui/input"
@@ -29,6 +29,13 @@ export default function Navbar() {
   const [mounted, setMounted] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [isSearching, setIsSearching] = useState(false)
+  const [suggestions, setSuggestions] = useState<any[]>([])
+  const [showSuggestions, setShowSuggestions] = useState(false)
+  const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false)
+  const [selectedIndex, setSelectedIndex] = useState(-1)
+  const searchRef = useRef<HTMLDivElement>(null)
+  const mobileSearchRef = useRef<HTMLDivElement>(null)
+  const debounceTimer = useRef<NodeJS.Timeout | null>(null)
   const router = useRouter()
   const pathname = usePathname()
 
@@ -49,6 +56,105 @@ export default function Navbar() {
     return () => {
       window.removeEventListener('storage', checkLoginStatus)
     }
+  }, [])
+
+  // Fetch suggestions when search query changes
+  useEffect(() => {
+    if (debounceTimer.current) {
+      clearTimeout(debounceTimer.current)
+    }
+
+    if (searchQuery.trim().length < 2) {
+      setSuggestions([])
+      setShowSuggestions(false)
+      return
+    }
+
+    debounceTimer.current = setTimeout(async () => {
+      try {
+        setIsLoadingSuggestions(true)
+        const result = await regionService.unifiedSearch(searchQuery)
+        
+        const allSuggestions: any[] = []
+        
+        // Add regions
+        if (result.data.regions && result.data.regions.length > 0) {
+          result.data.regions.slice(0, 3).forEach(region => {
+            allSuggestions.push({
+              type: 'region',
+              name: region.denom,
+              icon: MapPin,
+              route: `/region/${encodeURIComponent(region.denom)}`
+            })
+          })
+        }
+        
+        // Add domains
+        if (result.data.domains && result.data.domains.length > 0) {
+          result.data.domains.slice(0, 3).forEach(domain => {
+            allSuggestions.push({
+              type: 'domain',
+              name: domain.domainName,
+              description: domain.location?.city || '',
+              icon: Building2,
+              route: result.data.suggestedRoute || `/region/${encodeURIComponent(domain.location?.region || '')}`
+            })
+          })
+        }
+        
+        // Add services
+        if (result.data.services && result.data.services.length > 0) {
+          result.data.services.slice(0, 3).forEach(service => {
+            allSuggestions.push({
+              type: 'service',
+              name: service.serviceName,
+              description: `${service.domain.domainName} - ${service.pricePerPerson}€`,
+              icon: Wine,
+              route: result.data.suggestedRoute || `/experience/${service.domain.domainName}/${service.domain.domainId}`
+            })
+          })
+        }
+        
+        // Add static experiences
+        if (result.data.staticExperiences && result.data.staticExperiences.length > 0) {
+          result.data.staticExperiences.slice(0, 2).forEach(exp => {
+            allSuggestions.push({
+              type: 'experience',
+              name: exp.name,
+              description: exp.category || '',
+              icon: Wine,
+              route: result.data.suggestedRoute || '#'
+            })
+          })
+        }
+        
+        setSuggestions(allSuggestions.slice(0, 8))
+        setShowSuggestions(allSuggestions.length > 0)
+      } catch (error) {
+        console.error('Error fetching suggestions:', error)
+      } finally {
+        setIsLoadingSuggestions(false)
+      }
+    }, 300)
+
+    return () => {
+      if (debounceTimer.current) {
+        clearTimeout(debounceTimer.current)
+      }
+    }
+  }, [searchQuery])
+
+  // Handle click outside to close suggestions
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(event.target as Node) &&
+          mobileSearchRef.current && !mobileSearchRef.current.contains(event.target as Node)) {
+        setShowSuggestions(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
   const handleContactClick = (e: React.MouseEvent) => {
@@ -103,6 +209,33 @@ export default function Navbar() {
       toast.error("Erreur lors de la recherche")
     } finally {
       setIsSearching(false)
+    }
+  }
+
+  const handleSuggestionClick = (suggestion: any) => {
+    setSearchQuery(suggestion.name)
+    setShowSuggestions(false)
+    setMobileMenuOpen(false)
+    router.push(suggestion.route)
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (!showSuggestions || suggestions.length === 0) return
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      setSelectedIndex(prev => 
+        prev < suggestions.length - 1 ? prev + 1 : prev
+      )
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setSelectedIndex(prev => prev > 0 ? prev - 1 : -1)
+    } else if (e.key === 'Enter' && selectedIndex >= 0) {
+      e.preventDefault()
+      handleSuggestionClick(suggestions[selectedIndex])
+    } else if (e.key === 'Escape') {
+      setShowSuggestions(false)
+      setSelectedIndex(-1)
     }
   }
 
@@ -210,27 +343,71 @@ export default function Navbar() {
         <nav className="hidden lg:flex items-center gap-3">
           {/* Search Bar - Show on all pages except home */}
           {showSearchBar && (
-            <form onSubmit={handleSearch} className="relative">
-              <Input
-                placeholder="Rechercher..."
-                className="pl-4 pr-10 py-2 text-sm bg-white text-gray-900 border-0 rounded-full shadow-lg placeholder:text-gray-500 w-64"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                disabled={isSearching}
-              />
-              <Button
-                type="submit"
-                size="sm"
-                disabled={isSearching}
-                className="absolute right-1 top-1/2 -translate-y-1/2 rounded-full h-7 w-7 p-0 bg-[#318160] hover:bg-[#1D6346] shadow-md flex items-center justify-center disabled:opacity-50"
-              >
-                {isSearching ? (
-                  <Loader2 className="h-3 w-3 animate-spin" />
-                ) : (
-                  <Search className="h-3 w-3" />
-                )}
-              </Button>
-            </form>
+            <div ref={searchRef} className="relative">
+              <form onSubmit={handleSearch} className="relative">
+                <Input
+                  placeholder="Rechercher..."
+                  className="pl-4 pr-10 py-2 text-sm bg-white text-gray-900 border-0 rounded-full shadow-lg placeholder:text-gray-500 w-64"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
+                  disabled={isSearching}
+                  autoComplete="off"
+                />
+                <Button
+                  type="submit"
+                  size="sm"
+                  disabled={isSearching}
+                  className="absolute right-1 top-1/2 -translate-y-1/2 rounded-full h-7 w-7 p-0 bg-[#318160] hover:bg-[#1D6346] shadow-md flex items-center justify-center disabled:opacity-50"
+                >
+                  {isSearching ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <Search className="h-3 w-3" />
+                  )}
+                </Button>
+              </form>
+
+              {/* Autocomplete Dropdown */}
+              {showSuggestions && (suggestions.length > 0 || isLoadingSuggestions) && (
+                <div className="absolute w-full mt-2 bg-white rounded-lg shadow-2xl overflow-hidden z-50 max-h-96 overflow-y-auto">
+                  {isLoadingSuggestions ? (
+                    <div className="p-4 text-center text-gray-500">
+                      <Loader2 className="h-5 w-5 animate-spin mx-auto" />
+                    </div>
+                  ) : (
+                    <>
+                      {suggestions.map((suggestion, index) => {
+                        const Icon = suggestion.icon
+                        return (
+                          <button
+                            key={`${suggestion.type}-${index}`}
+                            onClick={() => handleSuggestionClick(suggestion)}
+                            className={`w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-3 transition-colors ${
+                              index === selectedIndex ? 'bg-gray-100' : ''
+                            }`}
+                          >
+                            <Icon className="h-5 w-5 text-[#318160] flex-shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-gray-900 font-medium truncate">{suggestion.name}</p>
+                              {suggestion.description && (
+                                <p className="text-sm text-gray-500 truncate">{suggestion.description}</p>
+                              )}
+                            </div>
+                            <span className="text-xs text-gray-400 capitalize flex-shrink-0">
+                              {suggestion.type === 'region' ? 'Région' : 
+                               suggestion.type === 'domain' ? 'Domaine' : 
+                               suggestion.type === 'service' ? 'Service' : 'Expérience'}
+                            </span>
+                          </button>
+                        )
+                      })}
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
           )}
           <NavigationLinks />
         </nav>
@@ -247,27 +424,71 @@ export default function Navbar() {
           <nav className="flex flex-col gap-4 pt-4">
             {/* Mobile Search Bar */}
             {showSearchBar && (
-              <form onSubmit={handleSearch} className="relative">
-                <Input
-                  placeholder="Rechercher un domaine, une région, une expérience"
-                  className="pl-6 pr-16 py-5 text-base bg-white text-gray-900 border-0 rounded-full shadow-lg placeholder:text-gray-500"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  disabled={isSearching}
-                />
-                <Button
-                  type="submit"
-                  size="sm"
-                  disabled={isSearching}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full h-9 w-9 p-0 bg-[#318160] hover:bg-[#1D6346] shadow-md flex items-center justify-center disabled:opacity-50"
-                >
-                  {isSearching ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Search className="h-4 w-4" />
-                  )}
-                </Button>
-              </form>
+              <div ref={mobileSearchRef} className="relative">
+                <form onSubmit={handleSearch} className="relative">
+                  <Input
+                    placeholder="Rechercher un domaine, une région, une expérience"
+                    className="pl-6 pr-16 py-5 text-base bg-white text-gray-900 border-0 rounded-full shadow-lg placeholder:text-gray-500"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
+                    disabled={isSearching}
+                    autoComplete="off"
+                  />
+                  <Button
+                    type="submit"
+                    size="sm"
+                    disabled={isSearching}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full h-9 w-9 p-0 bg-[#318160] hover:bg-[#1D6346] shadow-md flex items-center justify-center disabled:opacity-50"
+                  >
+                    {isSearching ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Search className="h-4 w-4" />
+                    )}
+                  </Button>
+                </form>
+
+                {/* Autocomplete Dropdown */}
+                {showSuggestions && (suggestions.length > 0 || isLoadingSuggestions) && (
+                  <div className="absolute w-full mt-2 bg-white rounded-lg shadow-2xl overflow-hidden z-50 max-h-96 overflow-y-auto">
+                    {isLoadingSuggestions ? (
+                      <div className="p-4 text-center text-gray-500">
+                        <Loader2 className="h-5 w-5 animate-spin mx-auto" />
+                      </div>
+                    ) : (
+                      <>
+                        {suggestions.map((suggestion, index) => {
+                          const Icon = suggestion.icon
+                          return (
+                            <button
+                              key={`${suggestion.type}-${index}`}
+                              onClick={() => handleSuggestionClick(suggestion)}
+                              className={`w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-3 transition-colors ${
+                                index === selectedIndex ? 'bg-gray-100' : ''
+                              }`}
+                            >
+                              <Icon className="h-5 w-5 text-[#318160] flex-shrink-0" />
+                              <div className="flex-1 min-w-0">
+                                <p className="text-gray-900 font-medium truncate">{suggestion.name}</p>
+                                {suggestion.description && (
+                                  <p className="text-sm text-gray-500 truncate">{suggestion.description}</p>
+                                )}
+                              </div>
+                              <span className="text-xs text-gray-400 capitalize flex-shrink-0">
+                                {suggestion.type === 'region' ? 'Région' : 
+                                 suggestion.type === 'domain' ? 'Domaine' : 
+                                 suggestion.type === 'service' ? 'Service' : 'Expérience'}
+                              </span>
+                            </button>
+                          )
+                        })}
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
             )}
             <div className="flex flex-col gap-4" onClick={() => setMobileMenuOpen(false)}>
               <NavigationLinks isMobile />
