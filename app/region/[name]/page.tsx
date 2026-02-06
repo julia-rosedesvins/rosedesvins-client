@@ -386,7 +386,7 @@ const LoireValley = ({ params }: { params: Promise<{ name: string }> }) => {
             {/* Split Layout: Map + Listings - fills remaining viewport */}
             <section className="flex flex-col lg:flex-row" style={{ height: 'calc(100vh - 60px)' }}>
                 {/* Interactive Map - 60% */}
-                <div className="lg:w-[60%] h-[600px] lg:h-full lg:sticky lg:top-[60px] relative z-10">
+                <div className="hidden md:block lg:w-[60%] h-[600px] lg:h-full lg:sticky lg:top-[60px] relative z-10">
                     {region && (
                         <RegionMap
                             centerLat={(region.min_lat + region.max_lat) / 2}
