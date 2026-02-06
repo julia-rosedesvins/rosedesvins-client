@@ -222,6 +222,7 @@ const ExperienceDomain = ({ params }: { params: Promise<{ name: string; domain: 
                                 address={location.address || undefined}
                                 city={location.city || undefined}
                                 codePostal={location.codePostal || undefined}
+                                domainImage={domainProfile.domainProfilePictureUrl || undefined}
                             />
                         </div>
                     </section>
