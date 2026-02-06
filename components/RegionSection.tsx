@@ -99,7 +99,7 @@ const RegionsSection = () => {
         </div>
 
         {/* Carousel */}
-        <div className="relative px-16">
+        <div className="relative px-20">
           <Carousel
             opts={{
               align: "start",
@@ -107,9 +107,9 @@ const RegionsSection = () => {
             }}
             className="w-full max-w-7xl mx-auto"
           >
-            <CarouselContent className="-ml-8 md:-ml-12">
+            <CarouselContent className="-ml-8 md:-ml-12 items-center">
               {regions.map((region) => (
-                <CarouselItem key={region._id} className="pl-8 md:pl-12 basis-1/1 md:basis-1/4">
+                <CarouselItem key={region._id} className="pl-8 md:pl-12 basis-1/1 md:basis-1/3">
                   <RegionCard 
                     title={region.denom}
                     image={region.thumbnailUrl || "/assets/loire-valley-new.jpg"}
@@ -118,8 +118,8 @@ const RegionsSection = () => {
                 </CarouselItem>
               ))}
             </CarouselContent>
-            <CarouselPrevious className="bg-white border border-[#318160] text-[#318160] hover:bg-[#1D6346] hover:text-white shadow-md -left-12" />
-            <CarouselNext className="bg-white border border-[#318160] text-[#318160] hover:bg-[#1D6346] hover:text-white shadow-md -right-12" />
+            <CarouselPrevious className="bg-white border border-[#318160] text-[#318160] hover:bg-[#1D6346] hover:text-white shadow-md -left-16" />
+            <CarouselNext className="bg-white border border-[#318160] text-[#318160] hover:bg-[#1D6346] hover:text-white shadow-md -right-16" />
           </Carousel>
         </div>
 
