@@ -69,7 +69,7 @@ const HeroSection = () => {
             {/* Content */}
             <div className="relative z-10 max-w-4xl mx-auto px-4 text-center text-white">
                 <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4 leading-tight max-w-3xl mx-auto">
-                    Laissez-vous guider à la découverte
+                    <span className="md:whitespace-nowrap">Laissez-vous guider à la découverte</span>
                     <br />
                     des domaines viticoles.
                 </h1>
