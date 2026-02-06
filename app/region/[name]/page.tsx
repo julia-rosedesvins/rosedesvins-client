@@ -41,7 +41,7 @@ const LoireValley = ({ params }: { params: Promise<{ name: string }> }) => {
     const [experienceCategories, setExperienceCategories] = useState<ExperienceCategory[]>([]);
 
     const languages = ['Français', 'English', 'Deutsch', 'Español', 'Italiano'];
-    const priceOptions = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50];
+    const priceOptions = [0, 5, 10, 15, 20];
 
     // Fetch experience categories on mount
     useEffect(() => {
@@ -67,7 +67,13 @@ const LoireValley = ({ params }: { params: Promise<{ name: string }> }) => {
                     filters.date = selectedDate.toISOString();
                 }
                 if (priceRange > 0) {
-                    filters.maxPrice = priceRange;
+                    // If priceRange is 20, it means "20€+" (minimum price)
+                    // Otherwise, it means "up to X€" (maximum price)
+                    if (priceRange === 20) {
+                        filters.minPrice = 20;
+                    } else {
+                        filters.maxPrice = priceRange;
+                    }
                 }
                 if (selectedLanguages.length > 0) {
                     filters.languages = selectedLanguages;
@@ -274,7 +280,7 @@ const LoireValley = ({ params }: { params: Promise<{ name: string }> }) => {
                                                     htmlFor={`price-${price}`}
                                                     className="text-sm cursor-pointer select-none"
                                                 >
-                                                    {price === 0 ? 'Tous les prix' : `Jusqu'à ${price}€`}
+                                                    {price === 0 ? 'Tous les prix' : price === 20 ? '20€+' : `Jusqu'à ${price}€`}
                                                 </label>
                                             </div>
                                         ))}
