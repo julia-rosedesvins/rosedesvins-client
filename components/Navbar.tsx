@@ -12,7 +12,7 @@ import toast from "react-hot-toast"
 // Navigation data structure
 const navLinks = [
   // { href: "#contact", label: "Contact", isSpecial: true },
-  { href: "/", label: "Espace domaines viticoles" },
+  // { href: "/", label: "Espace domaines viticoles" },
   { href: "/about", label: "À propos" },
   // { href: "#blog", label: "Blog" },
   // { href: "/faqs", label: "FAQ" },
@@ -146,7 +146,8 @@ export default function Navbar() {
         ) : (
           <>
             <LogIn className="w-4 h-4" />
-            <span>Se connecter</span>
+            {/* <span>Se connecter</span> */}
+            <span>Espace domaines viticoles</span>
           </>
         )}
       </Link>
