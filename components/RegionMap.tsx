@@ -102,9 +102,10 @@ interface RegionMapProps {
   centerLat: number;
   centerLon: number;
   domains: Domain[];
+  onMapLoad?: () => void;
 }
 
-function MapUpdater({ centerLat, centerLon, domains }: RegionMapProps) {
+function MapUpdater({ centerLat, centerLon, domains, onMapLoad }: RegionMapProps) {
   const map = useMap();
   
   useEffect(() => {
@@ -122,12 +123,19 @@ function MapUpdater({ centerLat, centerLon, domains }: RegionMapProps) {
     } else {
       map.setView([centerLat, centerLon], 10);
     }
-  }, [centerLat, centerLon, domains, map]);
+    
+    // Notify parent when map is ready
+    const timeoutId = setTimeout(() => {
+      onMapLoad?.();
+    }, 500);
+    
+    return () => clearTimeout(timeoutId);
+  }, [centerLat, centerLon, domains, map, onMapLoad]);
   
   return null;
 }
 
-export default function RegionMap({ centerLat, centerLon, domains }: RegionMapProps) {
+export default function RegionMap({ centerLat, centerLon, domains, onMapLoad }: RegionMapProps) {
   return (
     <>
       <style>{popupStyles}</style>
@@ -141,7 +149,7 @@ export default function RegionMap({ centerLat, centerLon, domains }: RegionMapPr
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
-      <MapUpdater centerLat={centerLat} centerLon={centerLon} domains={domains} />
+      <MapUpdater centerLat={centerLat} centerLon={centerLon} domains={domains} onMapLoad={onMapLoad} />
       {domains
         .filter(d => d.latitude && d.longitude)
         .map((domain, index) => (

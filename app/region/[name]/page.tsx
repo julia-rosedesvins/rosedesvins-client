@@ -30,6 +30,7 @@ const LoireValley = ({ params }: { params: Promise<{ name: string }> }) => {
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(0);
     const [isLoading, setIsLoading] = useState(true);
+    const [isMapLoaded, setIsMapLoaded] = useState(false);
     const limit = 5;
 
     // Filter states
@@ -60,6 +61,7 @@ const LoireValley = ({ params }: { params: Promise<{ name: string }> }) => {
         const fetchRegionData = async () => {
             try {
                 setIsLoading(true);
+                setIsMapLoaded(false);
                 
                 // Build filter params
                 const filters: any = {};
@@ -387,11 +389,22 @@ const LoireValley = ({ params }: { params: Promise<{ name: string }> }) => {
             <section className="flex flex-col lg:flex-row" style={{ height: 'calc(100vh - 60px)' }}>
                 {/* Interactive Map - 60% */}
                 <div className="hidden md:block lg:w-[60%] h-[600px] lg:h-full lg:sticky lg:top-[60px] relative z-10">
+                    {!isMapLoaded && (
+                        <div className="absolute inset-0 bg-white z-20 flex items-center justify-center">
+                            <div className="text-center">
+                                <div className="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-[#318160] border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]" role="status">
+                                    <span className="sr-only">Chargement...</span>
+                                </div>
+                                <p className="mt-4 text-[#318160] font-medium">Chargement de la carte...</p>
+                            </div>
+                        </div>
+                    )}
                     {region && (
                         <RegionMap
                             centerLat={(region.min_lat + region.max_lat) / 2}
                             centerLon={(region.min_lon + region.max_lon) / 2}
                             domains={domains}
+                            onMapLoad={() => setIsMapLoaded(true)}
                         />
                     )}
                 </div>
