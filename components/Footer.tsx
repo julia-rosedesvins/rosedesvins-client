@@ -13,7 +13,7 @@ const Footer = () => {
           </div>
           
           <div className="grid grid-cols-3 sm:flex sm:flex-row items-center gap-4 sm:gap-6 text-sm justify-center">
-            <a href="#" className="hover:opacity-80 transition-opacity flex justify-center">
+            <a href="https://www.instagram.com/rose_des_vins/" className="hover:opacity-80 transition-opacity flex justify-center">
               <Instagram className="h-5 w-5" />
             </a>
             {/* <Link href="/blog" className="hover:opacity-80 transition-opacity text-center">Blog</Link> */}
