@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from 'react';
+import { useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -105,7 +105,19 @@ interface RegionMapProps {
   onMapLoad?: () => void;
 }
 
-function MapUpdater({ centerLat, centerLon, domains, onMapLoad }: RegionMapProps) {
+export interface RegionMapRef {
+  focusOnDomain: (domainId: string) => void;
+}
+
+function MapUpdater({ 
+  centerLat, 
+  centerLon, 
+  domains, 
+  onMapLoad, 
+  markersRef 
+}: RegionMapProps & { 
+  markersRef: React.MutableRefObject<Map<string, L.Marker>> 
+}) {
   const map = useMap();
   
   useEffect(() => {
@@ -131,11 +143,37 @@ function MapUpdater({ centerLat, centerLon, domains, onMapLoad }: RegionMapProps
     
     return () => clearTimeout(timeoutId);
   }, [centerLat, centerLon, domains, map, onMapLoad]);
+
+  // Store map instance for parent access
+  useEffect(() => {
+    (window as any).__regionMap = map;
+    return () => {
+      delete (window as any).__regionMap;
+    };
+  }, [map]);
   
   return null;
 }
 
-export default function RegionMap({ centerLat, centerLon, domains, onMapLoad }: RegionMapProps) {
+const RegionMap = forwardRef<RegionMapRef, RegionMapProps>(({ centerLat, centerLon, domains, onMapLoad }, ref) => {
+  const markersRef = useRef<Map<string, L.Marker>>(new Map());
+
+  // Expose methods to parent via ref
+  useImperativeHandle(ref, () => ({
+    focusOnDomain: (domainId: string) => {
+      const marker = markersRef.current.get(domainId);
+      const map = (window as any).__regionMap;
+      
+      if (marker && map) {
+        const latLng = marker.getLatLng();
+        map.setView(latLng, 15, { animate: true });
+        setTimeout(() => {
+          marker.openPopup();
+        }, 300);
+      }
+    }
+  }), []);
+
   return (
     <>
       <style>{popupStyles}</style>
@@ -149,11 +187,26 @@ export default function RegionMap({ centerLat, centerLon, domains, onMapLoad }: 
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
-      <MapUpdater centerLat={centerLat} centerLon={centerLon} domains={domains} onMapLoad={onMapLoad} />
+      <MapUpdater 
+        centerLat={centerLat} 
+        centerLon={centerLon} 
+        domains={domains} 
+        onMapLoad={onMapLoad} 
+        markersRef={markersRef}
+      />
       {domains
         .filter(d => d.latitude && d.longitude)
         .map((domain, index) => (
-          <Marker key={index} position={[domain.latitude!, domain.longitude!]} icon={wineGlassIcon}> 
+          <Marker 
+            key={index} 
+            position={[domain.latitude!, domain.longitude!]} 
+            icon={wineGlassIcon}
+            ref={(marker) => {
+              if (marker && domain.domainId) {
+                markersRef.current.set(domain.domainId, marker as unknown as L.Marker);
+              }
+            }}
+          > 
             <Popup maxWidth={500} minWidth={500} className="custom-popup">
               <div className="bg-white">
                 {/* Hero Image */}
@@ -218,4 +271,8 @@ export default function RegionMap({ centerLat, centerLon, domains, onMapLoad }: 
       </MapContainer>
     </>
   );
-}
+});
+
+RegionMap.displayName = 'RegionMap';
+
+export default RegionMap;

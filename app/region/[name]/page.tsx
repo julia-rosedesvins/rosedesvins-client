@@ -2,17 +2,18 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, MapPin, Home, Euro, ChevronDown } from "lucide-react";
+import { ArrowLeft, MapPin, Home, Euro, ChevronDown, Locate } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
 import LandingPageLayout from "@/components/LandingPageLayout";
-import { useEffect, useState, use } from "react";
+import { useEffect, useState, use, useRef } from "react";
 import { regionService, type Domain, type Region } from "@/services/region.service";
 import { adminExperienceCategoriesService, ExperienceCategory } from "@/services/admin-experience-categories.service";
 import { toast } from "react-hot-toast";
 import dynamic from "next/dynamic";
 import { DatePicker } from "@/components/DatePicker";
+import type { RegionMapRef } from "@/components/RegionMap";
 
 // Dynamically import the map component to avoid SSR issues
 const RegionMap = dynamic(() => import('@/components/RegionMap'), {
@@ -31,6 +32,7 @@ const LoireValley = ({ params }: { params: Promise<{ name: string }> }) => {
     const [totalPages, setTotalPages] = useState(0);
     const [isLoading, setIsLoading] = useState(true);
     const [isMapLoaded, setIsMapLoaded] = useState(false);
+    const mapRef = useRef<RegionMapRef>(null);
     const limit = 5;
 
     // Filter states
@@ -158,6 +160,12 @@ const LoireValley = ({ params }: { params: Promise<{ name: string }> }) => {
         setCurrentPage(page);
         // Scroll to top of listings
         document.querySelector('.overflow-y-auto')?.scrollTo(0, 0);
+    };
+
+    const handleLocateDomain = (domainId: string | null) => {
+        if (mapRef.current && domainId) {
+            mapRef.current.focusOnDomain(domainId);
+        }
     };
 
     return (
@@ -401,6 +409,7 @@ const LoireValley = ({ params }: { params: Promise<{ name: string }> }) => {
                     )}
                     {region && (
                         <RegionMap
+                            ref={mapRef}
                             centerLat={(region.min_lat + region.max_lat) / 2}
                             centerLon={(region.min_lon + region.max_lon) / 2}
                             domains={domains}
@@ -459,53 +468,48 @@ const LoireValley = ({ params }: { params: Promise<{ name: string }> }) => {
                                     );
 
                                 return (
-                                    <CardWrapper key={index}>
-                                        <div className="bg-background rounded-lg shadow-sm overflow-hidden">
-                                            {domain.domainProfilePictureUrl && (
-                                                <img
-                                                    src={domain.domainProfilePictureUrl}
-                                                    alt={domain.domainName}
-                                                    className="w-full h-40 object-cover"
-                                                />
-                                            )}
-                                            <div className="p-4">
-                                                <div className="flex items-start justify-between gap-2">
-                                                    <h3 className="text-lg font-bold text-primary">
-                                                        {domain.domainName}
-                                                    </h3>
-                                                    {domain.producer === 'client' ? (
-                                                        <Button
-                                                            size="sm"
-                                                            className="bg-primary hover:bg-primary/90 text-white shrink-0"
-                                                            onClick={(e) => e.stopPropagation()}
-                                                        >
-                                                            Réserver
-                                                        </Button>
-                                                    ) : domain.producer === 'non-client' && domain.siteUrl ? (
-                                                        <Button
-                                                            size="sm"
-                                                            className="bg-primary hover:bg-primary/90 text-white shrink-0"
-                                                            onClick={(e) => e.stopPropagation()}
-                                                        >
-                                                            Visiter
-                                                        </Button>
-                                                    ) : null}
-                                                </div>
-                                                {domain.category && (
-                                                    <p className="text-muted-foreground text-sm mb-2">{domain.category}</p>
+                                    <div key={index} className="bg-background rounded-lg shadow-sm overflow-hidden">
+                                        {domain.domainProfilePictureUrl && (
+                                            <img
+                                                src={domain.domainProfilePictureUrl}
+                                                alt={domain.domainName}
+                                                className="w-full h-40 object-cover"
+                                            />
+                                        )}
+                                        <div className="p-4">
+                                            <div className="flex items-start justify-between gap-2">
+                                                <h3 className="text-lg font-bold text-primary">
+                                                    {domain.domainName}
+                                                </h3>
+                                                {domain.latitude && domain.longitude && (
+                                                    <Button
+                                                        size="sm"
+                                                        className="bg-primary hover:bg-primary/90 text-white shrink-0"
+                                                        onClick={(e) => {
+                                                            e.preventDefault();
+                                                            e.stopPropagation();
+                                                            handleLocateDomain(domain.domainId);
+                                                        }}
+                                                    >
+                                                        <Locate className="w-4 h-4 mr-1" />
+                                                        Localiser
+                                                    </Button>
                                                 )}
-                                                {domain.domainPrice !== null && (
-                                                    <div className="flex items-center mb-3">
-                                                        <Euro className="w-4 h-4 mr-1 text-muted-foreground" />
-                                                        <span className="text-muted-foreground">{domain.domainPrice}</span>
-                                                    </div>
-                                                )}
-                                                <p className="text-foreground/80 text-sm leading-relaxed line-clamp-3">
-                                                    {domain.domainDescription}
-                                                </p>
                                             </div>
+                                            {domain.category && (
+                                                <p className="text-muted-foreground text-sm mb-2">{domain.category}</p>
+                                            )}
+                                            {domain.domainPrice !== null && (
+                                                <div className="flex items-center mb-3">
+                                                    <Euro className="w-4 h-4 mr-1 text-muted-foreground" />
+                                                    <span className="text-muted-foreground">{domain.domainPrice}</span>
+                                                </div>
+                                            )}
+                                            <p className="text-foreground/80 text-sm leading-relaxed line-clamp-3">
+                                                {domain.domainDescription}
+                                            </p>
                                         </div>
-                                    </CardWrapper>
+                                    </div>
                                 );
                             })}
 
