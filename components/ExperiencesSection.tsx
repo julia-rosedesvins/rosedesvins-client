@@ -81,7 +81,7 @@ const ExperiencesSection = () => {
             >
               <CarouselContent className="-ml-2 md:-ml-4">
                 {services.map((service) => (
-                  <CarouselItem key={service.serviceId} className="pl-2 md:pl-4 md:basis-1/4">
+                  <CarouselItem key={service.serviceId} className="pl-2 md:pl-4 md:basis-1/3">
                     <RegionCard 
                       title={service.serviceName}
                       image={service.serviceBannerUrl || "/assets/default-service.jpg"}
