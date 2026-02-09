@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, MapPin, Home, Euro, ChevronDown, Locate } from "lucide-react";
+import { ArrowLeft, MapPin, Home, Euro, ChevronDown, Locate, Map, List, Navigation } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -34,6 +34,12 @@ const LoireValley = ({ params }: { params: Promise<{ name: string }> }) => {
     const [isMapLoaded, setIsMapLoaded] = useState(false);
     const mapRef = useRef<RegionMapRef>(null);
     const limit = 5;
+
+    // Mobile view states
+    const [mobileView, setMobileView] = useState<'list' | 'map'>('list');
+    const [userLocation, setUserLocation] = useState<{ lat: number; lon: number } | null>(null);
+    const [isAroundMeActive, setIsAroundMeActive] = useState(false);
+    const [isGettingLocation, setIsGettingLocation] = useState(false);
 
     // Filter states
     const [expandedFilter, setExpandedFilter] = useState<string | null>(null);
@@ -167,6 +173,63 @@ const LoireValley = ({ params }: { params: Promise<{ name: string }> }) => {
             mapRef.current.focusOnDomain(domainId);
         }
     };
+
+    const handleAroundMe = () => {
+        if (isAroundMeActive) {
+            // Turn off "Around me"
+            setIsAroundMeActive(false);
+            setUserLocation(null);
+            return;
+        }
+
+        // Get user's location
+        if (!navigator.geolocation) {
+            toast.error('La géolocalisation n\'est pas supportée par votre navigateur');
+            return;
+        }
+
+        setIsGettingLocation(true);
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                const { latitude, longitude } = position.coords;
+                setUserLocation({ lat: latitude, lon: longitude });
+                setIsAroundMeActive(true);
+                setIsGettingLocation(false);
+                toast.success('Localisation activée');
+            },
+            (error) => {
+                setIsGettingLocation(false);
+                console.error('Geolocation error:', error);
+                toast.error('Impossible d\'obtenir votre localisation');
+            }
+        );
+    };
+
+    // Calculate distance between two coordinates (Haversine formula)
+    const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+        const R = 6371; // Radius of the Earth in km
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLon = (lon2 - lon1) * Math.PI / 180;
+        const a = 
+            Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c;
+    };
+
+    // Filter domains based on user location
+    const filteredDomains = isAroundMeActive && userLocation
+        ? domains
+            .map(domain => ({
+                ...domain,
+                distance: domain.latitude && domain.longitude
+                    ? calculateDistance(userLocation.lat, userLocation.lon, domain.latitude, domain.longitude)
+                    : Infinity
+            }))
+            .filter(domain => domain.distance <= 50) // Within 50km
+            .sort((a, b) => a.distance - b.distance)
+        : domains;
 
     return (
         <LandingPageLayout>
@@ -396,7 +459,7 @@ const LoireValley = ({ params }: { params: Promise<{ name: string }> }) => {
             {/* Split Layout: Map + Listings - fills remaining viewport */}
             <section className="flex flex-col lg:flex-row" style={{ height: 'calc(100vh - 60px)' }}>
                 {/* Interactive Map - 60% */}
-                <div className="hidden md:block lg:w-[60%] h-[600px] lg:h-full lg:sticky lg:top-[60px] relative z-10">
+                <div className={`${mobileView === 'map' ? 'block' : 'hidden'} md:block lg:w-[60%] h-[600px] lg:h-full lg:sticky lg:top-[60px] relative z-10`}>
                     {!isMapLoaded && (
                         <div className="absolute inset-0 bg-white z-20 flex items-center justify-center">
                             <div className="text-center">
@@ -410,16 +473,16 @@ const LoireValley = ({ params }: { params: Promise<{ name: string }> }) => {
                     {region && (
                         <RegionMap
                             ref={mapRef}
-                            centerLat={(region.min_lat + region.max_lat) / 2}
-                            centerLon={(region.min_lon + region.max_lon) / 2}
-                            domains={domains}
+                            centerLat={userLocation?.lat || (region.min_lat + region.max_lat) / 2}
+                            centerLon={userLocation?.lon || (region.min_lon + region.max_lon) / 2}
+                            domains={isAroundMeActive ? filteredDomains : domains}
                             onMapLoad={() => setIsMapLoaded(true)}
                         />
                     )}
                 </div>
 
                 {/* Winemaker Listings - 40% - scrollable */}
-                <div className="lg:w-[40%] bg-muted/30 p-6 overflow-y-auto">
+                <div className={`${mobileView === 'list' ? 'block' : 'hidden'} md:block lg:w-[40%] bg-muted/30 p-6 overflow-y-auto pb-24 md:pb-6`}>
                     {isLoading ? (
                         <div className="space-y-4">
                             {Array.from({ length: 5 }).map((_, index) => (
@@ -443,7 +506,7 @@ const LoireValley = ({ params }: { params: Promise<{ name: string }> }) => {
                         </div>
                     ) : (
                         <div className="space-y-4">
-                            {domains.map((domain, index) => {
+                            {filteredDomains.map((domain, index) => {
                                 const CardWrapper = domain.producer === 'non-client' && domain.siteUrl
                                     ? ({ children }: { children: React.ReactNode }) => (
                                         <a
@@ -594,6 +657,61 @@ const LoireValley = ({ params }: { params: Promise<{ name: string }> }) => {
                             )}
                         </div>
                     )}
+                </div>
+
+                {/* Mobile Floating Controls */}
+                <div className="md:hidden fixed bottom-6 left-1/2 transform -translate-x-1/2 z-30 flex items-center gap-3 bg-white rounded-full shadow-lg px-4 py-3 border border-gray-200">
+                    {/* Map/List Toggle */}
+                    <Button
+                        variant={mobileView === 'map' ? "default" : "ghost"}
+                        size="sm"
+                        className={`rounded-full ${
+                            mobileView === 'map'
+                                ? "bg-primary text-white"
+                                : "text-foreground hover:bg-muted"
+                        }`}
+                        onClick={() => setMobileView(mobileView === 'map' ? 'list' : 'map')}
+                    >
+                        {mobileView === 'map' ? (
+                            <>
+                                <List className="w-4 h-4 mr-2" />
+                                Liste
+                            </>
+                        ) : (
+                            <>
+                                <Map className="w-4 h-4 mr-2" />
+                                Carte
+                            </>
+                        )}
+                    </Button>
+
+                    {/* Divider */}
+                    <div className="h-8 w-px bg-gray-300"></div>
+
+                    {/* Around Me Button */}
+                    <Button
+                        variant={isAroundMeActive ? "default" : "ghost"}
+                        size="sm"
+                        className={`rounded-full ${
+                            isAroundMeActive
+                                ? "bg-primary text-white"
+                                : "text-foreground hover:bg-muted"
+                        }`}
+                        onClick={handleAroundMe}
+                        disabled={isGettingLocation}
+                    >
+                        {isGettingLocation ? (
+                            <>
+                                <div className="w-4 h-4 mr-2 animate-spin rounded-full border-2 border-solid border-current border-r-transparent"></div>
+                                Localisation...
+                            </>
+                        ) : (
+                            <>
+                                <Navigation className="w-4 h-4 mr-2" />
+                                Autour de moi
+                            </>
+                        )}
+                    </Button>
                 </div>
             </section>
         </LandingPageLayout>
