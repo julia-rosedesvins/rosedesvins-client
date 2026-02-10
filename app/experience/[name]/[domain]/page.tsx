@@ -214,7 +214,7 @@ const ExperienceDomain = ({ params }: { params: Promise<{ name: string; domain: 
                 {location && location.domainLatitude && location.domainLongitude && (
                     <section className="mb-12">
                         <h2 className="text-2xl font-bold text-gray-800 mb-6">Localisation</h2>
-                        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+                        <div className="bg-white rounded-lg shadow-sm overflow-hidden relative z-0">
                             <DomainMap
                                 latitude={location.domainLatitude}
                                 longitude={location.domainLongitude}
