@@ -544,24 +544,52 @@ const LoireValley = ({ params }: { params: Promise<{ name: string }> }) => {
                                                 <h3 className="text-lg font-bold text-primary">
                                                     {domain.domainName}
                                                 </h3>
-                                                {domain.latitude && domain.longitude && (
-                                                    <Button
-                                                        size="sm"
-                                                        className="bg-primary hover:bg-primary/90 text-white shrink-0"
-                                                        onClick={(e) => {
-                                                            e.preventDefault();
-                                                            e.stopPropagation();
-                                                            handleLocateDomain(domain.domainId);
-                                                        }}
+                                                {domain.producer === 'client' ? (
+                                                    <Link href={`/experience/${region?.denom}/${domain.domainId}`}>
+                                                        <Button
+                                                            size="sm"
+                                                            className="bg-primary hover:bg-primary/90 text-white shrink-0"
+                                                        >
+                                                            Réserver
+                                                        </Button>
+                                                    </Link>
+                                                ) : domain.producer === 'non-client' && domain.siteUrl ? (
+                                                    <a
+                                                        href={domain.siteUrl}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        onClick={(e) => e.stopPropagation()}
                                                     >
-                                                        <Locate className="w-4 h-4 mr-1" />
-                                                        Localiser
-                                                    </Button>
+                                                        <Button
+                                                            size="sm"
+                                                            className="bg-primary hover:bg-primary/90 text-white shrink-0"
+                                                        >
+                                                            Voir le site
+                                                        </Button>
+                                                    </a>
+                                                ) : null}
+                                            </div>
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                                {domain.category && (
+                                                    <p className="text-muted-foreground text-sm mb-2">{domain.category}</p>
+                                                )}
+                                                {domain.latitude && domain.longitude && (
+                                                    <>
+                                                        {domain.category && <span className="text-muted-foreground text-sm mb-2">•</span>}
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.preventDefault();
+                                                                e.stopPropagation();
+                                                                handleLocateDomain(domain.domainId);
+                                                            }}
+                                                            className="text-primary hover:underline text-sm mb-2 flex items-center gap-1"
+                                                        >
+                                                            <Locate className="w-3 h-3" />
+                                                            Localiser
+                                                        </button>
+                                                    </>
                                                 )}
                                             </div>
-                                            {domain.category && (
-                                                <p className="text-muted-foreground text-sm mb-2">{domain.category}</p>
-                                            )}
                                             {domain.domainPrice !== null && (
                                                 <div className="flex items-center mb-3">
                                                     <Euro className="w-4 h-4 mr-1 text-muted-foreground" />
