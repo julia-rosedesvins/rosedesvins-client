@@ -569,36 +569,33 @@ const LoireValley = ({ params }: { params: Promise<{ name: string }> }) => {
                                                     </a>
                                                 ) : null}
                                             </div>
-                                            <div className="flex items-center gap-2 flex-wrap">
-                                                {domain.category && (
-                                                    <p className="text-muted-foreground text-sm mb-2">{domain.category}</p>
-                                                )}
-                                                {domain.latitude && domain.longitude && (
-                                                    <>
-                                                        {domain.category && <span className="text-muted-foreground text-sm mb-2">•</span>}
-                                                        <button
-                                                            onClick={(e) => {
-                                                                e.preventDefault();
-                                                                e.stopPropagation();
-                                                                handleLocateDomain(domain.domainId);
-                                                            }}
-                                                            className="text-primary hover:underline text-sm mb-2 flex items-center gap-1"
-                                                        >
-                                                            <Locate className="w-3 h-3" />
-                                                            Localiser
-                                                        </button>
-                                                    </>
-                                                )}
-                                            </div>
+                                            {domain.category && (
+                                                <p className="text-muted-foreground text-sm mb-2">{domain.category}</p>
+                                            )}
                                             {domain.domainPrice !== null && (
                                                 <div className="flex items-center mb-3">
                                                     <Euro className="w-4 h-4 mr-1 text-muted-foreground" />
                                                     <span className="text-muted-foreground">{domain.domainPrice}</span>
                                                 </div>
                                             )}
-                                            <p className="text-foreground/80 text-sm leading-relaxed line-clamp-3">
+                                            <p className="text-foreground/80 text-sm leading-relaxed line-clamp-3 mb-3">
                                                 {domain.domainDescription}
                                             </p>
+                                            {domain.latitude && domain.longitude && (
+                                                <div className="flex justify-end">
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.preventDefault();
+                                                            e.stopPropagation();
+                                                            handleLocateDomain(domain.domainId);
+                                                        }}
+                                                        className="text-primary hover:underline text-sm flex items-center gap-1"
+                                                    >
+                                                        <Locate className="w-3 h-3" />
+                                                        Localiser
+                                                    </button>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 );
