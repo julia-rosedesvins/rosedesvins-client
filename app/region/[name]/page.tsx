@@ -587,7 +587,12 @@ const LoireValley = ({ params }: { params: Promise<{ name: string }> }) => {
                                                         onClick={(e) => {
                                                             e.preventDefault();
                                                             e.stopPropagation();
-                                                            handleLocateDomain(domain.domainId);
+                                                            // On mobile, switch to map view
+                                                            setMobileView('map');
+                                                            // Small delay to ensure map is rendered before focusing
+                                                            setTimeout(() => {
+                                                                handleLocateDomain(domain.domainId);
+                                                            }, 100);
                                                         }}
                                                         className="text-primary hover:underline text-sm flex items-center gap-1"
                                                     >
