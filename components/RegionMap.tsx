@@ -77,6 +77,14 @@ const popupStyles = `
     text-decoration: none;
   }
 
+  /* Mobile responsive popup */
+  @media (max-width: 768px) {
+    .leaflet-popup-content-wrapper {
+      width: 280px !important;
+      max-width: 85vw !important;
+    }
+  }
+
   /* Custom marker */
   .wine-marker {
     width: 40px;
@@ -207,7 +215,7 @@ const RegionMap = forwardRef<RegionMapRef, RegionMapProps>(({ centerLat, centerL
               }
             }}
           > 
-            <Popup maxWidth={500} minWidth={500} className="custom-popup">
+            <Popup maxWidth={500} className="custom-popup">
               <div className="bg-white">
                 {/* Hero Image */}
                 {domain.domainProfilePictureUrl && (
