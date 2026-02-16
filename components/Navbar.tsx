@@ -73,13 +73,37 @@ export default function Navbar() {
     debounceTimer.current = setTimeout(async () => {
       try {
         setIsLoadingSuggestions(true)
-        const result = await regionService.unifiedSearch(searchQuery)
+        
+        // Fetch both backend results and geocoding results in parallel
+        const [backendResult, geocodingResult] = await Promise.all([
+          regionService.unifiedSearch(searchQuery),
+          fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&countrycodes=fr&limit=3&addressdetails=1`)
+            .then(res => res.json())
+            .catch(() => [])
+        ])
         
         const allSuggestions: any[] = []
         
+        // Add geocoding results (cities/addresses) first
+        if (Array.isArray(geocodingResult) && geocodingResult.length > 0) {
+          geocodingResult.forEach((place: any) => {
+            const city = place.address?.city || place.address?.town || place.address?.village || place.address?.municipality
+            const state = place.address?.state || place.address?.region
+            if (city) {
+              allSuggestions.push({
+                type: 'city',
+                name: city,
+                description: state || 'France',
+                icon: MapPin,
+                route: `/region/${encodeURIComponent(city)}`
+              })
+            }
+          })
+        }
+        
         // Add regions
-        if (result.data.regions && result.data.regions.length > 0) {
-          result.data.regions.slice(0, 3).forEach(region => {
+        if (backendResult.data.regions && backendResult.data.regions.length > 0) {
+          backendResult.data.regions.slice(0, 2).forEach(region => {
             allSuggestions.push({
               type: 'region',
               name: region.denom,
@@ -90,40 +114,40 @@ export default function Navbar() {
         }
         
         // Add domains
-        if (result.data.domains && result.data.domains.length > 0) {
-          result.data.domains.slice(0, 3).forEach(domain => {
+        if (backendResult.data.domains && backendResult.data.domains.length > 0) {
+          backendResult.data.domains.slice(0, 2).forEach(domain => {
             allSuggestions.push({
               type: 'domain',
               name: domain.domainName,
               description: domain.location?.city || '',
               icon: Building2,
-              route: result.data.suggestedRoute || `/region/${encodeURIComponent(domain.location?.region || '')}`
+              route: backendResult.data.suggestedRoute || `/region/${encodeURIComponent(domain.location?.region || '')}`
             })
           })
         }
         
         // Add services
-        if (result.data.services && result.data.services.length > 0) {
-          result.data.services.slice(0, 3).forEach(service => {
+        if (backendResult.data.services && backendResult.data.services.length > 0) {
+          backendResult.data.services.slice(0, 2).forEach(service => {
             allSuggestions.push({
               type: 'service',
               name: service.serviceName,
               description: `${service.domain.domainName} - ${service.pricePerPerson}€`,
               icon: Wine,
-              route: result.data.suggestedRoute || `/experience/${service.domain.domainName}/${service.domain.domainId}`
+              route: backendResult.data.suggestedRoute || `/experience/${service.domain.domainName}/${service.domain.domainId}`
             })
           })
         }
         
         // Add static experiences
-        if (result.data.staticExperiences && result.data.staticExperiences.length > 0) {
-          result.data.staticExperiences.slice(0, 2).forEach(exp => {
+        if (backendResult.data.staticExperiences && backendResult.data.staticExperiences.length > 0) {
+          backendResult.data.staticExperiences.slice(0, 1).forEach(exp => {
             allSuggestions.push({
               type: 'experience',
               name: exp.name,
               description: exp.category || '',
               icon: Wine,
-              route: result.data.suggestedRoute || '#'
+              route: backendResult.data.suggestedRoute || '#'
             })
           })
         }
@@ -212,11 +236,43 @@ export default function Navbar() {
     }
   }
 
-  const handleSuggestionClick = (suggestion: any) => {
+  const handleSuggestionClick = async (suggestion: any) => {
     setSearchQuery(suggestion.name)
     setShowSuggestions(false)
     setMobileMenuOpen(false)
-    router.push(suggestion.route)
+    
+    // If it's a city result, perform search with city name and navigate
+    if (suggestion.type === 'city') {
+      try {
+        setIsSearching(true)
+        const startTime = Date.now()
+        const result = await regionService.unifiedSearch(suggestion.name)
+
+        // Ensure minimum loading time of 800ms for better UX
+        const elapsed = Date.now() - startTime
+        const minLoadingTime = 800
+        if (elapsed < minLoadingTime) {
+          await new Promise(resolve => setTimeout(resolve, minLoadingTime - elapsed))
+        }
+
+        if (result.data.suggestedRoute) {
+          router.push(result.data.suggestedRoute)
+          setSearchQuery("") // Clear search after navigation
+        } else {
+          router.push(`/no-results?q=${encodeURIComponent(suggestion.name)}`)
+          setSearchQuery("") // Clear search after navigation
+        }
+      } catch (error: any) {
+        console.error("Search error:", error)
+        toast.error("Erreur lors de la recherche")
+      } finally {
+        setIsSearching(false)
+      }
+    } else {
+      // For other types (region, domain, service, experience), navigate directly
+      router.push(suggestion.route)
+      setSearchQuery("") // Clear search after navigation
+    }
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
