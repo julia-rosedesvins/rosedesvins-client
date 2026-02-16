@@ -243,11 +243,11 @@ const RegionMap = forwardRef<RegionMapRef, RegionMapProps>(({ centerLat, centerL
                   </h3>
                   
                   {/* Description */}
-                  {domain.domainDescription && (
+                  {/* {domain.domainDescription && (
                     <p className="text-xs text-gray-700 line-clamp-2 leading-relaxed">
                       {domain.domainDescription}
                     </p>
-                  )}
+                  )} */}
                   
                   {/* Price */}
                   {domain.domainPrice !== null && (
