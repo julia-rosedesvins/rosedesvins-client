@@ -292,7 +292,7 @@ const LoireValley = ({ params }: { params: Promise<{ name: string }> }) => {
                 </div>
             </section>
 
-            <section className="bg-background py-4 px-4 border-b sticky top-0 z-20">
+            <section className="bg-background py-4 px-4 border-b sticky top-[60px] z-20 shadow-sm">
                 <div className="space-y-2">
                     <div className="flex flex-wrap gap-3">
                         {/* Date Filter - Quand? */}
@@ -457,9 +457,9 @@ const LoireValley = ({ params }: { params: Promise<{ name: string }> }) => {
             </section>
 
             {/* Split Layout: Map + Listings - fills remaining viewport */}
-            <section className="flex flex-col lg:flex-row" style={{ height: 'calc(100vh - 60px)' }}>
+            <section className="flex flex-col lg:flex-row" style={{ height: 'calc(100vh - 140px)' }}>
                 {/* Interactive Map - 60% */}
-                <div className={`${mobileView === 'map' ? 'block' : 'hidden'} md:block lg:w-[60%] h-[600px] lg:h-full lg:sticky lg:top-[60px] relative z-10`}>
+                <div className={`${mobileView === 'map' ? 'block' : 'hidden'} md:block lg:w-[60%] h-[600px] lg:h-full lg:sticky lg:top-[140px] relative z-10`}>
                     {!isMapLoaded && (
                         <div className="absolute inset-0 bg-white z-20 flex items-center justify-center">
                             <div className="text-center">
