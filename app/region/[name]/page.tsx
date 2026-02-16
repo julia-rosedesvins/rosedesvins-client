@@ -27,7 +27,8 @@ const LoireValley = ({ params }: { params: Promise<{ name: string }> }) => {
     const searchQuery = searchParams.get('q');
     const resolvedParams = use(params);
     const [region, setRegion] = useState<Region | null>(null);
-    const [domains, setDomains] = useState<Domain[]>([]);
+    const [domains, setDomains] = useState<Domain[]>([]); // Paginated domains for list view
+    const [allMapDomains, setAllMapDomains] = useState<Domain[]>([]); // All domains for map view
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(0);
     const [isLoading, setIsLoading] = useState(true);
@@ -65,6 +66,47 @@ const LoireValley = ({ params }: { params: Promise<{ name: string }> }) => {
         fetchCategories();
     }, []);
 
+    // Fetch all domains for map (with filters)
+    useEffect(() => {
+        const fetchAllMapDomains = async () => {
+            try {
+                // Build filter params
+                const filters: any = {};
+                if (selectedDate) {
+                    filters.date = selectedDate.toISOString();
+                }
+                if (priceRange > 0) {
+                    if (priceRange === 20) {
+                        filters.minPrice = 20;
+                    } else {
+                        filters.maxPrice = priceRange;
+                    }
+                }
+                if (selectedLanguages.length > 0) {
+                    filters.languages = selectedLanguages;
+                }
+                if (selectedExperiences.length > 0) {
+                    filters.categories = selectedExperiences;
+                }
+                
+                // Fetch all domains for map with high limit
+                const mapResponse = await regionService.getRegionByName(
+                    resolvedParams.name, 
+                    1, 
+                    1000, // High limit to get all domains
+                    searchQuery || undefined,
+                    Object.keys(filters).length > 0 ? filters : undefined
+                );
+                setAllMapDomains(mapResponse.domains);
+            } catch (error: any) {
+                console.error('Error fetching map domains:', error);
+            }
+        };
+
+        fetchAllMapDomains();
+    }, [resolvedParams.name, searchQuery, selectedDate, priceRange, selectedLanguages, selectedExperiences]);
+
+    // Fetch paginated domains for list view
     useEffect(() => {
         const fetchRegionData = async () => {
             try {
@@ -218,8 +260,20 @@ const LoireValley = ({ params }: { params: Promise<{ name: string }> }) => {
         return R * c;
     };
 
-    // Filter domains based on user location
-    const filteredDomains = isAroundMeActive && userLocation
+    // Filter domains based on user location for both map and list
+    const filteredMapDomains = isAroundMeActive && userLocation
+        ? allMapDomains
+            .map(domain => ({
+                ...domain,
+                distance: domain.latitude && domain.longitude
+                    ? calculateDistance(userLocation.lat, userLocation.lon, domain.latitude, domain.longitude)
+                    : Infinity
+            }))
+            .filter(domain => domain.distance <= 50) // Within 50km
+            .sort((a, b) => a.distance - b.distance)
+        : allMapDomains;
+
+    const filteredListDomains = isAroundMeActive && userLocation
         ? domains
             .map(domain => ({
                 ...domain,
@@ -475,7 +529,7 @@ const LoireValley = ({ params }: { params: Promise<{ name: string }> }) => {
                             ref={mapRef}
                             centerLat={userLocation?.lat || (region.min_lat + region.max_lat) / 2}
                             centerLon={userLocation?.lon || (region.min_lon + region.max_lon) / 2}
-                            domains={isAroundMeActive ? filteredDomains : domains}
+                            domains={isAroundMeActive ? filteredMapDomains : allMapDomains}
                             onMapLoad={() => setIsMapLoaded(true)}
                         />
                     )}
@@ -506,7 +560,7 @@ const LoireValley = ({ params }: { params: Promise<{ name: string }> }) => {
                         </div>
                     ) : (
                         <div className="space-y-4">
-                            {filteredDomains.map((domain, index) => {
+                            {filteredListDomains.map((domain, index) => {
                                 const CardWrapper = domain.producer === 'non-client' && domain.siteUrl
                                     ? ({ children }: { children: React.ReactNode }) => (
                                         <a
