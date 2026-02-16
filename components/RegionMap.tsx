@@ -1,110 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
+import maplibregl from 'maplibre-gl';
+import 'maplibre-gl/dist/maplibre-gl.css';
 import type { Domain } from '@/services/region.service';
-
-// Fix for default marker icons in Next.js
-delete (L.Icon.Default.prototype as any)._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-});
-
-// Custom wine glass icon (white rounded background)
-const wineGlassIcon = L.divIcon({
-  className: 'wine-glass-marker',
-  html: `
-    <div class="wine-marker">
-      <img src="https://api.rosedesvins.co/v1/web/image/type-of-experience" alt="wine glass" />
-    </div>
-  `,
-  iconSize: [40, 40],
-  iconAnchor: [20, 40],
-  popupAnchor: [0, -34],
-});
-
-// Add custom styles for the popup
-const popupStyles = `
-  .leaflet-popup-content-wrapper {
-    border-radius: 12px;
-    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
-    padding: 0;
-    overflow: hidden;
-    width: 300px;
-    max-width: 300px;
-  }
-  .leaflet-popup-content {
-    margin: 0;
-    width: 100% !important;
-  }
-  .leaflet-popup-tip {
-    background: white;
-  }
-  .custom-popup .leaflet-popup-close-button {
-    top: 6px;
-    right: 6px;
-    width: 22px;
-    height: 22px;
-    font-size: 16px;
-    color: #ffffff !important;
-    background: #3A7E53 !important;
-    border: 1px solid #2d6340 !important;
-    border-radius: 50%;
-    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.18);
-    padding: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    opacity: 1;
-  }
-  .custom-popup .leaflet-popup-close-button:hover {
-    color: #ffffff !important;
-    background: #3A7E53 !important;
-    border-color: #2d6340 !important;
-    opacity: 1;
-  }
-  .custom-popup .leaflet-popup-close-button:focus {
-    outline: none;
-    box-shadow: 0 0 0 2px rgba(58, 126, 83, 0.35);
-  }
-  .custom-popup a,
-  .custom-popup a:visited {
-    color: #ffffff !important;
-    text-decoration: none;
-  }
-
-  /* Mobile responsive popup */
-  @media (max-width: 768px) {
-    .leaflet-popup-content-wrapper {
-      width: 225px !important;
-      max-width: 85vw !important;
-    }
-  }
-
-  /* Custom marker */
-  .wine-marker {
-    width: 40px;
-    height: 40px;
-    background: #ffffff;
-    border: 2px solid #3A7E53;
-    border-radius: 9999px;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-  }
-  .wine-marker img {
-    width: 22px;
-    height: 22px;
-    object-fit: contain;
-    display: block;
-  }
-`;
 
 interface RegionMapProps {
   centerLat: number;
@@ -117,166 +16,261 @@ export interface RegionMapRef {
   focusOnDomain: (domainId: string) => void;
 }
 
-function MapUpdater({ 
-  centerLat, 
-  centerLon, 
-  domains, 
-  onMapLoad, 
-  markersRef 
-}: RegionMapProps & { 
-  markersRef: React.MutableRefObject<Map<string, L.Marker>> 
-}) {
-  const map = useMap();
-  
-  useEffect(() => {
-    if (domains.length > 0) {
-      const validCoords = domains
-        .filter(d => d.latitude && d.longitude)
-        .map(d => [d.latitude!, d.longitude!] as [number, number]);
-      
-      if (validCoords.length > 0) {
-        const bounds = L.latLngBounds(validCoords);
-        map.fitBounds(bounds, { padding: [50, 50] });
-      } else {
-        map.setView([centerLat, centerLon], 10);
-      }
-    } else {
-      map.setView([centerLat, centerLon], 10);
-    }
-    
-    // Notify parent when map is ready
-    const timeoutId = setTimeout(() => {
-      onMapLoad?.();
-    }, 500);
-    
-    return () => clearTimeout(timeoutId);
-  }, [centerLat, centerLon, domains, map, onMapLoad]);
-
-  // Store map instance for parent access
-  useEffect(() => {
-    (window as any).__regionMap = map;
-    return () => {
-      delete (window as any).__regionMap;
-    };
-  }, [map]);
-  
-  return null;
-}
-
 const RegionMap = forwardRef<RegionMapRef, RegionMapProps>(({ centerLat, centerLon, domains, onMapLoad }, ref) => {
-  const markersRef = useRef<Map<string, L.Marker>>(new Map());
+  const mapContainer = useRef<HTMLDivElement>(null);
+  const map = useRef<maplibregl.Map | null>(null);
+  const markersRef = useRef<Map<string, maplibregl.Marker>>(new Map());
 
   // Expose methods to parent via ref
   useImperativeHandle(ref, () => ({
     focusOnDomain: (domainId: string) => {
       const marker = markersRef.current.get(domainId);
-      const map = (window as any).__regionMap;
       
-      if (marker && map) {
-        const latLng = marker.getLatLng();
-        map.setView(latLng, 15, { animate: true });
+      if (marker && map.current) {
+        const lngLat = marker.getLngLat();
+        map.current.flyTo({
+          center: [lngLat.lng, lngLat.lat],
+          zoom: 15,
+          duration: 1000
+        });
+        
         setTimeout(() => {
-          marker.openPopup();
-        }, 300);
+          marker.togglePopup();
+        }, 1000);
       }
     }
   }), []);
 
+  // Initialize map
+  useEffect(() => {
+    if (!mapContainer.current || map.current) return;
+
+    map.current = new maplibregl.Map({
+      container: mapContainer.current,
+      style: {
+        version: 8,
+        sources: {
+          'raster-tiles': {
+            type: 'raster',
+            tiles: [
+              'https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
+              'https://b.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
+              'https://c.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png'
+            ],
+            tileSize: 256,
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+          }
+        },
+        layers: [
+          {
+            id: 'simple-tiles',
+            type: 'raster',
+            source: 'raster-tiles',
+            minzoom: 0,
+            maxzoom: 22
+          }
+        ]
+      },
+      center: [centerLon, centerLat],
+      zoom: 10
+    });
+
+    return () => {
+      if (map.current) {
+        map.current.remove();
+        map.current = null;
+      }
+    };
+  }, [centerLon, centerLat]);
+
+  // Update map bounds and markers when domains change
+  useEffect(() => {
+    if (!map.current) return;
+
+    const addMarkers = () => {
+      if (!map.current) return;
+      
+      // Clear existing markers
+      markersRef.current.forEach(marker => marker.remove());
+      markersRef.current.clear();
+
+      const validDomains = domains.filter(d => d.latitude && d.longitude);
+
+      if (validDomains.length > 0) {
+        // Add markers
+        validDomains.forEach((domain) => {
+          if (!domain.latitude || !domain.longitude || !map.current) return;
+
+          // Create custom marker element
+          const el = document.createElement('div');
+          el.className = 'wine-marker';
+          el.style.width = '40px';
+          el.style.height = '40px';
+          el.style.background = '#ffffff';
+          el.style.border = '2px solid #3A7E53';
+          el.style.borderRadius = '50%';
+          el.style.boxShadow = '0 4px 10px rgba(0, 0, 0, 0.15)';
+          el.style.display = 'flex';
+          el.style.alignItems = 'center';
+          el.style.justifyContent = 'center';
+          el.style.overflow = 'hidden';
+          el.style.cursor = 'pointer';
+          
+          const img = document.createElement('img');
+          img.src = 'https://api.rosedesvins.co/v1/web/image/type-of-experience';
+          img.alt = 'wine glass';
+          img.style.width = '22px';
+          img.style.height = '22px';
+          img.style.objectFit = 'contain';
+          el.appendChild(img);
+
+        // Create popup HTML
+        const popupHTML = `
+          <div class="bg-white" style="width: 300px; max-width: 85vw;">
+            ${domain.domainProfilePictureUrl ? `
+              <div class="relative w-full" style="height: 112px; overflow: hidden;">
+                <img
+                  src="${domain.domainProfilePictureUrl}"
+                  alt="${domain.domainName}"
+                  style="width: 100%; height: 100%; object-fit: cover;"
+                />
+              </div>
+            ` : ''}
+            
+            <div style="padding: 10px 12px; display: flex; flex-direction: column; gap: 8px;">
+              ${domain.category ? `
+                <span style="display: inline-block; padding: 2px 8px; font-size: 10px; font-weight: 600; color: #3A7E53; background: rgba(58, 126, 83, 0.1); border-radius: 6px; text-transform: uppercase; letter-spacing: 0.05em; width: fit-content;">
+                  ${domain.category}
+                </span>
+              ` : ''}
+              
+              <h3 style="font-size: 14px; font-weight: 700; color: #111827; line-height: 1.25; margin: 0;">
+                ${domain.domainName}
+              </h3>
+              
+              ${domain.domainPrice !== null ? `
+                <div>
+                  <span style="font-size: 16px; font-weight: 700; color: #111827;">${domain.domainPrice} €</span>
+                </div>
+              ` : ''}
+              
+              <div style="border-top: 1px solid #E5E7EB;"></div>
+              
+              <a
+                href="${domain.producer === 'client' ? `/experience/${domain.domainId}` : domain.siteUrl || '#'}"
+                target="${domain.producer === 'non-client' ? '_blank' : '_self'}"
+                ${domain.producer === 'non-client' ? 'rel="noopener noreferrer"' : ''}
+                style="display: block; width: 100%; padding: 8px 12px; font-size: 12px; font-weight: 600; color: white; background: #3A7E53; border-radius: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); text-align: center; text-decoration: none; transition: background-color 0.2s;"
+                onmouseover="this.style.background='#2d6340'"
+                onmouseout="this.style.background='#3A7E53'"
+              >
+                ${domain.producer === 'client' ? 'Réserver maintenant' : 'En savoir plus'}
+              </a>
+            </div>
+          </div>
+        `;
+
+          // Create popup with custom styling
+          const popup = new maplibregl.Popup({
+            maxWidth: '300px',
+            className: 'custom-maplibre-popup',
+            closeButton: true,
+            closeOnClick: false,
+            offset: 25
+          }).setHTML(popupHTML);
+
+          // Create marker
+          const marker = new maplibregl.Marker({ element: el, anchor: 'bottom' })
+            .setLngLat([domain.longitude, domain.latitude])
+            .setPopup(popup)
+            .addTo(map.current);
+
+          if (domain.domainId) {
+            markersRef.current.set(domain.domainId, marker);
+          }
+        });
+
+        // Fit bounds to show all markers
+        if (!map.current) return;
+        const bounds = new maplibregl.LngLatBounds();
+        validDomains.forEach(domain => {
+          if (domain.latitude && domain.longitude) {
+            bounds.extend([domain.longitude, domain.latitude]);
+          }
+        });
+
+        map.current.fitBounds(bounds, {
+          padding: 50,
+          duration: 1000
+        });
+      } else {
+        if (!map.current) return;
+        map.current.flyTo({
+          center: [centerLon, centerLat],
+          zoom: 10,
+          duration: 1000
+        });
+      }
+
+      // Notify parent when map is ready
+      if (onMapLoad) {
+        onMapLoad();
+      }
+    };
+
+    // Wait for map to load before adding markers
+    if (map.current.loaded()) {
+      addMarkers();
+    } else {
+      map.current.once('load', addMarkers);
+    }
+  }, [domains, centerLat, centerLon, onMapLoad]);
+
   return (
     <>
-      <style>{popupStyles}</style>
-      <MapContainer
-        center={[centerLat, centerLon]}
-        zoom={10}
-        style={{ height: '100%', width: '100%' }}
-        scrollWheelZoom={true}
-      >
-        <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-      />
-      <MapUpdater 
-        centerLat={centerLat} 
-        centerLon={centerLon} 
-        domains={domains} 
-        onMapLoad={onMapLoad} 
-        markersRef={markersRef}
-      />
-      {domains
-        .filter(d => d.latitude && d.longitude)
-        .map((domain, index) => (
-          <Marker 
-            key={index} 
-            position={[domain.latitude!, domain.longitude!]} 
-            icon={wineGlassIcon}
-            ref={(marker) => {
-              if (marker && domain.domainId) {
-                markersRef.current.set(domain.domainId, marker as unknown as L.Marker);
-              }
-            }}
-          > 
-            <Popup maxWidth={300} className="custom-popup">
-              <div className="bg-white">
-                {/* Hero Image */}
-                {domain.domainProfilePictureUrl && (
-                  <div className="relative w-full h-28 overflow-hidden">
-                    <img
-                      src={domain.domainProfilePictureUrl}
-                      alt={domain.domainName}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                )}
-                
-                {/* Content */}
-                <div className="px-3 pt-2.5 pb-3 space-y-2">
-                  {/* Category Badge */}
-                  {domain.category && (
-                    <span className="inline-block px-2 py-0.5 text-[10px] font-semibold text-[#3A7E53] bg-[#3A7E53]/10 rounded-md uppercase tracking-wide">
-                      {domain.category}
-                    </span>
-                  )}
-                  
-                  {/* Title */}
-                  <h3 className="text-sm font-bold text-gray-900 leading-tight">
-                    {domain.domainName}
-                  </h3>
-                  
-                  {/* Description */}
-                  {/* {domain.domainDescription && (
-                    <p className="text-xs text-gray-700 line-clamp-2 leading-relaxed">
-                      {domain.domainDescription}
-                    </p>
-                  )} */}
-                  
-                  {/* Price */}
-                  {domain.domainPrice !== null && (
-                    <div>
-                      <span className="text-base font-bold text-gray-900">{domain.domainPrice} €</span>
-                    </div>
-                  )}
-                  
-                  {/* Divider */}
-                  <div className="border-t border-gray-200"></div>
-                  
-                  {/* Action Button */}
-                  <a
-                    href={domain.producer === 'client' 
-                      ? `/experience/${domain.domainId}` 
-                      : domain.siteUrl || '#'}
-                    target={domain.producer === 'non-client' ? "_blank" : "_self"}
-                    rel={domain.producer === 'non-client' ? "noopener noreferrer" : undefined}
-                    className="block w-full px-3 py-2 text-xs font-semibold text-white bg-[#3A7E53] rounded-lg shadow-md hover:bg-[#2d6340] transition-colors text-center"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    {domain.producer === 'client' ? 'Réserver maintenant' : 'En savoir plus'}
-                  </a>
-                </div>
-              </div>
-            </Popup>
-          </Marker>
-        ))}
-      </MapContainer>
+      <style>{`
+        .custom-maplibre-popup .maplibregl-popup-content {
+          padding: 0;
+          border-radius: 12px;
+          box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
+          overflow: hidden;
+        }
+        
+        .custom-maplibre-popup .maplibregl-popup-close-button {
+          width: 22px;
+          height: 22px;
+          font-size: 16px;
+          color: #ffffff;
+          background: #3A7E53;
+          border: 1px solid #2d6340;
+          border-radius: 50%;
+          box-shadow: 0 3px 10px rgba(0, 0, 0, 0.18);
+          padding: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          right: 6px;
+          top: 6px;
+        }
+        
+        .custom-maplibre-popup .maplibregl-popup-close-button:hover {
+          color: #ffffff;
+          background: #2d6340;
+        }
+        
+        .custom-maplibre-popup .maplibregl-popup-tip {
+          border-top-color: white;
+          border-bottom-color: white;
+        }
+        
+        @media (max-width: 768px) {
+          .custom-maplibre-popup .maplibregl-popup-content {
+            width: 225px !important;
+            max-width: 85vw !important;
+          }
+        }
+      `}</style>
+      <div ref={mapContainer} style={{ width: '100%', height: '100%' }} />
     </>
   );
 });
