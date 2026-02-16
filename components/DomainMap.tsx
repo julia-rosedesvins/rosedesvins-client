@@ -17,7 +17,7 @@ const wineGlassIcon = L.divIcon({
   className: 'wine-glass-marker',
   html: `
     <div class="wine-marker">
-      <img src="https://api.rosedesvins.co/v1/web/image/wine-glass" alt="wine glass" />
+      <img src="https://api.rosedesvins.co/v1/web/image/type-of-experience" alt="wine glass" />
     </div>
   `,
   iconSize: [40, 40],
@@ -140,16 +140,16 @@ export default function DomainMap({ latitude, longitude, domainName, address, ci
                 </h3>
                 
                 {/* Address */}
-                {address && (
+                {/* {address && (
                   <p className="text-sm text-gray-700 leading-relaxed">
                     {address}
                   </p>
-                )}
-                {codePostal && city && (
+                )} */}
+                {/* {codePostal && city && (
                   <p className="text-sm text-gray-700">
                     {codePostal} {city}
                   </p>
-                )}
+                )} */}
                 
                 {/* Divider */}
                 <div className="border-t border-gray-200"></div>
