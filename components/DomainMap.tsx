@@ -53,6 +53,9 @@ export default function DomainMap({ latitude, longitude, domainName, address, ci
       scrollZoom: false
     });
 
+    // Add zoom controls (without compass)
+    map.current.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
+
     // Create custom marker element
     const el = document.createElement('div');
     el.className = 'wine-marker';

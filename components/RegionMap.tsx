@@ -75,6 +75,9 @@ const RegionMap = forwardRef<RegionMapRef, RegionMapProps>(({ centerLat, centerL
       zoom: 10
     });
 
+    // Add zoom controls (without compass)
+    map.current.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
+
     return () => {
       if (map.current) {
         map.current.remove();
