@@ -34,8 +34,8 @@ const popupStyles = `
     box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
     padding: 0;
     overflow: hidden;
-    width: 500px;
-    max-width: 500px;
+    width: 300px;
+    max-width: 300px;
   }
   .leaflet-popup-content {
     margin: 0;
@@ -45,11 +45,11 @@ const popupStyles = `
     background: white;
   }
   .custom-popup .leaflet-popup-close-button {
-    top: 10px;
-    right: 10px;
-    width: 28px;
-    height: 28px;
-    font-size: 20px;
+    top: 6px;
+    right: 6px;
+    width: 22px;
+    height: 22px;
+    font-size: 16px;
     color: #ffffff !important;
     background: #3A7E53 !important;
     border: 1px solid #2d6340 !important;
@@ -80,7 +80,7 @@ const popupStyles = `
   /* Mobile responsive popup */
   @media (max-width: 768px) {
     .leaflet-popup-content-wrapper {
-      width: 280px !important;
+      width: 225px !important;
       max-width: 85vw !important;
     }
   }
@@ -215,11 +215,11 @@ const RegionMap = forwardRef<RegionMapRef, RegionMapProps>(({ centerLat, centerL
               }
             }}
           > 
-            <Popup maxWidth={500} className="custom-popup">
+            <Popup maxWidth={300} className="custom-popup">
               <div className="bg-white">
                 {/* Hero Image */}
                 {domain.domainProfilePictureUrl && (
-                  <div className="relative w-full h-48 overflow-hidden">
+                  <div className="relative w-full h-28 overflow-hidden">
                     <img
                       src={domain.domainProfilePictureUrl}
                       alt={domain.domainName}
@@ -229,22 +229,22 @@ const RegionMap = forwardRef<RegionMapRef, RegionMapProps>(({ centerLat, centerL
                 )}
                 
                 {/* Content */}
-                <div className="px-5 pt-4 pb-5 space-y-3">
+                <div className="px-3 pt-2.5 pb-3 space-y-2">
                   {/* Category Badge */}
                   {domain.category && (
-                    <span className="inline-block px-3 py-1 text-xs font-semibold text-[#3A7E53] bg-[#3A7E53]/10 rounded-md uppercase tracking-wide">
+                    <span className="inline-block px-2 py-0.5 text-[10px] font-semibold text-[#3A7E53] bg-[#3A7E53]/10 rounded-md uppercase tracking-wide">
                       {domain.category}
                     </span>
                   )}
                   
                   {/* Title */}
-                  <h3 className="text-lg font-bold text-gray-900 leading-tight">
+                  <h3 className="text-sm font-bold text-gray-900 leading-tight">
                     {domain.domainName}
                   </h3>
                   
                   {/* Description */}
                   {domain.domainDescription && (
-                    <p className="text-sm text-gray-700 line-clamp-3 leading-relaxed">
+                    <p className="text-xs text-gray-700 line-clamp-2 leading-relaxed">
                       {domain.domainDescription}
                     </p>
                   )}
@@ -252,7 +252,7 @@ const RegionMap = forwardRef<RegionMapRef, RegionMapProps>(({ centerLat, centerL
                   {/* Price */}
                   {domain.domainPrice !== null && (
                     <div>
-                      <span className="text-xl font-bold text-gray-900">{domain.domainPrice} €</span>
+                      <span className="text-base font-bold text-gray-900">{domain.domainPrice} €</span>
                     </div>
                   )}
                   
@@ -266,7 +266,7 @@ const RegionMap = forwardRef<RegionMapRef, RegionMapProps>(({ centerLat, centerL
                       : domain.siteUrl || '#'}
                     target={domain.producer === 'non-client' ? "_blank" : "_self"}
                     rel={domain.producer === 'non-client' ? "noopener noreferrer" : undefined}
-                    className="block w-full px-5 py-3 text-sm font-semibold text-white bg-[#3A7E53] rounded-lg shadow-md hover:bg-[#2d6340] transition-colors text-center"
+                    className="block w-full px-3 py-2 text-xs font-semibold text-white bg-[#3A7E53] rounded-lg shadow-md hover:bg-[#2d6340] transition-colors text-center"
                     onClick={(e) => e.stopPropagation()}
                   >
                     {domain.producer === 'client' ? 'Réserver maintenant' : 'En savoir plus'}
