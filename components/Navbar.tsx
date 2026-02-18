@@ -77,29 +77,57 @@ export default function Navbar() {
         // Fetch both backend results and geocoding results in parallel
         const [backendResult, geocodingResult] = await Promise.all([
           regionService.unifiedSearch(searchQuery),
-          fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&countrycodes=fr&limit=3&addressdetails=1`)
+          fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&countrycodes=fr&limit=10&addressdetails=1`)
             .then(res => res.json())
             .catch(() => [])
         ])
         
         const allSuggestions: any[] = []
+        const seenCities = new Set<string>()
+        const searchLower = searchQuery.toLowerCase()
         
-        // Add geocoding results (cities/addresses) first
+        // Process and score geocoding results
+        const scoredCities: Array<{city: string, state: string, score: number}> = []
+        
         if (Array.isArray(geocodingResult) && geocodingResult.length > 0) {
           geocodingResult.forEach((place: any) => {
             const city = place.address?.city || place.address?.town || place.address?.village || place.address?.municipality
             const state = place.address?.state || place.address?.region
-            if (city) {
-              allSuggestions.push({
-                type: 'city',
-                name: city,
-                description: state || 'France',
-                icon: MapPin,
-                route: `/region/${encodeURIComponent(city)}`
-              })
+            
+            if (city && !seenCities.has(city.toLowerCase())) {
+              seenCities.add(city.toLowerCase())
+              const cityLower = city.toLowerCase()
+              
+              // Calculate relevance score
+              let score = 0
+              if (cityLower === searchLower) {
+                score = 100 // Exact match
+              } else if (cityLower.startsWith(searchLower)) {
+                score = 90 // Starts with search query
+              } else if (cityLower.includes(searchLower)) {
+                // Contains search query - calculate position score
+                const position = cityLower.indexOf(searchLower)
+                score = 50 - position // Earlier positions score higher
+              }
+              
+              if (score > 0) {
+                scoredCities.push({ city, state: state || 'France', score })
+              }
             }
           })
         }
+        
+        // Sort cities by score and add top results
+        scoredCities.sort((a, b) => b.score - a.score)
+        scoredCities.slice(0, 3).forEach(({ city, state }) => {
+          allSuggestions.push({
+            type: 'city',
+            name: city,
+            description: state,
+            icon: MapPin,
+            route: `/region/${encodeURIComponent(city)}`
+          })
+        })
         
         // Add regions
         if (backendResult.data.regions && backendResult.data.regions.length > 0) {
