@@ -20,6 +20,7 @@ const RegionMap = forwardRef<RegionMapRef, RegionMapProps>(({ centerLat, centerL
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
   const markersRef = useRef<Map<string, maplibregl.Marker>>(new Map());
+  const currentPopupRef = useRef<maplibregl.Popup | null>(null);
 
   // Expose methods to parent via ref
   useImperativeHandle(ref, () => ({
@@ -187,6 +188,23 @@ const RegionMap = forwardRef<RegionMapRef, RegionMapProps>(({ centerLat, centerL
             .setLngLat([domain.longitude, domain.latitude])
             .setPopup(popup)
             .addTo(map.current);
+
+          // Add click event to close other popups when this one opens
+          el.addEventListener('click', () => {
+            // Close current popup if it exists and is different from this one
+            if (currentPopupRef.current && currentPopupRef.current !== popup) {
+              currentPopupRef.current.remove();
+            }
+            // Set this popup as the current one
+            currentPopupRef.current = popup;
+          });
+
+          // Clean up reference when popup is closed
+          popup.on('close', () => {
+            if (currentPopupRef.current === popup) {
+              currentPopupRef.current = null;
+            }
+          });
 
           if (domain.domainId) {
             markersRef.current.set(domain.domainId, marker);
