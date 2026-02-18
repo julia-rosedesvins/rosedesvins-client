@@ -104,12 +104,15 @@ const HeroSection = () => {
                 // Add domains
                 if (backendResult.data.domains && backendResult.data.domains.length > 0) {
                     backendResult.data.domains.slice(0, 2).forEach(domain => {
+                        const route = domain.location?.region 
+                            ? `/region/${encodeURIComponent(domain.location.region)}`
+                            : '/regions'
                         allSuggestions.push({
                             type: 'domain',
                             name: domain.domainName,
                             description: domain.location?.city || '',
                             icon: Building2,
-                            route: backendResult.data.suggestedRoute || `/region/${encodeURIComponent(domain.location?.region || '')}`
+                            route: route
                         })
                     })
                 }
@@ -117,12 +120,15 @@ const HeroSection = () => {
                 // Add services
                 if (backendResult.data.services && backendResult.data.services.length > 0) {
                     backendResult.data.services.slice(0, 2).forEach(service => {
+                        const route = service.domain?.domainId 
+                            ? `/experience/${service.domain.domainId}`
+                            : '/experiences'
                         allSuggestions.push({
                             type: 'service',
                             name: service.serviceName,
                             description: `${service.domain.domainName} - ${service.pricePerPerson}€`,
                             icon: Wine,
-                            route: backendResult.data.suggestedRoute || `/experience/${service.domain.domainName}/${service.domain.domainId}`
+                            route: route
                         })
                     })
                 }
@@ -130,12 +136,13 @@ const HeroSection = () => {
                 // Add static experiences
                 if (backendResult.data.staticExperiences && backendResult.data.staticExperiences.length > 0) {
                     backendResult.data.staticExperiences.slice(0, 1).forEach(exp => {
+                        const route = exp.website || '#'
                         allSuggestions.push({
                             type: 'experience',
                             name: exp.name,
                             description: exp.category || '',
                             icon: Wine,
-                            route: backendResult.data.suggestedRoute || '#'
+                            route: route
                         })
                     })
                 }
@@ -205,34 +212,29 @@ const HeroSection = () => {
         setSearchQuery(suggestion.name)
         setShowSuggestions(false)
         
-        // If it's a city result, perform search with city name and navigate
-        if (suggestion.type === 'city') {
-            try {
-                setIsSearching(true)
-                const startTime = Date.now()
-                const result = await regionService.unifiedSearch(suggestion.name)
+        // Perform search with the full suggestion name to get proper routing
+        try {
+            setIsSearching(true)
+            const startTime = Date.now()
+            const result = await regionService.unifiedSearch(suggestion.name)
 
-                // Ensure minimum loading time of 800ms for better UX
-                const elapsed = Date.now() - startTime
-                const minLoadingTime = 800
-                if (elapsed < minLoadingTime) {
-                    await new Promise(resolve => setTimeout(resolve, minLoadingTime - elapsed))
-                }
-
-                if (result.data.suggestedRoute) {
-                    router.push(result.data.suggestedRoute)
-                } else {
-                    router.push(`/no-results?q=${encodeURIComponent(suggestion.name)}`)
-                }
-            } catch (error: any) {
-                console.error("Search error:", error)
-                toast.error("Erreur lors de la recherche")
-            } finally {
-                setIsSearching(false)
+            // Ensure minimum loading time of 800ms for better UX
+            const elapsed = Date.now() - startTime
+            const minLoadingTime = 800
+            if (elapsed < minLoadingTime) {
+                await new Promise(resolve => setTimeout(resolve, minLoadingTime - elapsed))
             }
-        } else {
-            // For other types (region, domain, service, experience), navigate directly
-            router.push(suggestion.route)
+
+            if (result.data.suggestedRoute) {
+                router.push(result.data.suggestedRoute)
+            } else {
+                router.push(`/no-results?q=${encodeURIComponent(suggestion.name)}`)
+            }
+        } catch (error: any) {
+            console.error("Search error:", error)
+            toast.error("Erreur lors de la recherche")
+        } finally {
+            setIsSearching(false)
         }
     }
 
