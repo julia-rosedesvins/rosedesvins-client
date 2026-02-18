@@ -129,25 +129,25 @@ const RegionMap = forwardRef<RegionMapRef, RegionMapProps>(({ centerLat, centerL
 
         // Create popup HTML
         const popupHTML = `
-          <div class="bg-white" style="width: 300px; max-width: 85vw;">
+          <div class="bg-white" style="width: 100%; max-width: 100%; box-sizing: border-box;">
             ${domain.domainProfilePictureUrl ? `
               <div class="relative w-full" style="height: 112px; overflow: hidden;">
                 <img
                   src="${domain.domainProfilePictureUrl}"
                   alt="${domain.domainName}"
-                  style="width: 100%; height: 100%; object-fit: cover;"
+                  style="width: 100%; height: 100%; object-fit: cover; display: block;"
                 />
               </div>
             ` : ''}
             
-            <div style="padding: 10px 12px; display: flex; flex-direction: column; gap: 8px;">
+            <div style="padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; box-sizing: border-box;">
               ${domain.category ? `
-                <span style="display: inline-block; padding: 2px 8px; font-size: 10px; font-weight: 600; color: #3A7E53; background: rgba(58, 126, 83, 0.1); border-radius: 6px; text-transform: uppercase; letter-spacing: 0.05em; width: fit-content;">
+                <span style="display: inline-block; padding: 2px 8px; font-size: 10px; font-weight: 600; color: #3A7E53; background: rgba(58, 126, 83, 0.1); border-radius: 6px; text-transform: uppercase; letter-spacing: 0.05em; width: fit-content; box-sizing: border-box;">
                   ${domain.category}
                 </span>
               ` : ''}
               
-              <h3 style="font-size: 14px; font-weight: 700; color: #111827; line-height: 1.25; margin: 0;">
+              <h3 style="font-size: 14px; font-weight: 700; color: #111827; line-height: 1.25; margin: 0; word-wrap: break-word; overflow-wrap: break-word;">
                 ${domain.domainName}
               </h3>
               
@@ -163,7 +163,7 @@ const RegionMap = forwardRef<RegionMapRef, RegionMapProps>(({ centerLat, centerL
                 href="${domain.producer === 'client' ? `/experience/${domain.domainId}` : domain.siteUrl || '#'}"
                 target="${domain.producer === 'non-client' ? '_blank' : '_self'}"
                 ${domain.producer === 'non-client' ? 'rel="noopener noreferrer"' : ''}
-                style="display: block; width: 100%; padding: 8px 12px; font-size: 12px; font-weight: 600; color: white; background: #3A7E53; border-radius: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); text-align: center; text-decoration: none; transition: background-color 0.2s;"
+                style="display: block; width: 100%; padding: 8px 12px; font-size: 12px; font-weight: 600; color: white; background: #3A7E53; border-radius: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); text-align: center; text-decoration: none; transition: background-color 0.2s; box-sizing: border-box; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"
                 onmouseover="this.style.background='#2d6340'"
                 onmouseout="this.style.background='#3A7E53'"
               >
@@ -237,6 +237,9 @@ const RegionMap = forwardRef<RegionMapRef, RegionMapProps>(({ centerLat, centerL
           border-radius: 12px;
           box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
           overflow: hidden;
+          width: 300px;
+          max-width: 85vw;
+          box-sizing: border-box;
         }
         
         .custom-maplibre-popup .maplibregl-popup-close-button {
@@ -254,6 +257,7 @@ const RegionMap = forwardRef<RegionMapRef, RegionMapProps>(({ centerLat, centerL
           justify-content: center;
           right: 6px;
           top: 6px;
+          z-index: 10;
         }
         
         .custom-maplibre-popup .maplibregl-popup-close-button:hover {
@@ -268,7 +272,7 @@ const RegionMap = forwardRef<RegionMapRef, RegionMapProps>(({ centerLat, centerL
         
         @media (max-width: 768px) {
           .custom-maplibre-popup .maplibregl-popup-content {
-            width: 225px !important;
+            width: 240px !important;
             max-width: 85vw !important;
           }
         }
