@@ -57,6 +57,27 @@ export default function AdminScrapedExperiencesPage() {
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('');
   const limit = 10;
 
+  // Day name mapping
+  const dayMapping: Record<string, string> = {
+    'Lundi': 'Monday',
+    'Mardi': 'Tuesday',
+    'Mercredi': 'Wednesday',
+    'Jeudi': 'Thursday',
+    'Vendredi': 'Friday',
+    'Samedi': 'Saturday',
+    'Dimanche': 'Sunday'
+  };
+  
+  const reverseDayMapping: Record<string, string> = {
+    'Monday': 'Lundi',
+    'Tuesday': 'Mardi',
+    'Wednesday': 'Mercredi',
+    'Thursday': 'Jeudi',
+    'Friday': 'Vendredi',
+    'Saturday': 'Samedi',
+    'Sunday': 'Dimanche'
+  };
+
   // Modals
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -78,6 +99,7 @@ export default function AdminScrapedExperiencesPage() {
     reviews: 0,
     website: '',
     phone: '',
+    opening_hours: {},
     about: '',
     url: ''
   });
@@ -156,8 +178,25 @@ export default function AdminScrapedExperiencesPage() {
   const handleCreate = async () => {
     try {
       setCreating(true);
+      
+      // Convert French day names to English before sending to backend
+      const convertedOpeningHours: Record<string, string[]> = {};
+      if (formData.opening_hours) {
+        Object.entries(formData.opening_hours).forEach(([frenchDay, hours]) => {
+          const englishDay = dayMapping[frenchDay] || frenchDay;
+          if (hours && hours.length > 0) {
+            convertedOpeningHours[englishDay] = hours;
+          }
+        });
+      }
+      
+      const dataToSubmit = {
+        ...formData,
+        opening_hours: Object.keys(convertedOpeningHours).length > 0 ? convertedOpeningHours : undefined
+      };
+      
       // First create the experience
-      const response = await adminStaticExperiencesService.create(formData as CreateStaticExperienceDto);
+      const response = await adminStaticExperiencesService.create(dataToSubmit as CreateStaticExperienceDto);
       
       // If an image file is selected, upload it
       if (selectedFile && response._id) {
@@ -235,8 +274,24 @@ export default function AdminScrapedExperiencesPage() {
         setUploadingImage(false);
       }
 
+      // Convert French day names to English before sending to backend
+      const convertedOpeningHours: Record<string, string[]> = {};
+      if (formData.opening_hours) {
+        Object.entries(formData.opening_hours).forEach(([frenchDay, hours]) => {
+          const englishDay = dayMapping[frenchDay] || frenchDay;
+          if (hours && hours.length > 0) {
+            convertedOpeningHours[englishDay] = hours;
+          }
+        });
+      }
+      
+      const dataToSubmit = {
+        ...formData,
+        opening_hours: Object.keys(convertedOpeningHours).length > 0 ? convertedOpeningHours : undefined
+      };
+
       // Then update the experience
-      await adminStaticExperiencesService.update(selectedExperience._id, formData as UpdateStaticExperienceDto);
+      await adminStaticExperiencesService.update(selectedExperience._id, dataToSubmit as UpdateStaticExperienceDto);
       toast.success('Expérience mise à jour avec succès');
       setIsEditModalOpen(false);
       resetForm();
@@ -267,6 +322,20 @@ export default function AdminScrapedExperiencesPage() {
   const openEditModal = (experience: StaticExperience) => {
     setSelectedExperience(experience);
     
+    console.log('Opening edit modal with experience:', experience);
+    console.log('Opening hours from experience:', experience.opening_hours);
+    
+    // Convert English day names to French for the form
+    const convertedOpeningHours: Record<string, string[]> = {};
+    if (experience.opening_hours) {
+      Object.entries(experience.opening_hours).forEach(([englishDay, hours]) => {
+        const frenchDay = reverseDayMapping[englishDay] || englishDay;
+        convertedOpeningHours[frenchDay] = hours;
+      });
+    }
+    
+    console.log('Converted opening hours:', convertedOpeningHours);
+    
     // Check if this experience has a category_ref (selected from dropdown)
     const hasRef = !!(experience as any).category_ref;
     setCategoryMode(hasRef ? 'select' : 'manual');
@@ -286,6 +355,7 @@ export default function AdminScrapedExperiencesPage() {
       reviews: experience.reviews || 0,
       website: experience.website || '',
       phone: experience.phone || '',
+      opening_hours: convertedOpeningHours,
       about: experience.about || '',
       url: experience.url || ''
     });
@@ -313,6 +383,7 @@ export default function AdminScrapedExperiencesPage() {
       reviews: 0,
       website: '',
       phone: '',
+      opening_hours: {},
       about: '',
       url: ''
     });
@@ -801,6 +872,36 @@ export default function AdminScrapedExperiencesPage() {
               />
             </div>
             <div className="grid gap-2">
+              <Label>Horaires d'ouverture</Label>
+              <div className="border rounded-lg p-3 space-y-2">
+                {['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'].map((day) => {
+                  const dayHours = formData.opening_hours?.[day];
+                  const displayValue = Array.isArray(dayHours) ? dayHours.join(', ') : '';
+                  
+                  return (
+                    <div key={day} className="flex items-center gap-2">
+                      <Label className="w-24 text-sm">{day}</Label>
+                      <Input
+                        placeholder="ex: 09:00-12:00, 14:00-18:00"
+                        value={displayValue}
+                        onChange={(e) => {
+                          const hours = e.target.value.split(',').map(h => h.trim()).filter(h => h);
+                          setFormData(prev => ({
+                            ...prev,
+                            opening_hours: {
+                              ...prev.opening_hours,
+                              [day]: hours
+                            }
+                          }));
+                        }}
+                        className="flex-1 text-sm"
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="grid gap-2">
               <Label htmlFor="url">URL</Label>
               <Input
                 id="url"
@@ -1056,6 +1157,36 @@ export default function AdminScrapedExperiencesPage() {
                 value={formData.phone}
                 onChange={handleInputChange}
               />
+            </div>
+            <div className="grid gap-2">
+              <Label>Horaires d'ouverture</Label>
+              <div className="border rounded-lg p-3 space-y-2">
+                {['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'].map((day) => {
+                  const dayHours = formData.opening_hours?.[day];
+                  const displayValue = Array.isArray(dayHours) ? dayHours.join(', ') : '';
+                  
+                  return (
+                    <div key={day} className="flex items-center gap-2">
+                      <Label className="w-24 text-sm">{day}</Label>
+                      <Input
+                        placeholder="ex: 09:00-12:00, 14:00-18:00"
+                        value={displayValue}
+                        onChange={(e) => {
+                          const hours = e.target.value.split(',').map(h => h.trim()).filter(h => h);
+                          setFormData(prev => ({
+                            ...prev,
+                            opening_hours: {
+                              ...prev.opening_hours,
+                              [day]: hours
+                            }
+                          }));
+                        }}
+                        className="flex-1 text-sm"
+                      />
+                    </div>
+                  );
+                })}
+              </div>
             </div>
             <div className="grid gap-2">
               <Label htmlFor="edit-url">URL</Label>
