@@ -66,6 +66,8 @@ export default function AdminScrapedExperiencesPage() {
   // Form state
   const [formData, setFormData] = useState<CreateStaticExperienceDto | UpdateStaticExperienceDto>({
     name: '',
+    domain_name: '',
+    domain_description: '',
     category: '',
     category_ref: undefined,
     address: '',
@@ -82,6 +84,8 @@ export default function AdminScrapedExperiencesPage() {
 
   // File upload
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedDomainProfilePicFile, setSelectedDomainProfilePicFile] = useState<File | null>(null);
+  const [selectedDomainLogoFile, setSelectedDomainLogoFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -163,6 +167,22 @@ export default function AdminScrapedExperiencesPage() {
           toast.error('Expérience créée mais erreur lors du téléchargement de l\'image');
         }
       }
+
+      if (selectedDomainProfilePicFile && response._id) {
+        try {
+          await adminStaticExperiencesService.uploadDomainProfilePic(response._id, selectedDomainProfilePicFile);
+        } catch (error: any) {
+          toast.error('Expérience créée mais erreur lors du téléchargement de la photo de profil du domaine');
+        }
+      }
+
+      if (selectedDomainLogoFile && response._id) {
+        try {
+          await adminStaticExperiencesService.uploadDomainLogo(response._id, selectedDomainLogoFile);
+        } catch (error: any) {
+          toast.error('Expérience créée mais erreur lors du téléchargement du logo du domaine');
+        }
+      }
       
       toast.success('Expérience créée avec succès');
       setIsCreateModalOpen(false);
@@ -185,6 +205,30 @@ export default function AdminScrapedExperiencesPage() {
           await adminStaticExperiencesService.uploadMainImage(selectedExperience._id, selectedFile);
         } catch (error) {
           toast.error('Erreur lors du téléchargement de l\'image');
+          setUploadingImage(false);
+          return;
+        }
+        setUploadingImage(false);
+      }
+
+      if (selectedDomainProfilePicFile) {
+        setUploadingImage(true);
+        try {
+          await adminStaticExperiencesService.uploadDomainProfilePic(selectedExperience._id, selectedDomainProfilePicFile);
+        } catch (error) {
+          toast.error('Erreur lors du téléchargement de la photo de profil du domaine');
+          setUploadingImage(false);
+          return;
+        }
+        setUploadingImage(false);
+      }
+
+      if (selectedDomainLogoFile) {
+        setUploadingImage(true);
+        try {
+          await adminStaticExperiencesService.uploadDomainLogo(selectedExperience._id, selectedDomainLogoFile);
+        } catch (error) {
+          toast.error('Erreur lors du téléchargement du logo du domaine');
           setUploadingImage(false);
           return;
         }
@@ -230,6 +274,8 @@ export default function AdminScrapedExperiencesPage() {
     
     setFormData({
       name: experience.name,
+      domain_name: experience.domain_name || '',
+      domain_description: experience.domain_description || '',
       category: experience.category || '',
       category_ref: (experience as any).category_ref || undefined,
       address: experience.address || '',
@@ -255,6 +301,8 @@ export default function AdminScrapedExperiencesPage() {
   const resetForm = () => {
     setFormData({
       name: '',
+      domain_name: '',
+      domain_description: '',
       category: '',
       category_ref: undefined,
       address: '',
@@ -269,6 +317,8 @@ export default function AdminScrapedExperiencesPage() {
       url: ''
     });
     setSelectedFile(null);
+    setSelectedDomainProfilePicFile(null);
+    setSelectedDomainLogoFile(null);
     setPreviewUrl(null);
     setSelectedExperience(null);
     setCategoryMode('select');
@@ -285,6 +335,16 @@ export default function AdminScrapedExperiencesPage() {
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  const handleDomainProfilePicFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    setSelectedDomainProfilePicFile(file || null);
+  };
+
+  const handleDomainLogoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    setSelectedDomainLogoFile(file || null);
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -537,7 +597,7 @@ export default function AdminScrapedExperiencesPage() {
                         size="sm"
                         onClick={() => setPage(p => Math.max(1, p - 1))}
                         disabled={page === 1}
-                        className="min-w-[80px] sm:min-w-[100px]"
+                        className="min-w-20 sm:min-w-25"
                       >
                         <ChevronLeft className="w-4 h-4 sm:mr-2" />
                         <span className="hidden sm:inline">Précédent</span>
@@ -551,7 +611,7 @@ export default function AdminScrapedExperiencesPage() {
                         size="sm"
                         onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                         disabled={page === totalPages}
-                        className="min-w-[80px] sm:min-w-[100px]"
+                        className="min-w-20 sm:min-w-25"
                       >
                         <span className="hidden sm:inline">Suivant</span>
                         <span className="sm:hidden">Suiv</span>
@@ -585,6 +645,45 @@ export default function AdminScrapedExperiencesPage() {
                 onChange={handleInputChange}
                 required
               />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="domain_name">Domain Name</Label>
+              <Input
+                id="domain_name"
+                name="domain_name"
+                value={formData.domain_name || ''}
+                onChange={handleInputChange}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="domain_description">Domain Description</Label>
+              <Textarea
+                id="domain_description"
+                name="domain_description"
+                value={formData.domain_description || ''}
+                onChange={handleInputChange}
+                rows={3}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="domain_profile_pic_file">Domain Profile Pic File (S3)</Label>
+                <Input
+                  id="domain_profile_pic_file"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleDomainProfilePicFileChange}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="domain_logo_file">Domain Logo File (S3)</Label>
+                <Input
+                  id="domain_logo_file"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleDomainLogoFileChange}
+                />
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
@@ -775,6 +874,73 @@ export default function AdminScrapedExperiencesPage() {
                 onChange={handleInputChange}
                 required
               />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="edit-domain_name">Domain Name</Label>
+              <Input
+                id="edit-domain_name"
+                name="domain_name"
+                value={formData.domain_name || ''}
+                onChange={handleInputChange}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="edit-domain_description">Domain Description</Label>
+              <Textarea
+                id="edit-domain_description"
+                name="domain_description"
+                value={formData.domain_description || ''}
+                onChange={handleInputChange}
+                rows={3}
+              />
+            </div>
+            {selectedExperience && (
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label>Current Domain Profile Pic</Label>
+                  {selectedExperience.domain_profile_pic_url ? (
+                    <img
+                      src={selectedExperience.domain_profile_pic_url}
+                      alt="Domain profile pic"
+                      className="w-24 h-24 object-cover rounded border"
+                    />
+                  ) : (
+                    <p className="text-sm text-gray-500">No image</p>
+                  )}
+                </div>
+                <div className="grid gap-2">
+                  <Label>Current Domain Logo</Label>
+                  {selectedExperience.domain_logo_url ? (
+                    <img
+                      src={selectedExperience.domain_logo_url}
+                      alt="Domain logo"
+                      className="w-24 h-24 object-cover rounded border"
+                    />
+                  ) : (
+                    <p className="text-sm text-gray-500">No image</p>
+                  )}
+                </div>
+              </div>
+            )}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="edit-domain_profile_pic_file">Domain Profile Pic File (S3)</Label>
+                <Input
+                  id="edit-domain_profile_pic_file"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleDomainProfilePicFileChange}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="edit-domain_logo_file">Domain Logo File (S3)</Label>
+                <Input
+                  id="edit-domain_logo_file"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleDomainLogoFileChange}
+                />
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">

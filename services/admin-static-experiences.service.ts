@@ -3,6 +3,10 @@ import { apiClient } from "./admin.service";
 export interface StaticExperience {
   _id: string;
   name: string;
+  domain_name?: string;
+  domain_description?: string;
+  domain_profile_pic_url?: string;
+  domain_logo_url?: string;
   category?: string;
   category_ref?: string;
   address?: string;
@@ -30,6 +34,10 @@ export interface PaginatedStaticExperiences {
 
 export interface CreateStaticExperienceDto {
   name: string;
+  domain_name?: string;
+  domain_description?: string;
+  domain_profile_pic_url?: string;
+  domain_logo_url?: string;
   category?: string;
   category_ref?: string;
   address?: string;
@@ -47,6 +55,10 @@ export interface CreateStaticExperienceDto {
 
 export interface UpdateStaticExperienceDto {
   name?: string;
+  domain_name?: string;
+  domain_description?: string;
+  domain_profile_pic_url?: string;
+  domain_logo_url?: string;
   category?: string;
   category_ref?: string;
   address?: string;
@@ -141,6 +153,48 @@ class AdminStaticExperiencesService {
       await apiClient.delete(`/static-experiences/admin/${id}/image`);
     } catch (error: any) {
       console.error('Error deleting main image:', error);
+      throw error;
+    }
+  }
+
+  async uploadDomainProfilePic(id: string, file: File): Promise<string> {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await apiClient.post<{ imageUrl: string }>(
+        `/static-experiences/admin/${id}/domain-profile-pic`,
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        }
+      );
+      return response.data.imageUrl;
+    } catch (error: any) {
+      console.error('Error uploading domain profile picture:', error);
+      throw error;
+    }
+  }
+
+  async uploadDomainLogo(id: string, file: File): Promise<string> {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await apiClient.post<{ imageUrl: string }>(
+        `/static-experiences/admin/${id}/domain-logo`,
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        }
+      );
+      return response.data.imageUrl;
+    } catch (error: any) {
+      console.error('Error uploading domain logo:', error);
       throw error;
     }
   }

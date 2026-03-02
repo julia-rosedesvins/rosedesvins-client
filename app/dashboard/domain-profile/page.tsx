@@ -63,6 +63,13 @@ interface EnhancedDomainService extends DomainService {
 }
 
 export default function UserDomainProfile() {
+    const resolveImageUrl = (url?: string | null): string => {
+        if (!url) return '';
+        if (url.startsWith('http://') || url.startsWith('https://')) return url;
+        const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5001';
+        return `${baseUrl}${url.startsWith('/') ? '' : '/'}${url}`;
+    };
+
     const [isAddServiceModalOpen, setIsAddServiceModalOpen] = useState(false);
     const [selectedPrestation, setSelectedPrestation] = useState<string | null>(null);
     const [isEditServiceModalOpen, setIsEditServiceModalOpen] = useState(false);
@@ -208,12 +215,11 @@ export default function UserDomainProfile() {
                 });
 
                 // Set existing image previews if available
-                const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || '';
                 if (profileResponse.data.domainProfilePictureUrl) {
-                    setProfilePicturePreview(`${baseUrl}${profileResponse.data.domainProfilePictureUrl}`);
+                    setProfilePicturePreview(resolveImageUrl(profileResponse.data.domainProfilePictureUrl));
                 }
                 if (profileResponse.data.domainLogoUrl) {
-                    setLogoPreview(`${baseUrl}${profileResponse.data.domainLogoUrl}`);
+                    setLogoPreview(resolveImageUrl(profileResponse.data.domainLogoUrl));
                 }
             }
 
@@ -324,12 +330,11 @@ export default function UserDomainProfile() {
                 setDomainLogo(null);
 
                 // Update previews with new URLs if uploaded
-                const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || '';
                 if (response.data.domainProfile.domainProfilePictureUrl) {
-                    setProfilePicturePreview(`${baseUrl}${response.data.domainProfile.domainProfilePictureUrl}`);
+                    setProfilePicturePreview(resolveImageUrl(response.data.domainProfile.domainProfilePictureUrl));
                 }
                 if (response.data.domainProfile.domainLogoUrl) {
-                    setLogoPreview(`${baseUrl}${response.data.domainProfile.domainLogoUrl}`);
+                    setLogoPreview(resolveImageUrl(response.data.domainProfile.domainLogoUrl));
                 }
 
                 // Clear HTML file inputs
@@ -949,7 +954,7 @@ export default function UserDomainProfile() {
                                             {(profilePicturePreview || (domainProfile?.domainProfilePictureUrl && !domainProfilePicture)) ? (
                                                 <div className="relative">
                                                     <img
-                                                        src={profilePicturePreview || `http://localhost:5001${domainProfile?.domainProfilePictureUrl}`}
+                                                        src={profilePicturePreview || resolveImageUrl(domainProfile?.domainProfilePictureUrl)}
                                                         alt="Profile preview"
                                                         className="w-32 h-32 object-cover rounded-lg mx-auto mb-2"
                                                     />
@@ -1007,7 +1012,7 @@ export default function UserDomainProfile() {
                                             {(logoPreview || (domainProfile?.domainLogoUrl && !domainLogo)) ? (
                                                 <div className="relative">
                                                     <img
-                                                        src={logoPreview || `http://localhost:5001${domainProfile?.domainLogoUrl}`}
+                                                        src={logoPreview || resolveImageUrl(domainProfile?.domainLogoUrl)}
                                                         alt="Logo preview"
                                                         className="w-32 h-32 object-cover rounded-lg mx-auto mb-2"
                                                     />
@@ -1075,7 +1080,7 @@ export default function UserDomainProfile() {
                                             <div className="flex-1 relative">
                                                 <Label htmlFor="color-picker" className="text-sm font-medium">Code couleur</Label>
                                                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-2 mt-1">
-                                                    <div className="relative flex-shrink-0 order-2 sm:order-1">
+                                                    <div className="relative shrink-0 order-2 sm:order-1">
                                                         <input
                                                             type="color"
                                                             value={formData.domainColor}
@@ -1235,7 +1240,7 @@ export default function UserDomainProfile() {
                                                                         value={prestation.bookingRestrictionTime}
                                                                         onValueChange={(value) => handleBookingRestrictionTimeChange(prestation.id, value)}
                                                                     >
-                                                                        <SelectTrigger className="w-[180px]">
+                                                                        <SelectTrigger className="w-45">
                                                                             <SelectValue placeholder="Sélectionner" />
                                                                         </SelectTrigger>
                                                                         <SelectContent>
