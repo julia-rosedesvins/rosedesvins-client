@@ -27,9 +27,15 @@ const ExperienceDomain = ({ params }: { params: Promise<{ name: string; domain: 
         const fetchDomainProfile = async () => {
             try {
                 setLoading(true);
-                const response = await domainProfileService.getPublicDomainProfile(unwrappedParams.domain);
-                setDomainProfile(response.data.domainProfile);
-                setLocation(response.data.location);
+                try {
+                    const response = await domainProfileService.getPublicDomainProfile(unwrappedParams.domain);
+                    setDomainProfile(response.data.domainProfile);
+                    setLocation(response.data.location);
+                } catch {
+                    const staticResponse = await domainProfileService.getPublicStaticExperience(unwrappedParams.domain);
+                    setDomainProfile(staticResponse.data.domainProfile);
+                    setLocation(staticResponse.data.location);
+                }
             } catch (error: any) {
                 console.error('Error fetching domain profile:', error);
             } finally {
@@ -74,7 +80,7 @@ const ExperienceDomain = ({ params }: { params: Promise<{ name: string; domain: 
         <LandingPageLayout>
             {/* Hero Section */}
             <section
-                className="relative bg-cover bg-center text-white min-h-[400px]"
+                className="relative bg-cover bg-center text-white min-h-100"
                 style={{
                     backgroundImage: domainProfile.domainProfilePictureUrl 
                         ? `linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.3)), url(${domainProfile.domainProfilePictureUrl})`
@@ -138,6 +144,88 @@ const ExperienceDomain = ({ params }: { params: Promise<{ name: string; domain: 
                         <p className="text-gray-700 leading-relaxed">
                             {domainProfile.domainDescription}
                         </p>
+                    </section>
+                )}
+
+                {/* Static Experience Card - Shows when it's a non-client domain */}
+                {domainProfile.producer === 'non-client' && (
+                    <section className="mb-12">
+                        <h2 className="text-2xl font-bold text-gray-800 mb-8">Visiter le domaine</h2>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {domainProfile.siteWeb ? (
+                                <a 
+                                    href={domainProfile.siteWeb}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="bg-white rounded-lg shadow-sm border overflow-hidden flex flex-col hover:shadow-lg transition-shadow"
+                                >
+                                    {domainProfile.mainImage && (
+                                        <img
+                                            src={domainProfile.mainImage}
+                                            alt={domainProfile.domainName || 'Domain'}
+                                            className="w-full h-48 object-cover"
+                                        />
+                                    )}
+                                    <div className="p-5 flex flex-col flex-1">
+                                        {domainProfile.domainName && (
+                                            <h3 className="text-lg font-bold text-primary mb-3">
+                                                {domainProfile.domainName}
+                                            </h3>
+                                        )}
+
+                                        {location?.city && (
+                                            <div className="flex items-center text-sm text-gray-600 mb-3">
+                                                <MapPin className="w-4 h-4 mr-1 text-primary" />
+                                                <span>{location.city}</span>
+                                            </div>
+                                        )}
+
+                                        {domainProfile.domainDescription && (
+                                            <p className="text-gray-700 text-sm leading-relaxed mb-4 flex-1">
+                                                {domainProfile.domainDescription}
+                                            </p>
+                                        )}
+
+                                        <Button 
+                                            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
+                                            asChild
+                                        >
+                                            <span>Visiter le site web</span>
+                                        </Button>
+                                    </div>
+                                </a>
+                            ) : (
+                                <div className="bg-white rounded-lg shadow-sm border overflow-hidden flex flex-col">
+                                    {domainProfile.mainImage && (
+                                        <img
+                                            src={domainProfile.mainImage}
+                                            alt={domainProfile.domainName || 'Domain'}
+                                            className="w-full h-48 object-cover"
+                                        />
+                                    )}
+                                    <div className="p-5 flex flex-col flex-1">
+                                        {domainProfile.domainName && (
+                                            <h3 className="text-lg font-bold text-primary mb-3">
+                                                {domainProfile.domainName}
+                                            </h3>
+                                        )}
+
+                                        {location?.city && (
+                                            <div className="flex items-center text-sm text-gray-600 mb-3">
+                                                <MapPin className="w-4 h-4 mr-1 text-primary" />
+                                                <span>{location.city}</span>
+                                            </div>
+                                        )}
+
+                                        {domainProfile.domainDescription && (
+                                            <p className="text-gray-700 text-sm leading-relaxed mb-4 flex-1">
+                                                {domainProfile.domainDescription}
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                     </section>
                 )}
 

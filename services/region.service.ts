@@ -20,6 +20,7 @@ export interface Domain {
   domainName: string;
   domainDescription: string;
   domainProfilePictureUrl: string | null;
+  mainImage?: string | null;
   producer: 'client' | 'non-client';
   domainPrice: number | null;
   siteUrl: string | null;

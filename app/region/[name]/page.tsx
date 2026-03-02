@@ -561,34 +561,11 @@ const LoireValley = ({ params }: { params: Promise<{ name: string }> }) => {
                     ) : (
                         <div className="space-y-4">
                             {filteredListDomains.map((domain, index) => {
-                                const CardWrapper = domain.producer === 'non-client' && domain.siteUrl
-                                    ? ({ children }: { children: React.ReactNode }) => (
-                                        <a
-                                            href={domain.siteUrl!}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="block hover:shadow-lg transition-shadow cursor-pointer"
-                                        >
-                                            {children}
-                                        </a>
-                                    )
-                                    : domain.producer === 'client'
-                                    ? ({ children }: { children: React.ReactNode }) => (
-                                        <Link href={`/experience/${region?.denom}/${domain.domainId}`} className="block hover:shadow-lg transition-shadow cursor-pointer">
-                                            {children}
-                                        </Link>
-                                    )
-                                    : ({ children }: { children: React.ReactNode }) => (
-                                        <div className="block hover:shadow-lg transition-shadow">
-                                            {children}
-                                        </div>
-                                    );
-
                                 return (
                                     <div key={index} className="bg-background rounded-lg shadow-sm overflow-hidden">
-                                        {domain.domainProfilePictureUrl && (
+                                        {(domain.mainImage || domain.domainProfilePictureUrl) && (
                                             <img
-                                                src={domain.domainProfilePictureUrl}
+                                                src={domain.mainImage || domain.domainProfilePictureUrl || ''}
                                                 alt={domain.domainName}
                                                 className="w-full h-40 object-cover"
                                             />
@@ -598,30 +575,16 @@ const LoireValley = ({ params }: { params: Promise<{ name: string }> }) => {
                                                 <h3 className="text-lg font-bold text-primary">
                                                     {domain.domainName}
                                                 </h3>
-                                                {domain.producer === 'client' ? (
+                                                {domain.domainId && (
                                                     <Link href={`/experience/${region?.denom}/${domain.domainId}`}>
-                                                        <Button
-                                                            size="sm"
-                                                            className="bg-primary hover:bg-primary/90 text-white shrink-0"
-                                                        >
-                                                            Réserver
-                                                        </Button>
-                                                    </Link>
-                                                ) : domain.producer === 'non-client' && domain.siteUrl ? (
-                                                    <a
-                                                        href={domain.siteUrl}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        onClick={(e) => e.stopPropagation()}
-                                                    >
                                                         <Button
                                                             size="sm"
                                                             className="bg-primary hover:bg-primary/90 text-white shrink-0"
                                                         >
                                                             Voir le site
                                                         </Button>
-                                                    </a>
-                                                ) : null}
+                                                    </Link>
+                                                )}
                                             </div>
                                             {domain.category && (
                                                 <p className="text-muted-foreground text-sm mb-2">{domain.category}</p>
