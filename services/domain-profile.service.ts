@@ -31,6 +31,8 @@ export interface DomainProfile {
   services: Service[];
   domainName: string;
   siteWeb: string | null;
+  phone?: string | null;
+  openingHours?: Record<string, string[]> | null;
   createdAt: string;
   updatedAt: string;
   producer?: string;

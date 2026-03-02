@@ -186,6 +186,20 @@ const ExperienceDomain = ({ params }: { params: Promise<{ name: string; domain: 
                                             </p>
                                         )}
 
+                                        {domainProfile.openingHours && Object.keys(domainProfile.openingHours).length > 0 && (
+                                            <div className="mb-4">
+                                                <h4 className="text-sm font-semibold text-gray-800 mb-2">Horaires d'ouverture</h4>
+                                                <div className="space-y-1 text-xs text-gray-600">
+                                                    {Object.entries(domainProfile.openingHours).map(([day, hours]) => (
+                                                        <div key={day} className="flex justify-between">
+                                                            <span className="font-medium capitalize">{day}</span>
+                                                            <span>{Array.isArray(hours) ? hours.join(', ') : hours}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+
                                         <Button 
                                             className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
                                             asChild
@@ -221,6 +235,20 @@ const ExperienceDomain = ({ params }: { params: Promise<{ name: string; domain: 
                                             <p className="text-gray-700 text-sm leading-relaxed mb-4 flex-1">
                                                 {domainProfile.domainDescription}
                                             </p>
+                                        )}
+
+                                        {domainProfile.openingHours && Object.keys(domainProfile.openingHours).length > 0 && (
+                                            <div className="mb-4">
+                                                <h4 className="text-sm font-semibold text-gray-800 mb-2">Horaires d'ouverture</h4>
+                                                <div className="space-y-1 text-xs text-gray-600">
+                                                    {Object.entries(domainProfile.openingHours).map(([day, hours]) => (
+                                                        <div key={day} className="flex justify-between">
+                                                            <span className="font-medium capitalize">{day}</span>
+                                                            <span>{Array.isArray(hours) ? hours.join(', ') : hours}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
                                         )}
                                     </div>
                                 </div>
