@@ -582,7 +582,7 @@ const LoireValley = ({ params }: { params: Promise<{ name: string }> }) => {
                                                             size="sm"
                                                             className="bg-primary hover:bg-primary/90 text-white shrink-0"
                                                         >
-                                                            Voir le site
+                                                            Voir le profil
                                                         </Button>
                                                     </Link>
                                                 )}
