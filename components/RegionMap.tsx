@@ -10,17 +10,19 @@ interface RegionMapProps {
   centerLon: number;
   domains: Domain[];
   onMapLoad?: () => void;
+  userLocation?: { lat: number; lon: number } | null;
 }
 
 export interface RegionMapRef {
   focusOnDomain: (domainId: string) => void;
 }
 
-const RegionMap = forwardRef<RegionMapRef, RegionMapProps>(({ centerLat, centerLon, domains, onMapLoad }, ref) => {
+const RegionMap = forwardRef<RegionMapRef, RegionMapProps>(({ centerLat, centerLon, domains, onMapLoad, userLocation }, ref) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
   const markersRef = useRef<Map<string, maplibregl.Marker>>(new Map());
   const currentPopupRef = useRef<maplibregl.Popup | null>(null);
+  const userMarkerRef = useRef<maplibregl.Marker | null>(null);
 
   // Expose methods to parent via ref
   useImperativeHandle(ref, () => ({
@@ -97,6 +99,12 @@ const RegionMap = forwardRef<RegionMapRef, RegionMapProps>(({ centerLat, centerL
       // Clear existing markers
       markersRef.current.forEach(marker => marker.remove());
       markersRef.current.clear();
+
+      // Clear user marker if it exists
+      if (userMarkerRef.current) {
+        userMarkerRef.current.remove();
+        userMarkerRef.current = null;
+      }
 
       const validDomains = domains.filter(d => d.latitude && d.longitude);
 
@@ -211,6 +219,25 @@ const RegionMap = forwardRef<RegionMapRef, RegionMapProps>(({ centerLat, centerL
           }
         });
 
+        // Add user location marker if available
+        if (userLocation && map.current) {
+          const userEl = document.createElement('div');
+          userEl.className = 'user-marker';
+          userEl.style.width = '24px';
+          userEl.style.height = '24px';
+          userEl.style.background = '#3B82F6';
+          userEl.style.border = '3px solid #ffffff';
+          userEl.style.borderRadius = '50%';
+          userEl.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.3)';
+          userEl.style.cursor = 'default';
+
+          const userMarker = new maplibregl.Marker({ element: userEl, anchor: 'center' })
+            .setLngLat([userLocation.lon, userLocation.lat])
+            .addTo(map.current);
+
+          userMarkerRef.current = userMarker;
+        }
+
         // Fit bounds to show all markers
         if (!map.current) return;
         const bounds = new maplibregl.LngLatBounds();
@@ -219,6 +246,11 @@ const RegionMap = forwardRef<RegionMapRef, RegionMapProps>(({ centerLat, centerL
             bounds.extend([domain.longitude, domain.latitude]);
           }
         });
+
+        // Include user location in bounds if available
+        if (userLocation) {
+          bounds.extend([userLocation.lon, userLocation.lat]);
+        }
 
         map.current.fitBounds(bounds, {
           padding: 50,
@@ -245,7 +277,7 @@ const RegionMap = forwardRef<RegionMapRef, RegionMapProps>(({ centerLat, centerL
     } else {
       map.current.once('load', addMarkers);
     }
-  }, [domains, centerLat, centerLon, onMapLoad]);
+  }, [domains, centerLat, centerLon, onMapLoad, userLocation]);
 
   return (
     <>

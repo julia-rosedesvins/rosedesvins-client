@@ -531,6 +531,7 @@ const LoireValley = ({ params }: { params: Promise<{ name: string }> }) => {
                             centerLon={userLocation?.lon || (region.min_lon + region.max_lon) / 2}
                             domains={isAroundMeActive ? filteredMapDomains : allMapDomains}
                             onMapLoad={() => setIsMapLoaded(true)}
+                            userLocation={userLocation}
                         />
                     )}
                 </div>
