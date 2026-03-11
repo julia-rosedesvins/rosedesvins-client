@@ -113,7 +113,9 @@ function ReservationContent({ id, serviceId }: { id: string, serviceId: string }
 
                         {/* Languages */}
                         <div className="flex flex-wrap items-center justify-center gap-4 md:gap-8 mb-8 md:mb-10">
-                            {widgetData?.service?.languagesOffered?.map((language, index) => (
+                            {widgetData?.service?.languagesOffered?.filter((language) => 
+                                language.toLowerCase() !== 'autre' && language.toLowerCase() !== 'other'
+                            ).map((language, index) => (
                                 <div key={index} className="flex items-center gap-2 md:gap-3">
                                     <span className="text-2xl md:text-4xl">
                                         {language.toLowerCase() === 'français' || language.toLowerCase() === 'french' ? '🇫🇷' : 
