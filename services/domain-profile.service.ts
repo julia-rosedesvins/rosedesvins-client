@@ -148,13 +148,16 @@ class DomainProfileService {
    * Get all public services with pagination
    * @param page - Page number (default: 1)
    * @param limit - Items per page (default: 10)
+   * @param categories - Optional array of category IDs to filter by
    * @returns Promise with services list and pagination data
    */
-  async getAllPublicServices(page: number = 1, limit: number = 10): Promise<PublicServicesResponse> {
+  async getAllPublicServices(page: number = 1, limit: number = 10, categories?: string[]): Promise<PublicServicesResponse> {
     try {
-      const response = await apiClient.get<PublicServicesResponse>(
-        `/domain-profile/public/services/all?page=${page}&limit=${limit}`
-      );
+      let url = `/domain-profile/public/services/all?page=${page}&limit=${limit}`;
+      if (categories && categories.length > 0) {
+        url += `&categories=${categories.join(',')}`;
+      }
+      const response = await apiClient.get<PublicServicesResponse>(url);
       return response.data;
     } catch (error) {
       if (axios.isAxiosError(error) && error.response) {

@@ -5,8 +5,11 @@ import { useSearchParams } from "next/navigation";
 import LandingPageLayout from "@/components/LandingPageLayout";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ChevronDown } from "lucide-react";
 import Link from "next/link";
 import { domainProfileService, PublicService } from "@/services/domain-profile.service";
+import { adminExperienceCategoriesService, ExperienceCategory } from "@/services/admin-experience-categories.service";
 
 function ExperiencesContent() {
   const searchParams = useSearchParams();
@@ -20,11 +23,33 @@ function ExperiencesContent() {
   const [hasMore, setHasMore] = useState(false);
   const limit = 12;
 
+  // Filter states
+  const [expandedFilter, setExpandedFilter] = useState<string | null>(null);
+  const [selectedExperiences, setSelectedExperiences] = useState<string[]>([]);
+  const [experienceCategories, setExperienceCategories] = useState<ExperienceCategory[]>([]);
+
+  // Fetch experience categories on mount
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const activeCategories = await adminExperienceCategoriesService.getActiveCategories();
+        setExperienceCategories(activeCategories);
+      } catch (error) {
+        console.error('Error fetching categories:', error);
+      }
+    };
+    fetchCategories();
+  }, []);
+
   useEffect(() => {
     const fetchServices = async () => {
       try {
         setLoading(true);
-        const response = await domainProfileService.getAllPublicServices(page, limit);
+        const response = await domainProfileService.getAllPublicServices(
+          page, 
+          limit,
+          selectedExperiences.length > 0 ? selectedExperiences : undefined
+        );
         let filteredServices = response.data.services;
         
         // Filter by search query if provided
@@ -48,7 +73,47 @@ function ExperiencesContent() {
     };
 
     fetchServices();
-  }, [page, searchQuery]);
+  }, [page, searchQuery, selectedExperiences, selectedExperiences]);
+
+  const toggleFilter = (filterName: string) => {
+    setExpandedFilter(expandedFilter === filterName ? null : filterName);
+  };
+
+  const toggleExperience = (categoryId: string) => {
+    setSelectedExperiences(prev => 
+      prev.includes(categoryId) ? prev.filter(e => e !== categoryId) : [...prev, categoryId]
+    );
+  };
+
+  const clearFilters = () => {
+    setSelectedExperiences([]);
+    setExpandedFilter(null);
+    setPage(1);
+  };
+
+  const hasActiveFilters = selectedExperiences.length > 0;
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    if (hasActiveFilters) {
+      setPage(1);
+    }
+  }, [selectedExperiences]);
+
+  // Close filter dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest('.filter-dropdown-container')) {
+        setExpandedFilter(null);
+      }
+    };
+
+    if (expandedFilter) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [expandedFilter]);
 
   const handleLoadMore = () => {
     if (page < totalPages) {
@@ -106,9 +171,65 @@ function ExperiencesContent() {
             </div>
           )}
           
-          <h2 className="text-3xl md:text-4xl font-bold text-[#318160] text-center mb-16">
+          <h2 className="text-3xl md:text-4xl font-bold text-[#318160] text-center mb-8">
             Les activités œnotouristiques
           </h2>
+
+          {/* Filter Section */}
+          <div className="mb-8">
+            <div className="flex flex-wrap gap-3 justify-center">
+              {/* Experience Type Filter */}
+              <div className="relative filter-dropdown-container">
+                <Button
+                  variant={selectedExperiences.length > 0 ? "default" : "outline"}
+                  className={`rounded-full ${
+                    selectedExperiences.length > 0
+                      ? "bg-[#318160] hover:bg-[#1D6346] text-white"
+                      : "border-gray-300 text-gray-700 hover:bg-gray-50"
+                  }`}
+                  onClick={() => toggleFilter('experience')}
+                >
+                  Type d&apos;expérience
+                  <ChevronDown className={`ml-2 h-4 w-4 transition-transform ${
+                    expandedFilter === 'experience' ? 'rotate-180' : ''
+                  }`} />
+                </Button>
+                {expandedFilter === 'experience' && (
+                  <div className="absolute top-full mt-2 bg-white border border-gray-200 rounded-lg shadow-lg p-4 z-30 min-w-[250px]">
+                    <p className="text-sm font-semibold mb-3 text-gray-700">Type d&apos;expérience</p>
+                    <div className="space-y-2">
+                      {experienceCategories.map((category) => (
+                        <div key={category._id} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`exp-${category._id}`}
+                            checked={selectedExperiences.includes(category._id)}
+                            onCheckedChange={() => toggleExperience(category._id)}
+                          />
+                          <label
+                            htmlFor={`exp-${category._id}`}
+                            className="text-sm cursor-pointer select-none"
+                          >
+                            {category.category_name}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Clear Filters Button */}
+              {hasActiveFilters && (
+                <Button
+                  variant="ghost"
+                  className="rounded-full text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                  onClick={clearFilters}
+                >
+                  Effacer les filtres
+                </Button>
+              )}
+            </div>
+          </div>
 
           {loading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12 mb-16">

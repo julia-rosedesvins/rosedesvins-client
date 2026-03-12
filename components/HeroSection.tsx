@@ -318,9 +318,10 @@ const HeroSection = () => {
                                                     )}
                                                 </div>
                                                 <span className="text-xs text-gray-400 capitalize flex-shrink-0">
-                                                    {suggestion.type === 'region' ? 'Région' : 
-                                                     suggestion.type === 'domain' ? 'Domaine' : 
-                                                     suggestion.type === 'service' ? 'Service' : 'Expérience'}
+                                                    {suggestion.type === 'city' ? 'Région' :
+                                                        suggestion.type === 'region' ? 'Région' :
+                                                            suggestion.type === 'domain' ? 'Domaine' :
+                                                                suggestion.type === 'service' ? 'Expérience' : 'Expérience'}
                                                 </span>
                                             </button>
                                         )
