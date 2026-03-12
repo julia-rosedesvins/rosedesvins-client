@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Search, Loader2, MapPin, Wine, Building2 } from "lucide-react"
 import { regionService } from "@/services/region.service"
+import { citiesService } from "@/services/cities.service"
 import toast from "react-hot-toast"
 
 const HeroSection = () => {
@@ -34,60 +35,31 @@ const HeroSection = () => {
             try {
                 setIsLoadingSuggestions(true)
                 
-                // Fetch both backend results and geocoding results in parallel
-                const [backendResult, geocodingResult] = await Promise.all([
+                // Fetch both backend results and cities in parallel
+                const [backendResult, citiesResult] = await Promise.all([
                     regionService.unifiedSearch(searchQuery),
-                    fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&countrycodes=fr&limit=10&addressdetails=1`)
-                        .then(res => res.json())
-                        .catch(() => [])
+                    citiesService.searchCities(searchQuery)
                 ])
                 
                 const allSuggestions: any[] = []
                 const seenCities = new Set<string>()
                 const searchLower = searchQuery.toLowerCase()
                 
-                // Process and score geocoding results
-                const scoredCities: Array<{city: string, state: string, score: number}> = []
-                
-                if (Array.isArray(geocodingResult) && geocodingResult.length > 0) {
-                    geocodingResult.forEach((place: any) => {
-                        const city = place.address?.city || place.address?.town || place.address?.village || place.address?.municipality
-                        const state = place.address?.state || place.address?.region
-                        
-                        if (city && !seenCities.has(city.toLowerCase())) {
-                            seenCities.add(city.toLowerCase())
-                            const cityLower = city.toLowerCase()
-                            
-                            // Calculate relevance score
-                            let score = 0
-                            if (cityLower === searchLower) {
-                                score = 100 // Exact match
-                            } else if (cityLower.startsWith(searchLower)) {
-                                score = 90 // Starts with search query
-                            } else if (cityLower.includes(searchLower)) {
-                                // Contains search query - calculate position score
-                                const position = cityLower.indexOf(searchLower)
-                                score = 50 - position // Earlier positions score higher
-                            }
-                            
-                            if (score > 0) {
-                                scoredCities.push({ city, state: state || 'France', score })
-                            }
+                // Process cities from our backend
+                if (citiesResult.success && citiesResult.data && citiesResult.data.length > 0) {
+                    citiesResult.data.slice(0, 3).forEach((city: any) => {
+                        if (!seenCities.has(city.nom_standard.toLowerCase())) {
+                            seenCities.add(city.nom_standard.toLowerCase())
+                            allSuggestions.push({
+                                type: 'city',
+                                name: city.nom_standard,
+                                description: 'France',
+                                icon: MapPin,
+                                route: `/region/${encodeURIComponent(city.nom_standard)}`
+                            })
                         }
                     })
                 }
-                
-                // Sort cities by score and add top results
-                scoredCities.sort((a, b) => b.score - a.score)
-                scoredCities.slice(0, 3).forEach(({ city, state }) => {
-                    allSuggestions.push({
-                        type: 'city',
-                        name: city,
-                        description: state,
-                        icon: MapPin,
-                        route: `/region/${encodeURIComponent(city)}`
-                    })
-                })
                 
                 // Add regions
                 if (backendResult.data.regions && backendResult.data.regions.length > 0) {
