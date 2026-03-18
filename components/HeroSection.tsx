@@ -258,8 +258,7 @@ const HeroSection = () => {
                 </h1>
 
                 <p className="text-base md:text-lg mb-6 max-w-2xl mx-auto opacity-95">
-                    Partez à la découverte des vins qui vous ressemblent et réserver
-                    une expérience œnotouristique en quelques clics.
+                    Découvrez les domaines et réservez une expérience œnotouristique en quelques clics.
                 </p>
 
                 {/* Search Bar */}
