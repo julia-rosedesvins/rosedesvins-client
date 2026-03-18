@@ -37,13 +37,9 @@ const ExperiencesSection = () => {
         <div className="mb-8">
           <Link href="/experience">
             <h2 className="text-2xl md:text-3xl font-bold text-[#318160] mb-4 text-center hover:text-[#1D6346] transition-colors cursor-pointer">
-              Explorer les vignobles, vivez des expériences œnotouristiques inoubliables.
+              Vivez des expériences œnotouristiques inoubliables.
             </h2>
           </Link>
-          <p className="text-lg text-[#7B947F] max-w-4xl text-center mx-auto">
-            Rencontre avec un vigneron, exploration des chais, promenade au cœur des vignes ou initiation à 
-            l'œnologie... découvrez autrement le patrimoine viticole et les routes des vins françaises.
-          </p>
         </div>
 
         {/* Carousel */}
@@ -128,6 +124,13 @@ const ExperiencesSection = () => {
               Voir tout
             </Button>
           </Link>
+        </div>
+
+        {/* Description Text */}
+        <div className="mt-8">
+          <p className="text-lg text-[#7B947F] max-w-4xl text-center mx-auto">
+             À la rencontre des vignerons, des chais et des vignes, ou pour une initiation à l'œnologie… vivez autrement le patrimoine viticole et les routes des vins françaises. 
+          </p>
         </div>
       </div>
     </section>
