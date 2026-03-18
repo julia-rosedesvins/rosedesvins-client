@@ -38,11 +38,10 @@ const NewsletterSection = () => {
         <div className="bg-card border border-[#d1e0da] rounded-lg p-8 shadow-lg">
           <div className="text-center mb-6">
             <h2 className="text-3xl font-bold mb-4 text-[#318160]">
-              Explorez les vignobles autrement
+              Laissez-vous guider.
             </h2>
             <p className="text-[#264035]">
-              Laissez-vous guider : inscrivez-vous pour recevoir des suggestions de domaines à visiter, 
-              des expériences à réserver et des inspirations pour vos prochaines escapades viticoles.
+              Recevez par mail nos suggestions de domaines, d'expériences et d'escapades viticoles.
             </p>
           </div>
           
