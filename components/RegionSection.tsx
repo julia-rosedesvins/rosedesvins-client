@@ -89,6 +89,9 @@ const RegionsSection = () => {
               Un voyage au cœur des régions viticoles.
             </h2>
           </Link>
+          <p className="text-lg text-[#7B947F] max-w-4xl text-center mx-auto">
+            Rencontrez des vignerons passionnés, découvrez leur savoir-faire et des terroirs uniques.
+          </p>
         </div>
 
         {/* Carousel */}
@@ -147,12 +150,6 @@ const RegionsSection = () => {
           </Link>
         </div>
 
-        {/* Description Text */}
-        <div className="mt-8">
-          <p className="text-lg text-[#7B947F] max-w-4xl text-center mx-auto">
-            Rencontrez des vignerons passionnés, découvrez leur savoir-faire et des terroirs uniques.
-          </p>
-        </div>
       </div>
     </section>
   );

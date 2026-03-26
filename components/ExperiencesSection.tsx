@@ -40,6 +40,9 @@ const ExperiencesSection = () => {
               Vivez des expériences œnotouristiques inoubliables.
             </h2>
           </Link>
+          <p className="text-lg text-[#7B947F] max-w-4xl text-center mx-auto">
+             À la rencontre des vignerons, des chais et des vignes, ou pour une initiation à l'œnologie… vivez autrement le patrimoine viticole et les routes des vins françaises. 
+          </p>
         </div>
 
         {/* Carousel */}
@@ -126,12 +129,7 @@ const ExperiencesSection = () => {
           </Link>
         </div>
 
-        {/* Description Text */}
-        <div className="mt-8">
-          <p className="text-lg text-[#7B947F] max-w-4xl text-center mx-auto">
-             À la rencontre des vignerons, des chais et des vignes, ou pour une initiation à l'œnologie… vivez autrement le patrimoine viticole et les routes des vins françaises. 
-          </p>
-        </div>
+
       </div>
     </section>
   );
