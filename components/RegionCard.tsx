@@ -12,7 +12,7 @@ const RegionCard = ({ title, image, href }: RegionCardProps) => {
   
   const content = (
     <div className="flex flex-col items-center group cursor-pointer">
-      <div className="relative w-64 h-64 md:w-72 md:h-72 rounded-full overflow-hidden mb-4 transition-transform duration-300 group-hover:scale-105 shadow-lg">
+      <div className="relative w-64 h-64 md:w-72 md:h-72 rounded-full overflow-hidden mb-4 shadow-lg">
         <img 
           src={imageUrl} 
           alt={title}
