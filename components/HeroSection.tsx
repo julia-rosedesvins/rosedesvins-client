@@ -76,15 +76,17 @@ const HeroSection = () => {
                 // Add domains
                 if (backendResult.data.domains && backendResult.data.domains.length > 0) {
                     backendResult.data.domains.slice(0, 2).forEach(domain => {
-                        const route = domain.location?.region 
-                            ? `/region/${encodeURIComponent(domain.location.region)}`
+                        const regionName = domain.location?.region || domain.domainName || 'domaine'
+                        const route = domain.domainId
+                            ? `/experience/${encodeURIComponent(regionName)}/${domain.domainId}`
                             : '/regions'
                         allSuggestions.push({
                             type: 'domain',
                             name: domain.domainName,
                             description: domain.location?.city || '',
                             icon: Building2,
-                            route: route
+                            route: route,
+                            domainId: domain.domainId
                         })
                     })
                 }
@@ -183,6 +185,16 @@ const HeroSection = () => {
     const handleSuggestionClick = async (suggestion: any) => {
         setSearchQuery(suggestion.name)
         setShowSuggestions(false)
+
+        // For domain suggestions, navigate directly to the experience page
+        if (suggestion.type === 'domain' && suggestion.route) {
+            setIsSearching(true)
+            await new Promise(resolve => setTimeout(resolve, 400))
+            router.push(suggestion.route)
+            setSearchQuery("")
+            setIsSearching(false)
+            return
+        }
         
         // Perform search with the full suggestion name to get proper routing
         try {
