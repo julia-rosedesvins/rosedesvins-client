@@ -29,7 +29,7 @@ function ExperiencesContent() {
   const [selectedExperiences, setSelectedExperiences] = useState<string[]>(
     categoryParam ? [categoryParam] : []
   );
-  const [experienceCategories, setExperienceCategories] = useState<ExperienceCategory[]>();
+  const [experienceCategories, setExperienceCategories] = useState<ExperienceCategory[]>([]);
 
   // Sync selectedExperiences when URL category param changes
   useEffect(() => {
