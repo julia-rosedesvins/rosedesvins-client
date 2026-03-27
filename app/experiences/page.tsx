@@ -14,6 +14,7 @@ import { adminExperienceCategoriesService, ExperienceCategory } from "@/services
 function ExperiencesContent() {
   const searchParams = useSearchParams();
   const searchQuery = searchParams.get('q');
+  const categoryParam = searchParams.get('category');
   
   const [services, setServices] = useState<PublicService[]>([]);
   const [loading, setLoading] = useState(true);
@@ -25,8 +26,16 @@ function ExperiencesContent() {
 
   // Filter states
   const [expandedFilter, setExpandedFilter] = useState<string | null>(null);
-  const [selectedExperiences, setSelectedExperiences] = useState<string[]>([]);
-  const [experienceCategories, setExperienceCategories] = useState<ExperienceCategory[]>([]);
+  const [selectedExperiences, setSelectedExperiences] = useState<string[]>(
+    categoryParam ? [categoryParam] : []
+  );
+  const [experienceCategories, setExperienceCategories] = useState<ExperienceCategory[]>();
+
+  // Sync selectedExperiences when URL category param changes
+  useEffect(() => {
+    setSelectedExperiences(categoryParam ? [categoryParam] : []);
+    setPage(1);
+  }, [categoryParam]);
 
   // Fetch experience categories on mount
   useEffect(() => {
