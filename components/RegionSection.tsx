@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious, CarouselApi } from "@/components/ui/carousel";
 import { regionService, Region } from "@/services/region.service";
 
+const FEATURED_REGIONS = ['Bordeaux', 'Bourgogne', 'Alsace', 'Corse', 'Beaujolais', 'Provence', 'Touraine', 'Languedoc'];
+
 const RegionsSection = () => {
   const [regions, setRegions] = useState<Region[]>([]);
   const [loading, setLoading] = useState(true);
@@ -17,8 +19,12 @@ const RegionsSection = () => {
     const fetchRegions = async () => {
       try {
         setLoading(true);
-        const response = await regionService.getAllRegions({ page: 1, limit: 20, isParent: true });
-        setRegions(response.data);
+        const response = await regionService.getAllRegions({ page: 1, limit: 100, isParent: true });
+        // Pick exactly one region per featured name, in order
+        const filtered = FEATURED_REGIONS
+          .map(name => response.data.find((r: Region) => r.denom.toLowerCase().includes(name.toLowerCase())))
+          .filter((r): r is Region => r !== undefined);
+        setRegions(filtered);
       } catch (err: any) {
         console.error('Error fetching regions:', err);
         setError(err.message || 'Failed to load regions');
