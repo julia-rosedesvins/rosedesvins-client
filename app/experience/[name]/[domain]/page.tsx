@@ -138,12 +138,18 @@ const ExperienceDomain = ({ params }: { params: Promise<{ name: string; domain: 
                 </div>
 
                 {/* About Section - Only for client profiles */}
-                {domainProfile.producer !== 'non-client' && domainProfile.domainDescription && (
+                {domainProfile.producer !== 'non-client' && (
                     <section className="mb-12">
                         <h2 className="text-2xl font-bold text-gray-800 mb-4">À propos du domaine</h2>
-                        <p className="text-gray-700 leading-relaxed">
-                            {domainProfile.domainDescription}
-                        </p>
+                        {domainProfile.domainDescription ? (
+                            <p className="text-gray-700 leading-relaxed">
+                                {domainProfile.domainDescription}
+                            </p>
+                        ) : (
+                            <p className="text-gray-500 italic">
+                                Aucune description disponible pour ce domaine.
+                            </p>
+                        )}
                     </section>
                 )}
 
