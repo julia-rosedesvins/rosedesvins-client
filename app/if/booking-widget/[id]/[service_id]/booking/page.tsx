@@ -513,47 +513,65 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
     const afternoonSlots: string[] = [];
     const slotDuration = widgetData.availability?.defaultSlotDuration || 30;
     const serviceDuration = widgetData.service?.timeOfServiceInMinutes || 60;
-    
-    // Generate morning slots if morning is enabled
+
+    // Build the list of enabled override windows, then merge adjacent ones
+    // so that a long experience spanning morning + afternoon is offered.
+    const overrideWindows: { startTime: string; endTime: string }[] = [];
     if (override.morningEnabled && override.morningFrom && override.morningTo) {
-      const [morningFromHours, morningFromMins] = override.morningFrom.split(':').map(Number);
-      const [morningToHours, morningToMins] = override.morningTo.split(':').map(Number);
-      const morningFromMinutes = morningFromHours * 60 + morningFromMins;
-      const morningToMinutes = morningToHours * 60 + morningToMins;
-      
-      // Generate slots ensuring service duration fits
-      for (let currentMinutes = morningFromMinutes; currentMinutes + serviceDuration <= morningToMinutes; currentMinutes += slotDuration) {
-        const hours = Math.floor(currentMinutes / 60);
-        const minutes = currentMinutes % 60;
-        const timeSlot = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
-        
-        // Skip if time slot has passed or is already booked
-        if (!isTimeSlotPast(date, timeSlot) && !isTimeSlotBooked(date, timeSlot)) {
-          morningSlots.push(timeSlot);
-        }
-      }
+      overrideWindows.push({ startTime: override.morningFrom, endTime: override.morningTo });
     }
-    
-    // Generate afternoon slots if afternoon is enabled
     if (override.afternoonEnabled && override.afternoonFrom && override.afternoonTo) {
-      const [afternoonFromHours, afternoonFromMins] = override.afternoonFrom.split(':').map(Number);
-      const [afternoonToHours, afternoonToMins] = override.afternoonTo.split(':').map(Number);
-      const afternoonFromMinutes = afternoonFromHours * 60 + afternoonFromMins;
-      const afternoonToMinutes = afternoonToHours * 60 + afternoonToMins;
-      
-      // Generate slots ensuring service duration fits
-      for (let currentMinutes = afternoonFromMinutes; currentMinutes + serviceDuration <= afternoonToMinutes; currentMinutes += slotDuration) {
-        const hours = Math.floor(currentMinutes / 60);
-        const minutes = currentMinutes % 60;
-        const timeSlot = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
-        
-        // Skip if time slot has passed or is already booked
-        if (!isTimeSlotPast(date, timeSlot) && !isTimeSlotBooked(date, timeSlot)) {
-          afternoonSlots.push(timeSlot);
+      overrideWindows.push({ startTime: override.afternoonFrom, endTime: override.afternoonTo });
+    }
+
+    // Sort then merge
+    overrideWindows.sort((a, b) => {
+      const [aH, aM] = a.startTime.split(':').map(Number);
+      const [bH, bM] = b.startTime.split(':').map(Number);
+      return (aH * 60 + aM) - (bH * 60 + bM);
+    });
+
+    const mergedOverride: { startTime: string; endTime: string }[] = [];
+    for (const win of overrideWindows) {
+      const [sH, sM] = win.startTime.split(':').map(Number);
+      const [eH, eM] = win.endTime.split(':').map(Number);
+      const winStart = sH * 60 + sM;
+      const winEnd = eH * 60 + eM;
+      if (mergedOverride.length === 0) {
+        mergedOverride.push({ startTime: win.startTime, endTime: win.endTime });
+      } else {
+        const last = mergedOverride[mergedOverride.length - 1];
+        const [lH, lM] = last.endTime.split(':').map(Number);
+        const lastEnd = lH * 60 + lM;
+        if (winStart <= lastEnd) {
+          if (winEnd > lastEnd) last.endTime = win.endTime;
+        } else {
+          mergedOverride.push({ startTime: win.startTime, endTime: win.endTime });
         }
       }
     }
-    
+
+    for (const window of mergedOverride) {
+      const [fromH, fromM] = window.startTime.split(':').map(Number);
+      const [toH, toM] = window.endTime.split(':').map(Number);
+      const fromMinutes = fromH * 60 + fromM;
+      const toMinutes = toH * 60 + toM;
+
+      for (let currentMinutes = fromMinutes; currentMinutes + serviceDuration <= toMinutes; currentMinutes += slotDuration) {
+        const hours = Math.floor(currentMinutes / 60);
+        const minutes = currentMinutes % 60;
+        const timeSlot = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+
+        if (!isTimeSlotPast(date, timeSlot) && !isTimeSlotBooked(date, timeSlot)) {
+          if (hours < 12) {
+            morningSlots.push(timeSlot);
+          } else {
+            afternoonSlots.push(timeSlot);
+          }
+        }
+      }
+    }
+
     return { morning: morningSlots, afternoon: afternoonSlots };
   };
 
@@ -729,29 +747,55 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
     const morningSlots: string[] = [];
     const afternoonSlots: string[] = [];
 
-    dayAvailability.timeSlots.forEach((slot: { startTime: string; endTime: string }) => {
-      const startTime = slot.startTime;
-      const endTime = slot.endTime;
-      
-      // Generate time slots within the available range based on service duration
-      const duration = widgetData.service?.timeOfServiceInMinutes || 60;
-      const slotDuration = widgetData.availability?.defaultSlotDuration || 30;
-      
-      const [startHour, startMinute] = startTime.split(':').map(Number);
-      const [endHour, endMinute] = endTime.split(':').map(Number);
-      
+    const duration = widgetData.service?.timeOfServiceInMinutes || 60;
+    const slotDuration = widgetData.availability?.defaultSlotDuration || 30;
+
+    // Sort slots by start time, then merge adjacent/overlapping ones so that
+    // a long experience (e.g. 7h) spanning morning + afternoon windows is offered.
+    const sortedRawSlots = [...dayAvailability.timeSlots].sort(
+      (a: { startTime: string }, b: { startTime: string }) => {
+        const [aH, aM] = a.startTime.split(':').map(Number);
+        const [bH, bM] = b.startTime.split(':').map(Number);
+        return (aH * 60 + aM) - (bH * 60 + bM);
+      }
+    );
+
+    const mergedSlots: { startTime: string; endTime: string }[] = [];
+    for (const raw of sortedRawSlots) {
+      const [sH, sM] = raw.startTime.split(':').map(Number);
+      const [eH, eM] = raw.endTime.split(':').map(Number);
+      const rawStart = sH * 60 + sM;
+      const rawEnd = eH * 60 + eM;
+      if (mergedSlots.length === 0) {
+        mergedSlots.push({ startTime: raw.startTime, endTime: raw.endTime });
+      } else {
+        const last = mergedSlots[mergedSlots.length - 1];
+        const [lH, lM] = last.endTime.split(':').map(Number);
+        const lastEnd = lH * 60 + lM;
+        if (rawStart <= lastEnd) {
+          // Adjacent or overlapping — extend the merged window if needed
+          if (rawEnd > lastEnd) {
+            last.endTime = raw.endTime;
+          }
+        } else {
+          mergedSlots.push({ startTime: raw.startTime, endTime: raw.endTime });
+        }
+      }
+    }
+
+    mergedSlots.forEach((slot: { startTime: string; endTime: string }) => {
+      const [startHour, startMinute] = slot.startTime.split(':').map(Number);
+      const [endHour, endMinute] = slot.endTime.split(':').map(Number);
       const startMinutes = startHour * 60 + startMinute;
       const endMinutes = endHour * 60 + endMinute;
-      
-      // Only create a slot if the service can fit entirely within the time window
+
+      // Only create a slot if the service can fit entirely within the (merged) time window
       if (startMinutes + duration <= endMinutes) {
-        // Generate slots with the specified slot duration, but ensure service fits
         for (let currentMinutes = startMinutes; currentMinutes + duration <= endMinutes; currentMinutes += slotDuration) {
           const hours = Math.floor(currentMinutes / 60);
           const minutes = currentMinutes % 60;
           const timeSlot = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
-          
-          // Skip if time slot has passed or is already booked
+
           if (!isTimeSlotPast(date, timeSlot) && !isTimeSlotBooked(date, timeSlot)) {
             if (hours < 12) {
               morningSlots.push(timeSlot);
