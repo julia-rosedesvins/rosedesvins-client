@@ -156,15 +156,25 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
       if (hasExternalEvent) {
         errors.push(`Ce créneau horaire n'est pas disponible en raison d'un événement externe dans le calendrier. Veuillez choisir un autre horaire.`);
       } else {
-        // Calculate total existing participants (only for non-external events)
-        const totalExistingParticipants = overlappingBookings.reduce((sum, booking) => {
-          return sum + (booking.totalParticipants || 0);
-        }, 0);
-        
-        const totalWithNewBooking = totalExistingParticipants + totalParticipants;
-        
-        if (totalWithNewBooking > maxParticipants) {
-          errors.push(`Ce créneau horaire a atteint sa capacité maximale. Participants actuels: ${totalExistingParticipants}/${maxParticipants}. Veuillez choisir un autre horaire.`);
+        // 🔒 NEW FIX: Check if any overlapping booking is for a DIFFERENT service
+        const hasDifferentService = overlappingBookings.some(booking => {
+          if (!booking.serviceId) return true; // No serviceId means different service (personal/blocked)
+          return booking.serviceId !== serviceId;
+        });
+
+        if (hasDifferentService) {
+          errors.push(`Ce créneau horaire n'est pas disponible car une autre expérience est déjà réservée. Veuillez choisir un autre horaire.`);
+        } else {
+          // Calculate total existing participants (only for same service)
+          const totalExistingParticipants = overlappingBookings.reduce((sum, booking) => {
+            return sum + (booking.totalParticipants || 0);
+          }, 0);
+          
+          const totalWithNewBooking = totalExistingParticipants + totalParticipants;
+          
+          if (totalWithNewBooking > maxParticipants) {
+            errors.push(`Ce créneau horaire a atteint sa capacité maximale. Participants actuels: ${totalExistingParticipants}/${maxParticipants}. Veuillez choisir un autre horaire.`);
+          }
         }
       }
     }
@@ -648,6 +658,28 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
         externalEvents: overlappingBookings.filter(b => b.eventType === 'external').length
       });
       return true; // Block the slot completely
+    }
+
+    // 🔒 NEW FIX: Check if any overlapping booking is for a DIFFERENT service
+    // Multiple bookings per slot should ONLY apply to the SAME service
+    // If a different service is already booked, block the slot completely
+    const hasDifferentService = overlappingBookings.some(booking => {
+      // If booking has no serviceId (e.g., personal/blocked events), treat as different service
+      if (!booking.serviceId) return true;
+      // Check if the serviceId is different from current service
+      return booking.serviceId !== serviceId;
+    });
+
+    if (hasDifferentService) {
+      console.log('🚫 Slot blocked due to booking for different service:', {
+        date: dateString,
+        time,
+        currentServiceId: serviceId,
+        conflictingBookings: overlappingBookings
+          .filter(b => !b.serviceId || b.serviceId !== serviceId)
+          .map(b => ({ serviceId: b.serviceId, eventType: b.eventType, participants: b.totalParticipants }))
+      });
+      return true; // Block the slot completely - different service booked
     }
     
     // If multiple bookings not allowed, slot is blocked if any booking exists
