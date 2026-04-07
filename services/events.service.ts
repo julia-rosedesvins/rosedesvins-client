@@ -71,6 +71,7 @@ export interface PublicScheduleData {
   eventEndTime?: string; // Optional end time for blocking time ranges
   eventType?: 'booking' | 'personal' | 'external' | 'blocked'; // Event type to differentiate external events
   totalParticipants?: number; // Total participants for booking events
+  serviceId?: string; // Service ID for booking events - used to check if multiple bookings are for same service
 }
 
 export interface GetPublicScheduleResponse {
