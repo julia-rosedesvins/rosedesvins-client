@@ -2,11 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Label } from "@/components/ui/label";
-import { Clock, Users, Globe, Euro, CreditCard, Grape, Lock, Building2, Receipt, Loader2 } from "lucide-react";
+import { Clock, Users, Globe, Euro, CreditCard, Grape, Lock, Building2, Receipt, Loader2, CheckSquare, Square } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -50,12 +47,17 @@ function CheckoutContent({ id, serviceId }: { id: string, serviceId: string }) {
   };
   
   const [isProcessing, setIsProcessing] = useState(false);
+  // Stripe checkbox state — unchecked by default even when Stripe is available
+  const [useStripe, setUseStripe] = useState(false);
 
   // Get payment methods from widget data
   const acceptedPaymentMethods = widgetData?.paymentMethods?.methods || ['cash_on_onsite'];
   const stripeConnect = widgetData?.paymentMethods?.stripeConnect;
-  const canPayWithStripe =
+  // Whether Stripe is an option at all (vendor connected + charges enabled)
+  const stripeAvailable =
     acceptedPaymentMethods.includes('stripe') && stripeConnect?.chargesEnabled === true;
+  // On-site methods shown as informational (excludes stripe)
+  const onsiteMethods = acceptedPaymentMethods.filter((m) => m !== 'stripe');
   const loadingPaymentMethods = loading;
 
   const pricePerPerson = widgetData?.service?.pricePerPerson ?? 0;
@@ -315,7 +317,8 @@ function CheckoutContent({ id, serviceId }: { id: string, serviceId: string }) {
                     </div>
                   ) : (
                     <div className="space-y-3">
-                      {acceptedPaymentMethods.map((method) => (
+                      {/* On-site methods — informational, always shown as accepted */}
+                      {onsiteMethods.map((method) => (
                         <div
                           key={method}
                           className="flex items-center space-x-2 p-3 border rounded-lg bg-white border-gray-200"
@@ -329,22 +332,42 @@ function CheckoutContent({ id, serviceId }: { id: string, serviceId: string }) {
                           </div>
                         </div>
                       ))}
+
+                      {/* Stripe — optional, selectable checkbox */}
+                      {stripeAvailable && (
+                        <div
+                          onClick={() => setUseStripe((prev) => !prev)}
+                          className={cn(
+                            "flex items-center space-x-2 p-3 border rounded-lg cursor-pointer transition-colors select-none",
+                            useStripe
+                              ? "border-2 bg-green-50"
+                              : "border-gray-200 bg-white hover:bg-gray-50"
+                          )}
+                          style={useStripe ? { borderColor: colorCode } : {}}
+                        >
+                          {useStripe
+                            ? <CheckSquare className="w-5 h-5 shrink-0" style={{ color: colorCode }} />
+                            : <Square className="w-5 h-5 shrink-0 text-gray-400" />
+                          }
+                          <div className="flex items-center gap-2 flex-1">
+                            <CreditCard className="w-5 h-5 text-gray-600" />
+                            <div>
+                              <span className="text-gray-800 font-medium">Carte bancaire (en ligne)</span>
+                              <p className="text-xs text-gray-500 mt-0.5">Paiement sécurisé via Stripe</p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
 
-                  {canPayWithStripe ? (
-                    <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-                      <p className="text-sm text-green-800">
-                        <strong>Paiement en ligne disponible.</strong> Vous pouvez payer par carte bancaire de façon sécurisée via Stripe.
-                      </p>
-                    </div>
-                  ) : (
+                  {/* Hint text */}
+                  {!loadingPaymentMethods && (
                     <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                       <p className="text-sm text-blue-800">
-                        <strong>Note:</strong>{' '}
-                        {acceptedPaymentMethods.length > 1
-                          ? 'Vous pourrez choisir votre méthode de paiement préférée lors de votre visite.'
-                          : 'Vous pourrez effectuer votre paiement selon la méthode acceptée lors de votre visite.'
+                        {stripeAvailable && useStripe
+                          ? <><strong>Paiement en ligne.</strong> Vous serez redirigé vers Stripe pour régler en toute sécurité.</>  
+                          : <><strong>Note :</strong> Vous pourrez régler sur place selon le mode de paiement accepté.</>  
                         }
                       </p>
                     </div>
@@ -407,8 +430,8 @@ function CheckoutContent({ id, serviceId }: { id: string, serviceId: string }) {
             </Button>
 
             <div className="flex gap-3">
-              {/* Stripe pay button — shown only when vendor has Stripe connected */}
-              {canPayWithStripe && (
+              {/* Stripe pay button — only when Stripe checkbox is checked */}
+              {stripeAvailable && useStripe ? (
                 <Button
                   type="button"
                   onClick={handleStripePayment}
@@ -432,10 +455,8 @@ function CheckoutContent({ id, serviceId }: { id: string, serviceId: string }) {
                     </div>
                   )}
                 </Button>
-              )}
-
-              {/* Standard confirm button — always shown for non-stripe methods */}
-              {!canPayWithStripe && (
+              ) : (
+                /* Normal on-site confirm — shown when Stripe is not selected */
                 <Button
                   onClick={handleSubmit}
                   disabled={isProcessing}
