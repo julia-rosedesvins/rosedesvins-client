@@ -1,10 +1,19 @@
 import { apiClient } from './admin.service';
 
 // Types for payment methods
+export interface StripeConnectData {
+  stripeAccountId: string;
+  displayName?: string;
+  isVerified: boolean;
+  chargesEnabled: boolean;
+  connectedAt: string;
+}
+
 export interface PaymentMethodsData {
   _id?: string;
   userId?: string;
   methods: string[];
+  stripeConnect?: StripeConnectData | null;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -17,6 +26,23 @@ export interface PaymentMethodsResponse {
   success: boolean;
   message: string;
   data: PaymentMethodsData | null;
+}
+
+export interface StripeAuthUrlResponse {
+  success: boolean;
+  message: string;
+  data: {
+    authUrl: string;
+  } | null;
+}
+
+export interface StripeStatusResponse {
+  success: boolean;
+  message: string;
+  data: (StripeConnectData & {
+    requiresVerification?: boolean;
+    verificationFields?: string[];
+  }) | null;
 }
 
 export interface ApiError {
@@ -33,7 +59,8 @@ export interface ApiError {
 export const PAYMENT_METHOD_OPTIONS = {
   BANK_CARD: 'bank card',
   CHECKS: 'checks',
-  CASH: 'cash'
+  CASH: 'cash',
+  STRIPE: 'stripe',
 } as const;
 
 export type PaymentMethodOption = typeof PAYMENT_METHOD_OPTIONS[keyof typeof PAYMENT_METHOD_OPTIONS];
@@ -80,7 +107,54 @@ class PaymentMethodsService {
       throw new Error('Network error occurred');
     }
   }
+
+  /**
+   * Get Stripe Connect authorization URL to start OAuth flow
+   */
+  async getStripeAuthUrl(): Promise<StripeAuthUrlResponse> {
+    try {
+      const response = await apiClient.get<StripeAuthUrlResponse>('/payment-methods/stripe/auth-url');
+      return response.data;
+    } catch (error: any) {
+      console.error('PaymentMethodsService: Get Stripe auth URL error:', error);
+      if (error.response?.data) {
+        throw error.response.data as ApiError;
+      }
+      throw new Error('Network error occurred');
+    }
+  }
+
+  /**
+   * Disconnect Stripe Connected Account
+   */
+  async disconnectStripe(): Promise<PaymentMethodsResponse> {
+    try {
+      const response = await apiClient.post<PaymentMethodsResponse>('/payment-methods/stripe/disconnect');
+      return response.data;
+    } catch (error: any) {
+      console.error('PaymentMethodsService: Disconnect Stripe error:', error);
+      if (error.response?.data) {
+        throw error.response.data as ApiError;
+      }
+      throw new Error('Network error occurred');
+    }
+  }
+
+  /**
+   * Get current Stripe Connect status
+   */
+  async getStripeStatus(): Promise<StripeStatusResponse> {
+    try {
+      const response = await apiClient.get<StripeStatusResponse>('/payment-methods/stripe/status');
+      return response.data;
+    } catch (error: any) {
+      console.error('PaymentMethodsService: Get Stripe status error:', error);
+      if (error.response?.data) {
+        throw error.response.data as ApiError;
+      }
+      throw new Error('Network error occurred');
+    }
+  }
 }
 
-// Export singleton instance
 export const paymentMethodsService = new PaymentMethodsService();
