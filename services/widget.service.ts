@@ -67,8 +67,14 @@ export interface WidgetAvailability {
   isActive: boolean;
 }
 
+export interface WidgetStripeConnect {
+  stripeAccountId: string;
+  chargesEnabled: boolean;
+}
+
 export interface WidgetPaymentMethods {
   methods: string[];
+  stripeConnect?: WidgetStripeConnect | null;
 }
 
 export interface WidgetNotificationPreferences {
