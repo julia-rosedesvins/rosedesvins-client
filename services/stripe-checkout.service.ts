@@ -28,6 +28,7 @@ export interface CheckoutSessionResponse {
 }
 
 export interface TransactionStatus {
+  _id: string;
   bookingId: string;
   vendorUserId: string;
   stripeAccountId: string;
@@ -37,6 +38,8 @@ export interface TransactionStatus {
   currency: string;
   status: 'pending' | 'completed' | 'failed' | 'refunded' | 'expired';
   customerEmail?: string;
+  cardLast4?: string;
+  cardholderName?: string;
   participantsAdults: number;
   participantsEnfants: number;
   serviceName?: string;
@@ -66,4 +69,13 @@ export async function getSessionStatus(sessionId: string): Promise<TransactionSt
   const response = await stripeCheckoutApiClient.get(`/stripe-checkout/session/${sessionId}`);
   if (!response.data.success) return null;
   return response.data.data as TransactionStatus;
+}
+
+/**
+ * Get all transactions for the authenticated vendor (uses cookie auth)
+ */
+export async function getVendorTransactions(): Promise<TransactionStatus[]> {
+  const response = await stripeCheckoutApiClient.get('/stripe-checkout/transactions');
+  if (!response.data.success) return [];
+  return response.data.data as TransactionStatus[];
 }
