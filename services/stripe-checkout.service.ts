@@ -48,6 +48,26 @@ export interface TransactionStatus {
 }
 
 /**
+ * Create a Stripe PaymentIntent for in-app card form (no redirect).
+ * Returns clientSecret for use with stripe.confirmCardPayment()
+ */
+export async function createPaymentIntent(data: {
+  bookingId: string;
+  vendorUserId: string;
+  amountEur: number;
+  customerEmail?: string;
+  serviceName?: string;
+  participantsAdults?: number;
+  participantsEnfants?: number;
+}): Promise<{ clientSecret: string; paymentIntentId: string; stripeAccountId: string }> {
+  const response = await stripeCheckoutApiClient.post('/stripe-checkout/payment-intent', data);
+  if (!response.data.success) {
+    throw new Error(response.data.message || 'Failed to create payment intent');
+  }
+  return response.data.data;
+}
+
+/**
  * Create a Stripe Checkout Session for a booking
  * Returns { sessionId, sessionUrl } — redirect the user to sessionUrl
  */
