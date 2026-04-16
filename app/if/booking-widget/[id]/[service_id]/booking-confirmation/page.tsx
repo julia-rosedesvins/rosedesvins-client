@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -28,6 +28,7 @@ import {
 import { WidgetProvider, useWidget } from "@/contexts/WidgetContext";
 import { bookingService } from "@/services/booking.service";
 import { createPaymentIntent } from "@/services/stripe-checkout.service";
+// bookingService.cancelBookingAsGuest is used to roll back on card failure
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Stripe card form — must live inside <Elements>
@@ -53,6 +54,8 @@ function StripeCardForm({
   const elements = useElements();
   const [cardholderName, setCardholderName] = useState("");
   const [cardError, setCardError] = useState<string | null>(null);
+  // Track the bookingId so we can cancel it if payment fails
+  const pendingBookingIdRef = React.useRef<string | null>(null);
 
   const handlePay = async () => {
     if (!stripe || !elements || isProcessing) return;
@@ -62,9 +65,13 @@ function StripeCardForm({
     }
     setCardError(null);
     setIsProcessing(true);
+    pendingBookingIdRef.current = null;
 
     try {
       const { clientSecret, bookingId } = await getClientSecret();
+      // Store so we can roll back on failure
+      pendingBookingIdRef.current = bookingId;
+
       const cardElement = elements.getElement(CardNumberElement);
       if (!cardElement) throw new Error("Card element not found");
 
@@ -76,6 +83,11 @@ function StripeCardForm({
       });
 
       if (error) {
+        // Roll back the booking that was created before the payment attempt
+        if (pendingBookingIdRef.current) {
+          bookingService.cancelBookingAsGuest(pendingBookingIdRef.current).catch(() => {});
+          pendingBookingIdRef.current = null;
+        }
         setCardError(error.message || "Le paiement a échoué. Veuillez réessayer.");
         setIsProcessing(false);
       } else if (paymentIntent?.status === "succeeded") {
@@ -83,6 +95,11 @@ function StripeCardForm({
         onSuccess(bookingId);
       }
     } catch (err: any) {
+      // Roll back if booking was created but payment threw an exception
+      if (pendingBookingIdRef.current) {
+        bookingService.cancelBookingAsGuest(pendingBookingIdRef.current).catch(() => {});
+        pendingBookingIdRef.current = null;
+      }
       setCardError(err.message || "Erreur lors du paiement. Veuillez réessayer.");
       setIsProcessing(false);
     }
