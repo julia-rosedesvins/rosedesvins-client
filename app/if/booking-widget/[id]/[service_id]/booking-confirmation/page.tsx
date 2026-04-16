@@ -1,40 +1,214 @@
 'use client';
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { CountrySelector } from "@/components/CountrySelector";
-import { Clock, Users, Globe, Euro, CreditCard, Grape, Loader2 } from "lucide-react";
+import {
+  Clock, Users, Globe, Euro, CreditCard, Grape, Lock,
+  Loader2, XCircle,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
+import toast from "react-hot-toast";
+import { loadStripe } from "@stripe/stripe-js";
+import {
+  Elements,
+  CardNumberElement,
+  CardExpiryElement,
+  CardCvcElement,
+  useStripe as useStripeHook,
+  useElements,
+} from "@stripe/react-stripe-js";
 import { WidgetProvider, useWidget } from "@/contexts/WidgetContext";
+import { bookingService } from "@/services/booking.service";
+import { createPaymentIntent } from "@/services/stripe-checkout.service";
 
-interface BookingData {
-  date: string;
-  selectedTime?: string;
-  adults: number;
-  children: number;
-  language: string;
+// ─────────────────────────────────────────────────────────────────────────────
+// Stripe card form — must live inside <Elements>
+// ─────────────────────────────────────────────────────────────────────────────
+interface StripeCardFormProps {
+  colorCode: string;
+  totalPrice: number;
+  isProcessing: boolean;
+  setIsProcessing: (v: boolean) => void;
+  onSuccess: (bookingId: string) => void;
+  getClientSecret: () => Promise<{ clientSecret: string; bookingId: string }>;
 }
 
-function BookingConfirmationContent({ id, serviceId }: { id: string, serviceId: string }) {
+function StripeCardForm({
+  colorCode,
+  totalPrice,
+  isProcessing,
+  setIsProcessing,
+  onSuccess,
+  getClientSecret,
+}: StripeCardFormProps) {
+  const stripe = useStripeHook();
+  const elements = useElements();
+  const [cardholderName, setCardholderName] = useState("");
+  const [cardError, setCardError] = useState<string | null>(null);
+
+  const handlePay = async () => {
+    if (!stripe || !elements || isProcessing) return;
+    if (!cardholderName.trim()) {
+      setCardError("Veuillez entrer le nom du titulaire de la carte.");
+      return;
+    }
+    setCardError(null);
+    setIsProcessing(true);
+
+    try {
+      const { clientSecret, bookingId } = await getClientSecret();
+      const cardElement = elements.getElement(CardNumberElement);
+      if (!cardElement) throw new Error("Card element not found");
+
+      const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
+        payment_method: {
+          card: cardElement,
+          billing_details: { name: cardholderName.trim() },
+        },
+      });
+
+      if (error) {
+        setCardError(error.message || "Le paiement a échoué. Veuillez réessayer.");
+        setIsProcessing(false);
+      } else if (paymentIntent?.status === "succeeded") {
+        toast.success("Paiement réussi !");
+        onSuccess(bookingId);
+      }
+    } catch (err: any) {
+      setCardError(err.message || "Erreur lors du paiement. Veuillez réessayer.");
+      setIsProcessing(false);
+    }
+  };
+
+  const elementOptions = {
+    style: {
+      base: {
+        fontSize: "14px",
+        color: "#374151",
+        fontFamily: '"Inter", system-ui, sans-serif',
+        "::placeholder": { color: "#9CA3AF" },
+      },
+      invalid: { color: "#EF4444" },
+    },
+  };
+
+  return (
+    <div
+      className="mt-4 p-4 border-2 rounded-xl space-y-4 bg-gray-50"
+      style={{ borderColor: colorCode }}
+    >
+      <div className="flex items-center gap-2">
+        <CreditCard className="w-4 h-4" style={{ color: colorCode }} />
+        <span className="text-sm font-semibold" style={{ color: colorCode }}>
+          Paiement par carte (en ligne)
+        </span>
+      </div>
+
+      {/* Cardholder name */}
+      <div>
+        <label className="block text-xs font-medium text-gray-600 mb-1">
+          Nom du titulaire
+        </label>
+        <input
+          type="text"
+          value={cardholderName}
+          onChange={(e) => setCardholderName(e.target.value)}
+          placeholder="Jean Dupont"
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none disabled:opacity-60"
+          disabled={isProcessing}
+          autoComplete="cc-name"
+        />
+      </div>
+
+      {/* Card number */}
+      <div>
+        <label className="block text-xs font-medium text-gray-600 mb-1">
+          Numéro de carte
+        </label>
+        <div className="px-3 py-3 border border-gray-300 rounded-lg bg-white">
+          <CardNumberElement options={elementOptions} />
+        </div>
+      </div>
+
+      {/* Expiry + CVC */}
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">
+            Date d&apos;expiration
+          </label>
+          <div className="px-3 py-3 border border-gray-300 rounded-lg bg-white">
+            <CardExpiryElement options={elementOptions} />
+          </div>
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">CVV / CVC</label>
+          <div className="px-3 py-3 border border-gray-300 rounded-lg bg-white">
+            <CardCvcElement options={elementOptions} />
+          </div>
+        </div>
+      </div>
+
+      {/* Card error */}
+      {cardError && (
+        <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+          <XCircle className="w-4 h-4 text-red-500 shrink-0" />
+          <p className="text-sm text-red-700">{cardError}</p>
+        </div>
+      )}
+
+      {/* Security note */}
+      <div className="flex items-center gap-2 text-xs text-gray-500">
+        <Lock className="w-3 h-3" />
+        <span>Paiement sécurisé — données chiffrées par Stripe</span>
+      </div>
+
+      {/* Pay button */}
+      <Button
+        type="button"
+        onClick={handlePay}
+        disabled={isProcessing || !stripe}
+        className="w-full text-white"
+        style={{ backgroundColor: colorCode }}
+      >
+        {isProcessing ? (
+          <div className="flex items-center gap-2 justify-center">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            Traitement du paiement...
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 justify-center">
+            <Lock className="w-4 h-4" />
+            Payer {totalPrice} €
+          </div>
+        )}
+      </Button>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Main page content
+// ─────────────────────────────────────────────────────────────────────────────
+function BookingConfirmationContent({ id, serviceId }: { id: string; serviceId: string }) {
   const { widgetData, loading, error, colorCode } = useWidget();
   const searchParams = useSearchParams();
   const router = useRouter();
-  const withLayout = searchParams.get('withLayout') === 'true';
+  const withLayout = searchParams.get("withLayout") === "true";
 
-  // Extract booking data from URL parameters
-  const bookingData: BookingData = {
-    date: searchParams.get('date') || '',
-    selectedTime: searchParams.get('selectedTime') || undefined,
-    adults: parseInt(searchParams.get('adults') || '2'),
-    children: parseInt(searchParams.get('children') || '0'),
-    language: searchParams.get('language') || 'Français',
+  const bookingData = {
+    date: searchParams.get("date") || "",
+    selectedTime: searchParams.get("selectedTime") || undefined,
+    adults: parseInt(searchParams.get("adults") || "2"),
+    children: parseInt(searchParams.get("children") || "0"),
+    language: searchParams.get("language") || "Français",
   };
 
   const [email, setEmail] = useState("");
@@ -46,100 +220,169 @@ function BookingConfirmationContent({ id, serviceId }: { id: string, serviceId: 
     code: "FR",
     name: "France",
     flag: "🇫🇷",
-    dialCode: "+33"
+    dialCode: "+33",
   });
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Email validation helper
-  const isValidEmail = (email: string): boolean => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  };
+  // ── Stripe availability ────────────────────────────────────────────────────
+  const acceptedPaymentMethods = widgetData?.paymentMethods?.methods || ["cash_on_onsite"];
+  const stripeConnect = widgetData?.paymentMethods?.stripeConnect;
+  const stripeAvailable =
+    acceptedPaymentMethods.includes("stripe") && stripeConnect?.chargesEnabled === true;
 
-  // Phone validation helper
-  const isValidPhone = (phone: string): boolean => {
-    const phoneRegex = /^[+]?[\d\s\-()]{8,}$/;
-    return phoneRegex.test(phone.trim());
-  };
+  const pricePerPerson = widgetData?.service?.pricePerPerson ?? 0;
+  const totalPrice = (bookingData?.adults ?? 0) * pricePerPerson;
 
-  // Validation function
-  const validateBookingConfirmation = (): boolean => {
+  const stripePromise = useMemo(() => {
+    const pubKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+    if (!pubKey || !stripeConnect?.stripeAccountId || !stripeAvailable) return null;
+    return loadStripe(pubKey, { stripeAccount: stripeConnect.stripeAccountId });
+  }, [stripeConnect?.stripeAccountId, stripeAvailable]);
+
+  // ── Validation ─────────────────────────────────────────────────────────────
+  const isValidEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+  const isValidPhone = (v: string) => /^[+]?[\d\s\-()]{8,}$/.test(v.trim());
+
+  const validate = (): boolean => {
     const errors: string[] = [];
-
-    if (!email.trim()) {
-      errors.push("L'adresse e-mail est requise");
-    } else if (!isValidEmail(email)) {
-      errors.push("Veuillez saisir une adresse e-mail valide");
-    }
-
-    if (!firstName.trim()) {
-      errors.push("Le prénom est requis");
-    }
-
-    if (!lastName.trim()) {
-      errors.push("Le nom est requis");
-    }
-
-    if (!phone.trim()) {
-      errors.push("Le numéro de téléphone est requis");
-    } else if (!isValidPhone(phone)) {
-      errors.push("Veuillez saisir un numéro de téléphone valide");
-    }
-
+    if (!email.trim()) errors.push("L'adresse e-mail est requise");
+    else if (!isValidEmail(email)) errors.push("Veuillez saisir une adresse e-mail valide");
+    if (!firstName.trim()) errors.push("Le prénom est requis");
+    if (!lastName.trim()) errors.push("Le nom est requis");
+    if (!phone.trim()) errors.push("Le numéro de téléphone est requis");
+    else if (!isValidPhone(phone)) errors.push("Veuillez saisir un numéro de téléphone valide");
     setValidationErrors(errors);
     return errors.length === 0;
   };
 
-  // Handle booking confirmation
-  const handleBookingConfirmation = async (e: React.MouseEvent) => {
+  // ── Build booking payload helper ───────────────────────────────────────────
+  const buildPayload = (method: "cash_on_onsite" | "stripe") => ({
+    userId: id,
+    serviceId,
+    bookingDate: bookingData.date.split("T")[0],
+    bookingTime: bookingData.selectedTime || "10:00",
+    participantsAdults: bookingData.adults,
+    participantsEnfants: bookingData.children,
+    selectedLanguage: bookingData.language,
+    userContactFirstname: firstName,
+    userContactLastname: lastName,
+    customerEmail: email,
+    phoneNo: phone,
+    additionalNotes: additionalInfo,
+    paymentMethod: { method },
+  });
+
+  const navigateToSuccess = (bookingId: string) => {
+    const params = new URLSearchParams({
+      date: bookingData.date,
+      selectedTime: bookingData.selectedTime || "",
+      adults: bookingData.adults.toString(),
+      children: bookingData.children.toString(),
+      language: bookingData.language,
+      email,
+      firstName,
+      lastName,
+      phone,
+      bookingId,
+    });
+    if (withLayout) params.set("withLayout", "true");
+    router.push(`/if/booking-widget/${id}/${serviceId}/confirmation-success?${params.toString()}`);
+  };
+
+  // ── Stripe: called by StripeCardForm ──────────────────────────────────────
+  const getStripeClientSecret = async (): Promise<{
+    clientSecret: string;
+    bookingId: string;
+  }> => {
+    const result = await bookingService.createBooking(buildPayload("stripe"));
+    const bookingId = result.data?._id || (result as any)._id;
+    if (!bookingId) throw new Error("Impossible de créer la réservation.");
+
+    const pi = await createPaymentIntent({
+      bookingId,
+      vendorUserId: id,
+      amountEur: totalPrice,
+      customerEmail: email || undefined,
+      serviceName: widgetData?.service?.name || "Réservation",
+      participantsAdults: bookingData.adults,
+      participantsEnfants: bookingData.children,
+    });
+
+    return { clientSecret: pi.clientSecret, bookingId };
+  };
+
+  // ── On-site / cash confirmation ────────────────────────────────────────────
+  const handleConfirm = async (e: React.MouseEvent) => {
     e.preventDefault();
-
-    if (isSubmitting) return; // Prevent double clicks
-
-    if (!validateBookingConfirmation()) {
-      // Scroll to top to show errors
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (isSubmitting) return;
+    if (!validate()) {
+      window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
-
-    // Set loading state
     setIsSubmitting(true);
-
     try {
-      // Add a small delay for better UX
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      // If validation passes, navigate to checkout using Next.js router
-      const query = new URLSearchParams({
-        date: bookingData.date,
-        selectedTime: bookingData.selectedTime || '',
-        adults: bookingData.adults.toString(),
-        children: bookingData.children.toString(),
-        language: bookingData.language,
-        email: email,
-        firstName: firstName,
-        lastName: lastName,
-        phone: phone,
-        additionalInfo: additionalInfo,
-      });
-      
-      if (withLayout) {
-        query.append('withLayout', 'true');
+      const result = await bookingService.createBooking(buildPayload("cash_on_onsite"));
+      const bookingId = result.data?._id || (result as any)._id || "unknown";
+      toast.success("Réservation créée avec succès !");
+      navigateToSuccess(bookingId);
+    } catch (err: any) {
+      if (err.response?.status === 201 && err.response?.data) {
+        const bookingId =
+          err.response.data._id || err.response.data.data?._id || "unknown";
+        toast.success("Réservation créée avec succès !");
+        navigateToSuccess(bookingId);
+        return;
       }
-
-      router.push(`/if/booking-widget/${id}/${serviceId}/checkout?${query.toString()}`);
-    } catch (error) {
-      // Reset loading state if something goes wrong
+      toast.error(
+        err.message || err.response?.data?.message || "Erreur lors de la création de la réservation",
+      );
+    } finally {
       setIsSubmitting(false);
     }
+  };
+
+  // ── Stripe card form submit (validate contact first) ──────────────────────
+  const validateAndGetSecret = async (): Promise<{
+    clientSecret: string;
+    bookingId: string;
+  }> => {
+    if (!validate()) {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      throw new Error("Veuillez corriger les erreurs du formulaire.");
+    }
+    return getStripeClientSecret();
+  };
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
+  const formatDate = (d: string) => format(new Date(d), "dd/MM/yyyy", { locale: fr });
+  const displayTime = bookingData?.selectedTime || "Aucun horaire sélectionné";
+  const totalParticipants = (bookingData?.adults ?? 2) + (bookingData?.children ?? 0);
+
+  const formatParticipants = () => {
+    const a = bookingData?.adults ?? 2;
+    const c = bookingData?.children ?? 0;
+    if (c > 0) return `${totalParticipants} personnes (${a} adultes, ${c} enfants)`;
+    return `${a} personnes (adultes)`;
+  };
+
+  const getLanguageInFrench = (language: string) => {
+    const l = language.toLowerCase();
+    if (l === "français" || l === "french") return "Français";
+    if (l === "anglais" || l === "english") return "Anglais";
+    if (l === "español" || l === "spanish") return "Espagnol";
+    if (l === "deutsch" || l === "german") return "Allemand";
+    return language;
   };
 
   if (loading) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 mx-auto mb-4" style={{ borderColor: colorCode }}></div>
+          <div
+            className="animate-spin rounded-full h-8 w-8 border-b-2 mx-auto mb-4"
+            style={{ borderColor: colorCode }}
+          />
           <p className="text-lg">Chargement...</p>
         </div>
       </div>
@@ -157,37 +400,6 @@ function BookingConfirmationContent({ id, serviceId }: { id: string, serviceId: 
     );
   }
 
-  // Format date and time
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return format(date, "dd/MM/yyyy", { locale: fr });
-  };
-
-  const displayTime = bookingData?.selectedTime || "Aucun horaire sélectionné";
-  const totalParticipants = (bookingData?.adults ?? 2) + (bookingData?.children ?? 0);
-  const pricePerPerson = widgetData?.service?.pricePerPerson ?? 0;
-  const totalPrice = (bookingData?.adults ?? 2) * pricePerPerson;
-
-  const formatParticipants = () => {
-    const adults = bookingData?.adults ?? 2;
-    const children = bookingData?.children ?? 0;
-
-    if (children > 0) {
-      return `${totalParticipants} personnes (${adults} adultes, ${children} enfants)`;
-    }
-    return `${adults} personnes (adultes)`;
-  };
-
-  // Function to convert language to French display name
-  const getLanguageInFrench = (language: string) => {
-    const lang = language.toLowerCase();
-    if (lang === 'français' || lang === 'french') return 'Français';
-    if (lang === 'anglais' || lang === 'english') return 'Anglais';
-    if (lang === 'español' || lang === 'spanish') return 'Espagnol';
-    if (lang === 'deutsch' || lang === 'german') return 'Allemand';
-    return language; // Return original if no match
-  };
-
   return (
     <div className="min-h-screen bg-white">
       <div className="container mx-auto px-4 py-8 max-w-4xl">
@@ -196,15 +408,17 @@ function BookingConfirmationContent({ id, serviceId }: { id: string, serviceId: 
             Demande de réservation
           </h1>
 
-          {/* Validation Errors */}
+          {/* Validation errors */}
           {validationErrors.length > 0 && (
             <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-              <h3 className="text-red-800 font-medium mb-2">Veuillez corriger les erreurs suivantes :</h3>
+              <h3 className="text-red-800 font-medium mb-2">
+                Veuillez corriger les erreurs suivantes :
+              </h3>
               <ul className="text-red-700 space-y-1">
-                {validationErrors.map((error, index) => (
-                  <li key={index} className="flex items-start">
+                {validationErrors.map((e, i) => (
+                  <li key={i} className="flex items-start">
                     <span className="text-red-500 mr-2">•</span>
-                    {error}
+                    {e}
                   </li>
                 ))}
               </ul>
@@ -212,7 +426,7 @@ function BookingConfirmationContent({ id, serviceId }: { id: string, serviceId: 
           )}
 
           <div className="grid md:grid-cols-2 gap-8">
-            {/* Informations de contact */}
+            {/* ── Contact information ───────────────────────────────────── */}
             <div>
               <h2 className="text-xl font-semibold mb-6">Informations de contact</h2>
 
@@ -239,10 +453,7 @@ function BookingConfirmationContent({ id, serviceId }: { id: string, serviceId: 
                 </div>
 
                 <div className="flex gap-2">
-                  <CountrySelector
-                    value={selectedCountry}
-                    onSelect={setSelectedCountry}
-                  />
+                  <CountrySelector value={selectedCountry} onSelect={setSelectedCountry} />
                   <Input
                     placeholder="Téléphone"
                     value={phone}
@@ -250,22 +461,41 @@ function BookingConfirmationContent({ id, serviceId }: { id: string, serviceId: 
                     className="flex-1"
                   />
                 </div>
+
+                {/* ── Stripe card form (only when Stripe is available) ─────── */}
+                {stripeAvailable && stripePromise && (
+                  <Elements stripe={stripePromise}>
+                    <StripeCardForm
+                      colorCode={colorCode}
+                      totalPrice={totalPrice}
+                      isProcessing={isSubmitting}
+                      setIsProcessing={setIsSubmitting}
+                      onSuccess={navigateToSuccess}
+                      getClientSecret={validateAndGetSecret}
+                    />
+                  </Elements>
+                )}
               </div>
             </div>
 
-            {/* Récapitulatif de la demande */}
+            {/* ── Booking summary ───────────────────────────────────────── */}
             <div>
               <h2 className="text-xl font-semibold mb-6">Récapitulatif de la demande</h2>
 
               <div className="space-y-4">
                 <div className="flex items-center gap-3">
                   <Clock className="w-5 h-5" style={{ color: colorCode }} />
-                  <span>{formatDate(bookingData?.date || new Date().toISOString())} - {displayTime}</span>
+                  <span>
+                    {formatDate(bookingData?.date || new Date().toISOString())} -{" "}
+                    {displayTime}
+                  </span>
                 </div>
 
                 <div className="flex items-center gap-3">
                   <Grape className="w-5 h-5" style={{ color: colorCode }} />
-                  <span>{widgetData?.service?.name || 'Visite libre & dégustation des cuvées Tradition'}</span>
+                  <span>
+                    {widgetData?.service?.name || "Visite libre & dégustation"}
+                  </span>
                 </div>
 
                 <div className="flex items-center gap-3">
@@ -285,14 +515,16 @@ function BookingConfirmationContent({ id, serviceId }: { id: string, serviceId: 
 
                 <div className="flex items-center gap-3">
                   <CreditCard className="w-5 h-5" style={{ color: colorCode }} />
-                  <span>Paiement sur place</span>
+                  <span>
+                    {stripeAvailable ? "Paiement en ligne ou sur place" : "Paiement sur place"}
+                  </span>
                 </div>
 
                 <div className="mt-6">
                   <Link
                     href={`/if/booking-widget/${id}/${serviceId}/booking?${new URLSearchParams({
                       date: bookingData.date,
-                      selectedTime: bookingData.selectedTime || '',
+                      selectedTime: bookingData.selectedTime || "",
                       adults: bookingData.adults.toString(),
                       children: bookingData.children.toString(),
                       language: bookingData.language,
@@ -307,7 +539,7 @@ function BookingConfirmationContent({ id, serviceId }: { id: string, serviceId: 
             </div>
           </div>
 
-          {/* Information supplémentaire */}
+          {/* ── Additional info ───────────────────────────────────────────── */}
           <div className="mt-8">
             <h3 className="text-lg font-medium mb-2">
               Une information supplémentaire à nous partager ?
@@ -321,38 +553,78 @@ function BookingConfirmationContent({ id, serviceId }: { id: string, serviceId: 
             />
           </div>
 
-          {/* Bouton Confirmer */}
-          <div className="flex justify-end mt-6">
-            <Button
-              onClick={handleBookingConfirmation}
-              disabled={isSubmitting}
-              className={cn(
-                "text-white px-8 py-2",
-                isSubmitting
-                  ? "opacity-70 cursor-not-allowed"
-                  : "hover:opacity-90"
-              )}
-              style={{ backgroundColor: colorCode }}
-              size="lg"
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                  Traitement...
-                </>
-              ) : (
-                "Confirmer"
-              )}
-            </Button>
-          </div>
+          {/* ── Confirm button — only for on-site flow ────────────────────── */}
+          {!stripeAvailable && (
+            <div className="flex justify-end mt-6">
+              <Button
+                onClick={handleConfirm}
+                disabled={isSubmitting}
+                className={cn(
+                  "text-white px-8 py-2",
+                  isSubmitting ? "opacity-70 cursor-not-allowed" : "hover:opacity-90",
+                )}
+                style={{ backgroundColor: colorCode }}
+                size="lg"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    Traitement...
+                  </>
+                ) : (
+                  "Confirmer la réservation"
+                )}
+              </Button>
+            </div>
+          )}
+
+          {/* When stripe is available but vendor has ALSO on-site methods, show both options note */}
+          {stripeAvailable && (
+            <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-sm text-blue-800">
+                Vous pouvez payer en ligne par carte ci-dessus, ou régler directement sur place.
+              </p>
+              <div className="flex justify-end mt-3">
+                <Button
+                  onClick={handleConfirm}
+                  disabled={isSubmitting}
+                  variant="outline"
+                  className={cn(
+                    "px-6",
+                    isSubmitting ? "opacity-70 cursor-not-allowed" : "",
+                  )}
+                  style={{ borderColor: colorCode, color: colorCode }}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                      Traitement...
+                    </>
+                  ) : (
+                    "Payer sur place"
+                  )}
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
 }
 
-const BookingConfirmation = ({ params }: { params: Promise<{ id: string, service_id: string }> }) => {
-  const [resolvedParams, setResolvedParams] = useState<{ id: string, service_id: string } | null>(null);
+// ─────────────────────────────────────────────────────────────────────────────
+// Page wrapper
+// ─────────────────────────────────────────────────────────────────────────────
+const BookingConfirmation = ({
+  params,
+}: {
+  params: Promise<{ id: string; service_id: string }>;
+}) => {
+  const [resolvedParams, setResolvedParams] = useState<{
+    id: string;
+    service_id: string;
+  } | null>(null);
 
   useEffect(() => {
     params.then(setResolvedParams);
@@ -362,7 +634,7 @@ const BookingConfirmation = ({ params }: { params: Promise<{ id: string, service
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#3A7E53] mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#3A7E53] mx-auto mb-4" />
           <p className="text-lg">Chargement...</p>
         </div>
       </div>
