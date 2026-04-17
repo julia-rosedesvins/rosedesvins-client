@@ -27,7 +27,7 @@ import {
 } from "@stripe/react-stripe-js";
 import { WidgetProvider, useWidget } from "@/contexts/WidgetContext";
 import { bookingService } from "@/services/booking.service";
-import { createPaymentIntent } from "@/services/stripe-checkout.service";
+import { createPaymentIntent, confirmPaymentOnServer } from "@/services/stripe-checkout.service";
 // bookingService.cancelBookingAsGuest is used to roll back on card failure
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -91,6 +91,8 @@ function StripeCardForm({
         setCardError(error.message || "Le paiement a échoué. Veuillez réessayer.");
         setIsProcessing(false);
       } else if (paymentIntent?.status === "succeeded") {
+        // Notify server: verify PI, mark booking confirmed, send emails
+        await confirmPaymentOnServer(paymentIntent.id).catch(() => {});
         toast.success("Paiement réussi !");
         onSuccess(bookingId);
       }

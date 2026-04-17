@@ -92,6 +92,19 @@ export async function getSessionStatus(sessionId: string): Promise<TransactionSt
 }
 
 /**
+ * Called right after stripe.confirmCardPayment() succeeds.
+ * Tells the server to verify, update DB and send confirmation emails.
+ */
+export async function confirmPaymentOnServer(paymentIntentId: string): Promise<void> {
+  const response = await stripeCheckoutApiClient.post('/stripe-checkout/confirm-payment', {
+    paymentIntentId,
+  });
+  if (!response.data.success) {
+    throw new Error(response.data.message || 'Failed to confirm payment on server');
+  }
+}
+
+/**
  * Get all transactions for the authenticated vendor (uses cookie auth)
  */
 export async function getVendorTransactions(): Promise<TransactionStatus[]> {
