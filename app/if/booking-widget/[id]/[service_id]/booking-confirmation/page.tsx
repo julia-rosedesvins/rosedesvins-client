@@ -535,7 +535,26 @@ function BookingConfirmationContent({ id, serviceId }: { id: string; serviceId: 
                 <div className="flex items-center gap-3">
                   <CreditCard className="w-5 h-5" style={{ color: colorCode }} />
                   <span>
-                    {stripeAvailable ? "Paiement en ligne ou sur place" : "Paiement sur place"}
+                    {(() => {
+                      const onSiteMethods = acceptedPaymentMethods.filter((m: string) => m !== 'stripe');
+                      const methodLabels: Record<string, string> = {
+                        'bank card': 'carte bancaire',
+                        'bank_card': 'carte bancaire',
+                        'checks': 'chèques',
+                        'cheque': 'chèques',
+                        'cash': 'espèces',
+                        'cash_on_onsite': 'espèces',
+                      };
+                      const labels = onSiteMethods.map((m: string) => methodLabels[m.toLowerCase()] || m.toLowerCase());
+                      const onSiteText = labels.length === 0
+                        ? ''
+                        : labels.length === 1
+                          ? ` (${labels[0]})`
+                          : ` (${labels.slice(0, -1).join(', ')} ou ${labels[labels.length - 1]})`;
+                      return stripeAvailable
+                        ? `Paiement en ligne`
+                        : `Paiement sur place${onSiteText}`;
+                    })()}
                   </span>
                 </div>
 
@@ -597,35 +616,31 @@ function BookingConfirmationContent({ id, serviceId }: { id: string; serviceId: 
             </div>
           )}
 
-          {/* When stripe is available but vendor has ALSO on-site methods, show both options note */}
+          {/* ── Pay on-site button — shown alongside Stripe option ───────── */}
           {stripeAvailable && (
-            <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-              <p className="text-sm text-blue-800">
-                Vous pouvez payer en ligne par carte ci-dessus, ou régler directement sur place.
-              </p>
-              <div className="flex justify-end mt-3">
-                <Button
-                  onClick={handleConfirm}
-                  disabled={isSubmitting}
-                  variant="outline"
-                  className={cn(
-                    "px-6",
-                    isSubmitting ? "opacity-70 cursor-not-allowed" : "",
-                  )}
-                  style={{ borderColor: colorCode, color: colorCode }}
-                >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                      Traitement...
-                    </>
-                  ) : (
-                    "Payer sur place"
-                  )}
-                </Button>
-              </div>
+            <div className="flex justify-end mt-4">
+              <Button
+                onClick={handleConfirm}
+                disabled={isSubmitting}
+                variant="outline"
+                className={cn(
+                  "px-6",
+                  isSubmitting ? "opacity-70 cursor-not-allowed" : "",
+                )}
+                style={{ borderColor: colorCode, color: colorCode }}
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    Traitement...
+                  </>
+                ) : (
+                  "Payer sur place"
+                )}
+              </Button>
             </div>
           )}
+
         </div>
       </div>
     </div>

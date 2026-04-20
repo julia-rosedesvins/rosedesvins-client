@@ -23,6 +23,7 @@ function ConfirmationSuccessContent({ id, serviceId }: { id: string, serviceId: 
   
   // Get payment methods from widget data
   const acceptedPaymentMethods = widgetData?.paymentMethods?.methods || ['cash_on_onsite'];
+  const stripeAvailable = acceptedPaymentMethods.includes('stripe') && widgetData?.paymentMethods?.stripeConnect?.chargesEnabled === true;
   
   // Extract booking data from URL parameters
   const bookingData: BookingData = {
@@ -74,11 +75,14 @@ function ConfirmationSuccessContent({ id, serviceId }: { id: string, serviceId: 
   };
 
   const formatPaymentMethods = () => {
-    if (acceptedPaymentMethods.length === 0) {
+    // Exclude stripe — it's an online method, not on-site
+    const onSiteMethods = acceptedPaymentMethods.filter((m: string) => m.toLowerCase() !== 'stripe');
+
+    if (onSiteMethods.length === 0) {
       return 'Paiement sur place';
     }
     
-    const labels = acceptedPaymentMethods.map(method => getPaymentMethodLabel(method));
+    const labels = onSiteMethods.map((method: string) => getPaymentMethodLabel(method));
     
     if (labels.length === 1) {
       return `Paiement sur place (${labels[0].toLowerCase()})`;
@@ -149,7 +153,7 @@ function ConfirmationSuccessContent({ id, serviceId }: { id: string, serviceId: 
 
               <div className="flex items-center gap-3">
                 <CreditCard className="w-5 h-5" style={{ color: colorCode }} />
-                <span>{formatPaymentMethods()}</span>
+                <span>{stripeAvailable ? 'Paiement en ligne' : formatPaymentMethods()}</span>
               </div>
             </div>
           </div>
