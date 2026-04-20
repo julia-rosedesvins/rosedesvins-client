@@ -16,6 +16,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState, useEffect, useMemo } from "react";
 import { userService, DomainProfile, DomainService } from "@/services/user.service";
+import { paymentMethodsService } from "@/services/payment-methods.service";
 import toast from "react-hot-toast";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -51,6 +52,7 @@ interface EnhancedDomainService extends DomainService {
     id?: number;
     active?: boolean;
     periodActive?: boolean;
+    stripeEnabled?: boolean;
     selectedDates?: Date[];
     hasChanges?: boolean;
     originalBookingSettings?: {
@@ -58,6 +60,7 @@ interface EnhancedDomainService extends DomainService {
         bookingRestrictionTime: string;
         multipleBookings: boolean;
         hasCustomAvailability: boolean;
+        stripeEnabled: boolean;
         dateAvailability: any[];
     };
 }
@@ -84,6 +87,7 @@ export default function UserDomainProfile() {
     const [isShiftPressed, setIsShiftPressed] = useState(false);
     const [serviceSchedules, setServiceSchedules] = useState<{ [serviceId: string]: any }>({});
     const [savingServices, setSavingServices] = useState<{ [serviceId: string]: boolean }>({});
+    const [isStripeConnected, setIsStripeConnected] = useState(false);
 
     // Form states
     const [formData, setFormData] = useState({
@@ -136,6 +140,7 @@ export default function UserDomainProfile() {
                         bookingRestrictionTime: (service as any).bookingRestrictionTime ?? "24h",
                         multipleBookings: (service as any).multipleBookings ?? false,
                         hasCustomAvailability: computedHasCustom,
+                        stripeEnabled: (service as any).stripeEnabled ?? true,
                         dateAvailability: (service as any).dateAvailability ?? []
                     }
                 } as EnhancedDomainService;
@@ -151,6 +156,7 @@ export default function UserDomainProfile() {
                         bookingRestrictionTime: "24h",
                         multipleBookings: false,
                         hasCustomAvailability: false,
+                        stripeEnabled: true,
                         dateAvailability: []
                     }
                 } as EnhancedDomainService;
@@ -226,6 +232,14 @@ export default function UserDomainProfile() {
             // Load services separately and initialize original settings
             const servicesResponse = await userService.getServices();
             setServices(hydrateServices(servicesResponse?.data));
+
+            // Check if Stripe is connected and charges enabled
+            try {
+                const stripeStatus = await paymentMethodsService.getStripeStatus();
+                setIsStripeConnected(!!(stripeStatus?.data?.chargesEnabled));
+            } catch {
+                setIsStripeConnected(false);
+            }
 
         } catch (error: any) {
             console.error('Error loading domain profile:', error);
@@ -372,6 +386,7 @@ export default function UserDomainProfile() {
                         bookingRestrictionTime: service.bookingRestrictionTime ?? "24h",
                         multipleBookings: service.multipleBookings ?? false,
                         hasCustomAvailability: service.hasCustomAvailability ?? false,
+                        stripeEnabled: service.stripeEnabled ?? true,
                         dateAvailability: service.dateAvailability ?? []
                     };
 
@@ -390,6 +405,7 @@ export default function UserDomainProfile() {
                         updatedService.bookingRestrictionTime !== originalSettings.bookingRestrictionTime ||
                         updatedService.multipleBookings !== originalSettings.multipleBookings ||
                         updatedService.hasCustomAvailability !== originalSettings.hasCustomAvailability ||
+                        (updatedService.stripeEnabled ?? true) !== (originalSettings.stripeEnabled ?? true) ||
                         JSON.stringify(currentDateAvailability) !== JSON.stringify(originalDateAvailability)
                     );
 
@@ -477,6 +493,7 @@ export default function UserDomainProfile() {
                 bookingRestrictionTime: service.bookingRestrictionTime ?? "24h",
                 multipleBookings: service.multipleBookings ?? false,
                 hasCustomAvailability: service.hasCustomAvailability ?? false,
+                stripeEnabled: service.stripeEnabled ?? true,
                 dateAvailability
             };
 
@@ -496,6 +513,7 @@ export default function UserDomainProfile() {
                                 bookingRestrictionTime: s.bookingRestrictionTime ?? "24h",
                                 multipleBookings: s.multipleBookings ?? false,
                                 hasCustomAvailability: s.hasCustomAvailability ?? false,
+                                stripeEnabled: s.stripeEnabled ?? true,
                                 dateAvailability: s.dateAvailability ?? []
                             }
                         };
@@ -551,6 +569,7 @@ export default function UserDomainProfile() {
             multipleBookings: service.multipleBookings || false,
             bookingRestrictionActive: service.bookingRestrictionActive || false,
             bookingRestrictionTime: service.bookingRestrictionTime || "24h",
+            stripeEnabled: service.stripeEnabled ?? true,
             selectedDates: selectedDates
         };
     });
@@ -757,6 +776,13 @@ export default function UserDomainProfile() {
         const service = services.find(s => s._id === prestationId);
         if (service) {
             updateServiceBookingSettings(prestationId, 'multipleBookings', !service.multipleBookings);
+        }
+    };
+
+    const handleToggleServiceStripe = (prestationId: string) => {
+        const service = services.find(s => s._id === prestationId);
+        if (service) {
+            updateServiceBookingSettings(prestationId, 'stripeEnabled', !(service.stripeEnabled ?? true));
         }
     };
 
@@ -1262,6 +1288,20 @@ export default function UserDomainProfile() {
                                                                     <span className="text-sm text-gray-600">Activer</span>
                                                                 </div>
                                                             </div>
+
+                                                            {/* Stripe Payment Toggle (per-service) — only shown when Stripe is globally connected */}
+                                                            {isStripeConnected && (
+                                                                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                                                                    <span className="text-sm font-medium text-gray-700">Paiement en ligne (Stripe)</span>
+                                                                    <div className="flex items-center space-x-2">
+                                                                        <Switch
+                                                                            checked={prestation.stripeEnabled ?? true}
+                                                                            onCheckedChange={() => handleToggleServiceStripe(prestation.id)}
+                                                                        />
+                                                                        <span className="text-sm text-gray-600">Activer</span>
+                                                                    </div>
+                                                                </div>
+                                                            )}
                                                             
                                                             {/* Period Availability */}
                                                             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
