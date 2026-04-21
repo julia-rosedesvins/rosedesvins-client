@@ -617,7 +617,7 @@ function BookingConfirmationContent({ id, serviceId }: { id: string; serviceId: 
           )}
 
           {/* ── Pay on-site button — shown alongside Stripe option ───────── */}
-          {stripeAvailable && (
+          {/* {stripeAvailable && (
             <div className="flex justify-end mt-4">
               <Button
                 onClick={handleConfirm}
@@ -639,7 +639,7 @@ function BookingConfirmationContent({ id, serviceId }: { id: string; serviceId: 
                 )}
               </Button>
             </div>
-          )}
+          )} */}
 
         </div>
       </div>
