@@ -1270,8 +1270,12 @@ export default function UserDomainProfile() {
                                                                             <SelectValue placeholder="Sélectionner" />
                                                                         </SelectTrigger>
                                                                         <SelectContent>
+                                                                            <SelectItem value="4h">4h</SelectItem>
                                                                             <SelectItem value="24h">24h</SelectItem>
                                                                             <SelectItem value="48h">48h</SelectItem>
+                                                                            <SelectItem value="72h">72h</SelectItem>
+                                                                            <SelectItem value="7d">Une semaine</SelectItem>
+                                                                            <SelectItem value="10d">10 jours</SelectItem>
                                                                         </SelectContent>
                                                                     </Select>
                                                                 </div>

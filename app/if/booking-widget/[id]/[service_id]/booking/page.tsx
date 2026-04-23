@@ -191,10 +191,18 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
       
       // Override with service-specific restriction if available
       if (serviceBookingRestriction) {
-        if (serviceBookingRestriction === '24h') {
+        if (serviceBookingRestriction === '4h') {
+          bookingAdvanceLimit = '4_hours';
+        } else if (serviceBookingRestriction === '24h') {
           bookingAdvanceLimit = '24_hours';
         } else if (serviceBookingRestriction === '48h') {
           bookingAdvanceLimit = '48_hours';
+        } else if (serviceBookingRestriction === '72h') {
+          bookingAdvanceLimit = '72_hours';
+        } else if (serviceBookingRestriction === '7d') {
+          bookingAdvanceLimit = '7_days';
+        } else if (serviceBookingRestriction === '10d') {
+          bookingAdvanceLimit = '10_days';
         }
       }
       
@@ -233,6 +241,10 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
               minimumAdvanceHours = 2;
               limitLabel = '2 heures';
               break;
+            case '4_hours':
+              minimumAdvanceHours = 4;
+              limitLabel = '4 heures';
+              break;
             case '24_hours':
               minimumAdvanceHours = 24;
               limitLabel = '24 heures';
@@ -240,6 +252,18 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
             case '48_hours':
               minimumAdvanceHours = 48;
               limitLabel = '48 heures';
+              break;
+            case '72_hours':
+              minimumAdvanceHours = 72;
+              limitLabel = '72 heures';
+              break;
+            case '7_days':
+              minimumAdvanceHours = 168;
+              limitLabel = 'une semaine';
+              break;
+            case '10_days':
+              minimumAdvanceHours = 240;
+              limitLabel = '10 jours';
               break;
             case 'day_before':
               minimumAdvanceHours = 24;
@@ -441,10 +465,18 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
       
       // Override with service-specific restriction if available
       if (serviceBookingRestriction) {
-        if (serviceBookingRestriction === '24h') {
+        if (serviceBookingRestriction === '4h') {
+          bookingAdvanceLimit = '4_hours';
+        } else if (serviceBookingRestriction === '24h') {
           bookingAdvanceLimit = '24_hours';
         } else if (serviceBookingRestriction === '48h') {
           bookingAdvanceLimit = '48_hours';
+        } else if (serviceBookingRestriction === '72h') {
+          bookingAdvanceLimit = '72_hours';
+        } else if (serviceBookingRestriction === '7d') {
+          bookingAdvanceLimit = '7_days';
+        } else if (serviceBookingRestriction === '10d') {
+          bookingAdvanceLimit = '10_days';
         }
       }
       
@@ -463,11 +495,23 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
         case '2_hours':
           minimumAdvanceHours = 2;
           break;
+        case '4_hours':
+          minimumAdvanceHours = 4;
+          break;
         case '24_hours':
           minimumAdvanceHours = 24;
           break;
         case '48_hours':
           minimumAdvanceHours = 48;
+          break;
+        case '72_hours':
+          minimumAdvanceHours = 72;
+          break;
+        case '7_days':
+          minimumAdvanceHours = 168;
+          break;
+        case '10_days':
+          minimumAdvanceHours = 240;
           break;
         case 'day_before':
           minimumAdvanceHours = 24;
