@@ -74,6 +74,7 @@ export interface WidgetStripeConnect {
 
 export interface WidgetPaymentMethods {
   methods: string[];
+  cancellationPolicy?: string | null;
   stripeConnect?: WidgetStripeConnect | null;
 }
 

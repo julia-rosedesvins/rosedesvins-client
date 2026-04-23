@@ -252,6 +252,7 @@ function BookingConfirmationContent({ id, serviceId }: { id: string; serviceId: 
 
   const pricePerPerson = widgetData?.service?.pricePerPerson ?? 0;
   const totalPrice = (bookingData?.adults ?? 0) * pricePerPerson;
+  const cancellationPolicy: string = widgetData?.paymentMethods?.cancellationPolicy ?? '';
 
   const stripePromise = useMemo(() => {
     const pubKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
@@ -305,6 +306,7 @@ function BookingConfirmationContent({ id, serviceId }: { id: string; serviceId: 
       phone,
       bookingId,
     });
+    if (cancellationPolicy) params.set("cancellationPolicy", cancellationPolicy);
     if (withLayout) params.set("withLayout", "true");
     router.push(`/if/booking-widget/${id}/${serviceId}/confirmation-success?${params.toString()}`);
   };
@@ -392,6 +394,17 @@ function BookingConfirmationContent({ id, serviceId }: { id: string; serviceId: 
     if (l === "español" || l === "spanish") return "Espagnol";
     if (l === "deutsch" || l === "german") return "Allemand";
     return language;
+  };
+
+  const getCancellationPolicyLabel = (policy: string) => {
+    switch (policy) {
+      case 'none': return 'Aucun remboursement possible';
+      case '24h': return "Remboursement intégral possible en cas d'annulation 24h avant";
+      case '48h': return "Remboursement intégral possible en cas d'annulation 48h avant";
+      case '72h': return "Remboursement intégral possible en cas d'annulation 72h avant";
+      case '1_week': return "Remboursement intégral possible en cas d'annulation une semaine avant";
+      default: return '';
+    }
   };
 
   if (loading) {
@@ -557,6 +570,13 @@ function BookingConfirmationContent({ id, serviceId }: { id: string; serviceId: 
                     })()}
                   </span>
                 </div>
+
+                {stripeAvailable && cancellationPolicy && getCancellationPolicyLabel(cancellationPolicy) && (
+                  <div className="flex items-start gap-3">
+                    <CreditCard className="w-5 h-5 opacity-0" />
+                    <span className="text-sm text-gray-500 italic">{getCancellationPolicyLabel(cancellationPolicy)}</span>
+                  </div>
+                )}
 
                 <div className="mt-6">
                   <Link

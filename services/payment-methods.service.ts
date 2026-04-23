@@ -13,6 +13,7 @@ export interface PaymentMethodsData {
   _id?: string;
   userId?: string;
   methods: string[];
+  cancellationPolicy?: string | null;
   stripeConnect?: StripeConnectData | null;
   createdAt?: string;
   updatedAt?: string;
@@ -20,6 +21,7 @@ export interface PaymentMethodsData {
 
 export interface CreateOrUpdatePaymentMethodsRequest {
   methods: string[];
+  cancellationPolicy?: string | null;
 }
 
 export interface PaymentMethodsResponse {

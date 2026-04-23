@@ -22,6 +22,7 @@ export const PaymentSection = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
   const [selectedMethods, setSelectedMethods] = useState<string[]>([]);
+  const [cancellationPolicy, setCancellationPolicy] = useState<string>('');
   const [stripeStatus, setStripeStatus] = useState<StripeConnectData | null>(null);
   const [isStripeConnecting, setIsStripeConnecting] = useState(false);
   const [isStripeDisconnecting, setIsStripeDisconnecting] = useState(false);
@@ -73,6 +74,7 @@ export const PaymentSection = () => {
         ]);
         if (isMounted) {
           setSelectedMethods(paymentResponse.data?.methods ?? []);
+          setCancellationPolicy(paymentResponse.data?.cancellationPolicy ?? '');
           setHasChanges(false);
         }
       } catch {
@@ -89,7 +91,10 @@ export const PaymentSection = () => {
   const savePaymentMethods = async () => {
     setIsSaving(true);
     try {
-      const methodsData: CreateOrUpdatePaymentMethodsRequest = { methods: selectedMethods };
+      const methodsData: CreateOrUpdatePaymentMethodsRequest = {
+        methods: selectedMethods,
+        cancellationPolicy: cancellationPolicy || null,
+      };
       await paymentMethodsService.createOrUpdatePaymentMethods(methodsData);
       toast.success('Moyens de paiement sauvegardés avec succès');
       setHasChanges(false);
@@ -270,6 +275,25 @@ export const PaymentSection = () => {
                           Tableau de bord Stripe
                         </a>
                       </Button>
+                    </div>
+
+                    {/* Cancellation policy */}
+                    <div className="pt-1">
+                      <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                        Politique de remboursement
+                      </label>
+                      <select
+                        value={cancellationPolicy}
+                        onChange={(e) => { setCancellationPolicy(e.target.value); setHasChanges(true); }}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#3A7B59]/30"
+                      >
+                        <option value="">Sélectionnez une politique</option>
+                        <option value="none">Aucun remboursement possible</option>
+                        <option value="24h">Remboursement intégral possible en cas d&apos;annulation 24h avant</option>
+                        <option value="48h">Remboursement intégral possible en cas d&apos;annulation 48h avant</option>
+                        <option value="72h">Remboursement intégral possible en cas d&apos;annulation 72h avant</option>
+                        <option value="1_week">Remboursement intégral possible en cas d&apos;annulation une semaine avant</option>
+                      </select>
                     </div>
                   </div>
                 ) : (

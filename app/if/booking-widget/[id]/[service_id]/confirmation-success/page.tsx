@@ -20,6 +20,7 @@ function ConfirmationSuccessContent({ id, serviceId }: { id: string, serviceId: 
   const { widgetData, loading, error, colorCode } = useWidget();
   const searchParams = useSearchParams();
   const withLayout = searchParams.get('withLayout');
+  const cancellationPolicy = searchParams.get('cancellationPolicy') || '';
   
   // Get payment methods from widget data
   const acceptedPaymentMethods = widgetData?.paymentMethods?.methods || ['cash_on_onsite'];
@@ -103,6 +104,17 @@ function ConfirmationSuccessContent({ id, serviceId }: { id: string, serviceId: 
     return language; // Return original if no match
   };
 
+  const getCancellationPolicyLabel = (policy: string) => {
+    switch (policy) {
+      case 'none': return 'Aucun remboursement possible';
+      case '24h': return "Remboursement intégral possible en cas d'annulation 24h avant";
+      case '48h': return "Remboursement intégral possible en cas d'annulation 48h avant";
+      case '72h': return "Remboursement intégral possible en cas d'annulation 72h avant";
+      case '1_week': return "Remboursement intégral possible en cas d'annulation une semaine avant";
+      default: return '';
+    }
+  };
+
   return (
     <div className="min-h-screen bg-white">
       <div className="container mx-auto px-4 py-8 max-w-2xl">
@@ -155,6 +167,13 @@ function ConfirmationSuccessContent({ id, serviceId }: { id: string, serviceId: 
                 <CreditCard className="w-5 h-5" style={{ color: colorCode }} />
                 <span>{stripeAvailable ? 'Paiement en ligne' : formatPaymentMethods()}</span>
               </div>
+
+              {cancellationPolicy && getCancellationPolicyLabel(cancellationPolicy) && (
+                <div className="flex items-start gap-3">
+                  <CreditCard className="w-5 h-5 opacity-0" />
+                  <span className="text-sm text-gray-500 italic">{getCancellationPolicyLabel(cancellationPolicy)}</span>
+                </div>
+              )}
             </div>
           </div>
 
