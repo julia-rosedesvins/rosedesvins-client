@@ -762,28 +762,19 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
     return slotCompletelyFull;
   };
 
-  // Check if a date is a public holiday
-  const isHoliday = (date: Date): boolean => {
-    if (!widgetData?.availability?.publicHolidays) return false;
-    
-    // Get the list of enabled holiday names from the widget data
-    const enabledHolidayNames = widgetData.availability.publicHolidays.map((h: any) => h.name);
-    
-    // Calculate holidays for the year of the checked date
-    const year = date.getFullYear();
-    const holidaysForYear = getHolidays(year);
-    
-    const dateString = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
-    
-    // Check if the date matches any holiday that is enabled (by name)
-    return holidaysForYear.some(holiday => {
-      // Check if this holiday is enabled (its name is in the list)
-      if (!enabledHolidayNames.includes(holiday.name)) return false;
-      
-      // Check if the date matches
-      return holiday.date === dateString;
-    });
-  };
+  // DISABLED: public holidays feature — uncomment when re-enabled
+  // const isHoliday = (date: Date): boolean => {
+  //   if (!widgetData?.availability?.publicHolidays) return false;
+  //   const enabledHolidayNames = widgetData.availability.publicHolidays.map((h: any) => h.name);
+  //   const year = date.getFullYear();
+  //   const holidaysForYear = getHolidays(year);
+  //   const dateString = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
+  //   return holidaysForYear.some(holiday => {
+  //     if (!enabledHolidayNames.includes(holiday.name)) return false;
+  //     return holiday.date === dateString;
+  //   });
+  // };
+  const isHoliday = (_date: Date): boolean => false; // DISABLED: always returns false until feature re-enabled
 
   // Get available time slots for the selected date
   const getAvailableTimeSlots = (date: Date | null) => {

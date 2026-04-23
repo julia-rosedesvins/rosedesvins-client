@@ -38,15 +38,15 @@ export const AvailabilitySection = () => {
     afternoonTo: string;
   }}>({});
   
-  const [selectedHolidays, setSelectedHolidays] = useState<string[]>([]);
+  // const [selectedHolidays, setSelectedHolidays] = useState<string[]>([]); // DISABLED: public holidays feature
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
   const [initialDataLoaded, setInitialDataLoaded] = useState(false);
   const [originalData, setOriginalData] = useState<{
     schedules: typeof schedules;
-    holidays: string[];
-  }>({ schedules: {}, holidays: [] });
+    // holidays: string[]; // DISABLED: public holidays feature
+  }>({ schedules: {} /*, holidays: []*/ });
 
   // Load availability data on component mount
   useEffect(() => {
@@ -60,13 +60,13 @@ export const AvailabilitySection = () => {
     // Deep compare schedules
     const schedulesChanged = JSON.stringify(schedules) !== JSON.stringify(originalData.schedules);
     
-    // Compare holidays - create copies before sorting to avoid mutation
-    const holidaysChanged = JSON.stringify([...selectedHolidays].sort()) !== JSON.stringify([...originalData.holidays].sort());
+    // DISABLED: public holidays feature
+    // const holidaysChanged = JSON.stringify([...selectedHolidays].sort()) !== JSON.stringify([...originalData.holidays].sort());
     
-    const hasDataChanges = schedulesChanged || holidaysChanged;
+    const hasDataChanges = schedulesChanged; // || holidaysChanged;
 
     setHasChanges(hasDataChanges);
-  }, [schedules, selectedHolidays, initialDataLoaded, originalData]);
+  }, [schedules, /*selectedHolidays,*/ initialDataLoaded, originalData]);
 
   const loadAvailabilityData = async () => {
     setIsLoading(true);
@@ -110,39 +110,29 @@ export const AvailabilitySection = () => {
 
         setSchedules(convertedSchedules);
         
-        // Convert public holidays to selected holidays with validation
-        const holidayIds = apiData.publicHolidays
-          .filter(holiday => holiday.isBlocked !== false && holiday.date)
-          .map(holiday => {
-            try {
-              // Safely extract date string
-              const dateStr = typeof holiday.date === 'string' 
-                ? holiday.date.split('T')[0] 
-                : new Date(holiday.date).toISOString().split('T')[0];
-              
-              // Map holiday dates to IDs
-              // Try to find by date first (exact match for current year)
-              let foundHoliday = holidays.find(h => h.date === dateStr);
-              
-              // If not found by date (might be a different year), try to find by name
-              if (!foundHoliday) {
-                foundHoliday = holidays.find(h => h.name === holiday.name);
-              }
-              
-              return foundHoliday?.id;
-            } catch (error) {
-              console.warn('Invalid holiday date format:', holiday);
-              return null;
-            }
-          })
-          .filter(Boolean) as string[];
-          
-        setSelectedHolidays(holidayIds);
+        // DISABLED: public holidays feature
+        // const holidayIds = apiData.publicHolidays
+        //   .filter(holiday => holiday.isBlocked !== false && holiday.date)
+        //   .map(holiday => {
+        //     try {
+        //       const dateStr = typeof holiday.date === 'string'
+        //         ? holiday.date.split('T')[0]
+        //         : new Date(holiday.date).toISOString().split('T')[0];
+        //       let foundHoliday = holidays.find(h => h.date === dateStr);
+        //       if (!foundHoliday) foundHoliday = holidays.find(h => h.name === holiday.name);
+        //       return foundHoliday?.id;
+        //     } catch (error) {
+        //       console.warn('Invalid holiday date format:', holiday);
+        //       return null;
+        //     }
+        //   })
+        //   .filter(Boolean) as string[];
+        // setSelectedHolidays(holidayIds);
         
         // Store original data for change detection
         setOriginalData({
           schedules: convertedSchedules,
-          holidays: holidayIds
+          // holidays: holidayIds
         });
         
         setHasChanges(false);
@@ -155,7 +145,7 @@ export const AvailabilitySection = () => {
         // Store empty original data
         setOriginalData({
           schedules: {},
-          holidays: []
+          // holidays: []
         });
         
         setHasChanges(false);
@@ -201,20 +191,20 @@ export const AvailabilitySection = () => {
         };
       });
 
-      // Convert selected holidays to public holidays format
-      const publicHolidays = selectedHolidays.map(holidayId => {
-        const holiday = holidays.find(h => h.id === holidayId);
-        return {
-          name: holiday!.name,
-          date: `${holiday!.date}T00:00:00.000Z`,
-          isBlocked: true,
-          isRecurring: true
-        };
-      });
+      // DISABLED: public holidays feature — always save empty array
+      // const publicHolidays = selectedHolidays.map(holidayId => {
+      //   const holiday = holidays.find(h => h.id === holidayId);
+      //   return {
+      //     name: holiday!.name,
+      //     date: `${holiday!.date}T00:00:00.000Z`,
+      //     isBlocked: true,
+      //     isRecurring: true
+      //   };
+      // });
 
       const availabilityData: AvailabilityData = {
         weeklyAvailability,
-        publicHolidays,
+        publicHolidays: [],
         specialDateOverrides: [],
         timezone: "Europe/Paris",
         defaultSlotDuration: 30,
@@ -229,7 +219,7 @@ export const AvailabilitySection = () => {
       // Update original data to reflect the saved state
       setOriginalData({
         schedules: { ...schedules },
-        holidays: [...selectedHolidays]
+        // holidays: [...selectedHolidays] // DISABLED: public holidays feature
       });
       
       setHasChanges(false);
@@ -288,13 +278,14 @@ export const AvailabilitySection = () => {
     });
   };
 
-  const handleHolidayToggle = (holidayId: string) => {
-    setSelectedHolidays(prev => 
-      prev.includes(holidayId) 
-        ? prev.filter(id => id !== holidayId)
-        : [...prev, holidayId]
-    );
-  };
+  // DISABLED: public holidays feature
+  // const handleHolidayToggle = (holidayId: string) => {
+  //   setSelectedHolidays(prev =>
+  //     prev.includes(holidayId)
+  //       ? prev.filter(id => id !== holidayId)
+  //       : [...prev, holidayId]
+  //   );
+  // };
 
   return (
     <Card className="mb-6 lg:mb-8 relative shadow-sm border-0 bg-white ring-1 ring-gray-200 hover:ring-gray-300 transition-all duration-200">
@@ -509,6 +500,7 @@ export const AvailabilitySection = () => {
             </div>
           ))}
           
+          {/* DISABLED: public holidays feature — uncomment to re-enable
           <div className="mt-8 lg:mt-10 p-6 bg-gray-50 rounded-lg border border-gray-200">
             <div className="text-base lg:text-lg font-semibold mb-4 text-gray-800">Jours fériés</div>
             <Popover>
@@ -561,6 +553,7 @@ export const AvailabilitySection = () => {
               </PopoverContent>
             </Popover>
           </div>
+          */}
           
           {/* Save Button */}
           <div className="mt-8 flex justify-end">
