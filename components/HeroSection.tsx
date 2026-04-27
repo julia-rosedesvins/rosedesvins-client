@@ -259,12 +259,14 @@ const HeroSection = () => {
             >
             {/* Hero background — priority-loaded, auto WebP/AVIF */}
             <Image
-                src="/assets/hero.jpg"
+                src="/assets/hero.webp"
                 alt=""
                 fill
                 priority
                 quality={85}
                 sizes="100vw"
+                placeholder="blur"
+                blurDataURL="data:image/webp;base64,UklGRlYAAABXRUJQVlA4IEoAAADQAQCdASoIAAgAAUAmJZQCdAEO/gHOAAD++Knv3n7f////////7f////////7f////////7f////////7f////////wAA"
                 className="object-cover object-[center_60%]"
                 aria-hidden
             />

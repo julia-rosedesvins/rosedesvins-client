@@ -2,28 +2,48 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   images: {
-    domains: ['localhost'],
+    minimumCacheTTL: 60 * 60 * 24 * 30, // cache optimised images for 30 days
     remotePatterns: [
-      // Development - localhost
+      // Development - localhost API
       {
         protocol: 'http',
         hostname: 'localhost',
         port: '5001',
         pathname: '/uploads/**',
       },
-      // Production - add your production domain here
+      // Production API server (uploaded files)
       {
         protocol: 'https',
-        hostname: 'your-production-domain.com', // Replace with your actual production domain
+        hostname: 'api.rosedesvins.co',
         pathname: '/uploads/**',
       },
-      // Alternative: If you're using a different production setup
+      // AWS S3 bucket - rosedesvins (us-east-1)
       {
         protocol: 'https',
-        hostname: 'api.your-domain.com', // Replace with your actual API domain
-        pathname: '/uploads/**',
+        hostname: 'rosedesvins.s3.us-east-1.amazonaws.com',
+        pathname: '/**',
+      },
+      // AWS S3 path-style URLs (fallback)
+      {
+        protocol: 'https',
+        hostname: 's3.us-east-1.amazonaws.com',
+        pathname: '/rosedesvins/**',
       },
     ],
+  },
+  async headers() {
+    return [
+      {
+        // Long-term cache for all static assets in /public
+        source: '/assets/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
+          },
+        ],
+      },
+    ];
   },
 };
 
