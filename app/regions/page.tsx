@@ -2,11 +2,13 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { useState, useEffect, Suspense } from "react";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import LandingPageLayout from "@/components/LandingPageLayout";
 import { regionService, Region } from "@/services/region.service";
+import heroImg from "/public/assets/chablis-vignoble-bourgogne.webp";
 
 function RegionsContent() {
     const router = useRouter();
@@ -55,17 +57,25 @@ function RegionsContent() {
     return (
         <>
             {/* Hero Section */}
-            <section
-                className="relative bg-cover text-white min-h-[300px]"
-                style={{
-                    backgroundImage: `linear-gradient(rgba(59, 130, 91, 0.7), rgba(59, 130, 91, 0.5)), url(/assets/chablis-vignoble-bourgogne.jpg)`,
-                    backgroundPosition: 'center 0%',
-                    transform: 'scaleX(-1)'
-                }}
-            >
+            <section className="relative text-white min-h-[300px]" style={{ transform: 'scaleX(-1)' }}>
+                {/* Background image */}
+                <div className="absolute inset-0 overflow-hidden">
+                    <Image
+                        src={heroImg}
+                        alt=""
+                        fill
+                        priority
+                        quality={85}
+                        placeholder="blur"
+                        className="object-cover object-[center_0%]"
+                        sizes="100vw"
+                    />
+                    {/* Green gradient overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-b from-[rgba(59,130,91,0.7)] to-[rgba(59,130,91,0.5)]" />
+                </div>
                 {/* Back Button */}
                 <div
-                    className="max-w-6xl mx-auto px-4 pt-4"
+                    className="relative z-10 max-w-6xl mx-auto px-4 pt-4"
                     style={{ transform: 'scaleX(-1)' }}
                 >
                     <Button
@@ -80,7 +90,7 @@ function RegionsContent() {
 
                 {/* Content */}
                 <div
-                    className="max-w-6xl mx-auto px-4 pb-12 pt-8 flex items-center min-h-[250px]"
+                    className="relative z-10 max-w-6xl mx-auto px-4 pb-12 pt-8 flex items-center min-h-[250px]"
                     style={{ transform: 'scaleX(-1)' }}
                 >
                     <div>
@@ -139,11 +149,13 @@ function RegionsContent() {
                                             href={`/region/${encodeURIComponent(region.denom)}`} 
                                             className="flex flex-col items-center text-center hover:transform hover:scale-105 transition-transform"
                                         >
-                                            <div className="w-32 h-32 md:w-40 md:h-40 rounded-full overflow-hidden mb-4 shadow-lg">
-                                                <img
+                                            <div className="relative w-32 h-32 md:w-40 md:h-40 rounded-full overflow-hidden mb-4 shadow-lg">
+                                                <Image
                                                     src={region.thumbnailUrl || "/assets/loire-valley-new.jpg"}
                                                     alt={region.denom}
-                                                    className="w-full h-full object-cover"
+                                                    fill
+                                                    sizes="(max-width: 768px) 128px, 160px"
+                                                    className="object-cover"
                                                 />
                                             </div>
                                             <h3 className="text-[#318160] font-semibold text-lg hover:text-[#1D6346]">
