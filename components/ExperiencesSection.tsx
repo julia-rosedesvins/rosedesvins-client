@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious, CarouselApi } from "@/components/ui/carousel";
@@ -8,18 +9,18 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { adminExperienceCategoriesService, ExperienceCategory } from "@/services/admin-experience-categories.service";
 
 const CATEGORY_IMAGES = [
-  "/assets/atelier-oenologie.jpg",
-  "/assets/cave-visite.jpg",
-  "/assets/degustation-vin.jpg",
-  "/assets/wine-cellar.jpg",
-  "/assets/velo-vignes.jpg",
-  "/assets/pique-nique-vignes.jpg",
-  "/assets/vol-montgolfiere-vignes.png",
-  "/assets/yoga-vignes.jpeg",
-  "/assets/food-wine.jpg",
-  "/assets/gift-escape-game-cave.jpg",
-  "/assets/murder-mystery.png",
-  "/assets/cave-visits-hero.jpeg",
+  "/assets/atelier-oenologie.webp",
+  "/assets/cave-visite.webp",
+  "/assets/degustation-vin.webp",
+  "/assets/wine-cellar.webp",
+  "/assets/velo-vignes.webp",
+  "/assets/pique-nique-vignes.webp",
+  "/assets/vol-montgolfiere-vignes.webp",
+  "/assets/yoga-vignes.webp",
+  "/assets/food-wine.webp",
+  "/assets/gift-escape-game-cave.webp",
+  "/assets/murder-mystery.webp",
+  "/assets/cave-visits-hero.webp",
 ];
 
 const ExperiencesSection = () => {
@@ -95,12 +96,14 @@ const ExperiencesSection = () => {
                       className="flex flex-col items-center group cursor-pointer"
                     >
                       <div className="relative w-64 h-64 md:w-72 md:h-72 rounded-full overflow-hidden mb-4 shadow-[0_8px_30px_rgba(0,0,0,0.25)]">
-                        <img
+                        <Image
                           src={CATEGORY_IMAGES[index % CATEGORY_IMAGES.length]}
                           alt={category.category_name}
-                          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                          fill
+                          priority={index < 3}
+                          sizes="(max-width: 768px) 256px, 288px"
+                          className="object-cover transition-transform duration-300 group-hover:scale-105"
                         />
-
                       </div>
                       <h3 className="text-lg font-semibold text-[#264035] text-center group-hover:text-[#318160] transition-colors">
                         {category.category_name}
