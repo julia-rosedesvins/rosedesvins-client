@@ -30,6 +30,8 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
     const [loadingSchedule, setLoadingSchedule] = useState(false);
     const [validationErrors, setValidationErrors] = useState<string[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    // Language locked to the first existing booking's language when multipleBookingsAllowed is true
+    const [slotLockedLanguage, setSlotLockedLanguage] = useState<string | null>(null);
 
     // Function to convert language to French display name
     const getLanguageInFrench = (language: string) => {
@@ -167,6 +169,15 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
         if (hasDifferentService) {
           errors.push(`Ce créneau horaire n'est pas disponible car une autre expérience est déjà réservée. Veuillez choisir un autre horaire.`);
         } else {
+          // 🔒 Language enforcement: all simultaneous bookings must share the same language
+          const bookingsWithLanguage = overlappingBookings.filter(b => b.selectedLanguage);
+          if (bookingsWithLanguage.length > 0) {
+            const existingLanguage = bookingsWithLanguage[0].selectedLanguage!;
+            if (selectedLanguage && selectedLanguage !== existingLanguage) {
+              errors.push(`Ce créneau est déjà réservé en ${existingLanguage}. Veuillez sélectionner la même langue pour rejoindre ce groupe.`);
+            }
+          }
+
           // Calculate total existing participants (only for same service)
           const totalExistingParticipants = overlappingBookings.reduce((sum, booking) => {
             return sum + (booking.totalParticipants || 0);
@@ -382,6 +393,39 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
       fetchBookedSlots();
     }
   }, [id]);
+
+  // When the selected time changes, lock the language to match an existing booking in that slot
+  useEffect(() => {
+    if (!selectedDate || !selectedTime || !widgetData?.availability?.multipleBookingsSameSlot) {
+      setSlotLockedLanguage(null);
+      return;
+    }
+    const dateString = `${selectedDate.getFullYear()}-${(selectedDate.getMonth() + 1).toString().padStart(2, '0')}-${selectedDate.getDate().toString().padStart(2, '0')}`;
+    const serviceDuration = widgetData?.service?.timeOfServiceInMinutes || 60;
+    const [slotHours, slotMinutes] = selectedTime.split(':').map(Number);
+    const slotStartMinutes = slotHours * 60 + slotMinutes;
+    const slotEndMinutes = slotStartMinutes + serviceDuration;
+
+    const overlapping = bookedSlots.filter(slot => {
+      const slotDate = new Date(slot.eventDate);
+      const slotDateString = `${slotDate.getFullYear()}-${(slotDate.getMonth() + 1).toString().padStart(2, '0')}-${slotDate.getDate().toString().padStart(2, '0')}`;
+      if (slotDateString !== dateString) return false;
+      if (slot.serviceId && slot.serviceId !== serviceId) return false;
+      const [eH, eM] = slot.eventTime.split(':').map(Number);
+      const eStart = eH * 60 + eM;
+      let eEnd = eStart + serviceDuration;
+      if (slot.eventEndTime) { const [eh2, em2] = slot.eventEndTime.split(':').map(Number); eEnd = eh2 * 60 + em2; }
+      return slotStartMinutes < eEnd && slotEndMinutes > eStart;
+    });
+
+    const existingWithLang = overlapping.find(b => b.selectedLanguage);
+    if (existingWithLang?.selectedLanguage) {
+      setSlotLockedLanguage(existingWithLang.selectedLanguage);
+      setSelectedLanguage(existingWithLang.selectedLanguage);
+    } else {
+      setSlotLockedLanguage(null);
+    }
+  }, [selectedDate, selectedTime, bookedSlots, serviceId, widgetData]);
 
   // Auto-select today's date if available and has time slots
   useEffect(() => {
@@ -1279,12 +1323,18 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
         {/* Langues */}
         <div className="mb-8 md:mb-12">
           <h2 className="text-xl md:text-2xl font-semibold mb-4 md:mb-6 text-center" style={{ color: colorCode }}>Langues</h2>
+          {slotLockedLanguage && (
+            <p className="text-center text-sm text-amber-600 mb-3">
+              Ce créneau est déjà réservé en <strong>{getLanguageInFrench(slotLockedLanguage)}</strong>. La langue est fixée pour ce groupe.
+            </p>
+          )}
           <div className="flex flex-wrap justify-center gap-3 md:gap-4 px-2">
             {widgetData?.service?.languagesOffered?.map((language, index) => (
               <Button
                 key={index}
                 variant={selectedLanguage === language ? "default" : "outline"}
-                onClick={() => setSelectedLanguage(language)}
+                onClick={() => !slotLockedLanguage && setSelectedLanguage(language)}
+                disabled={!!slotLockedLanguage && language !== slotLockedLanguage}
                 className={cn(
                   "px-4 md:px-8 py-2 md:py-3 text-sm md:text-base",
                   selectedLanguage === language 
@@ -1299,7 +1349,8 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
               <>
                 <Button
                   variant={selectedLanguage === "Français" ? "default" : "outline"}
-                  onClick={() => setSelectedLanguage("Français")}
+                  onClick={() => !slotLockedLanguage && setSelectedLanguage("Français")}
+                  disabled={!!slotLockedLanguage && slotLockedLanguage !== "Français"}
                   className={cn(
                     "px-4 md:px-8 py-2 md:py-3 text-sm md:text-base",
                     selectedLanguage === "Français" 
@@ -1312,7 +1363,8 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
                 </Button>
                 <Button
                   variant={selectedLanguage === "English" ? "default" : "outline"}
-                  onClick={() => setSelectedLanguage("English")}
+                  onClick={() => !slotLockedLanguage && setSelectedLanguage("English")}
+                  disabled={!!slotLockedLanguage && slotLockedLanguage !== "English"}
                   className={cn(
                     "px-4 md:px-8 py-2 md:py-3 text-sm md:text-base",
                     selectedLanguage === "English" 
