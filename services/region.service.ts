@@ -225,9 +225,9 @@ class RegionService {
    * @param query - Search query
    * @returns Promise with search results and suggested route
    */
-  async unifiedSearch(query: string): Promise<UnifiedSearchResult> {
+  async unifiedSearch(query: string, signal?: AbortSignal): Promise<UnifiedSearchResult> {
     try {
-      const response = await apiClient.get<UnifiedSearchResult>(`/regions/unified-search?q=${encodeURIComponent(query)}`);
+      const response = await apiClient.get<UnifiedSearchResult>(`/regions/unified-search?q=${encodeURIComponent(query)}`, { signal });
       return response.data;
     } catch (error) {
       if (axios.isAxiosError(error) && error.response) {

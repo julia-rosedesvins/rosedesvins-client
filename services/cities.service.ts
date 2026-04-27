@@ -1,10 +1,11 @@
 import { apiClient } from './admin.service';
 
 export const citiesService = {
-    async searchCities(query: string) {
+    async searchCities(query: string, signal?: AbortSignal) {
         try {
             const response = await apiClient.get(`/cities/search`, {
-                params: { q: query }
+                params: { q: query },
+                signal,
             });
             return response.data;
         } catch (error) {

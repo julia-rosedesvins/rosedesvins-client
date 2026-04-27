@@ -37,6 +37,10 @@ export default function Navbar() {
   const searchRef = useRef<HTMLDivElement>(null)
   const mobileSearchRef = useRef<HTMLDivElement>(null)
   const debounceTimer = useRef<NodeJS.Timeout | null>(null)
+  const abortControllerRef = useRef<AbortController | null>(null)
+  // Simple in-memory cache: query → { data, timestamp }
+  const cacheRef = useRef<Map<string, { data: any[]; ts: number }>>(new Map())
+  const CACHE_TTL = 60_000 // 60 seconds
   const router = useRouter()
   const pathname = usePathname()
 
@@ -61,9 +65,7 @@ export default function Navbar() {
 
   // Fetch suggestions when search query changes
   useEffect(() => {
-    if (debounceTimer.current) {
-      clearTimeout(debounceTimer.current)
-    }
+    if (debounceTimer.current) clearTimeout(debounceTimer.current)
 
     if (searchQuery.trim().length < 2) {
       setSuggestions([])
@@ -72,18 +74,33 @@ export default function Navbar() {
     }
 
     debounceTimer.current = setTimeout(async () => {
+      const key = searchQuery.trim().toLowerCase()
+
+      // Serve from cache if fresh
+      const cached = cacheRef.current.get(key)
+      if (cached && Date.now() - cached.ts < CACHE_TTL) {
+        setSuggestions(cached.data)
+        setShowSuggestions(cached.data.length > 0)
+        return
+      }
+
+      // Cancel previous in-flight request
+      if (abortControllerRef.current) abortControllerRef.current.abort()
+      abortControllerRef.current = new AbortController()
+      const { signal } = abortControllerRef.current
+
       try {
         setIsLoadingSuggestions(true)
         
-        // Fetch both backend results and cities in parallel
         const [backendResult, citiesResult] = await Promise.all([
-          regionService.unifiedSearch(searchQuery),
-          citiesService.searchCities(searchQuery)
+          regionService.unifiedSearch(searchQuery, signal),
+          citiesService.searchCities(searchQuery, signal)
         ])
+
+        if (signal.aborted) return
         
         const allSuggestions: any[] = []
         const seenCities = new Set<string>()
-        const searchLower = searchQuery.toLowerCase()
         
         // Process cities from our backend
         if (citiesResult.success && citiesResult.data && citiesResult.data.length > 0) {
@@ -161,19 +178,21 @@ export default function Navbar() {
           })
         }
         
-        setSuggestions(allSuggestions.slice(0, 8))
-        setShowSuggestions(allSuggestions.length > 0)
-      } catch (error) {
+        const finalSuggestions = allSuggestions.slice(0, 8)
+        // Store in cache
+        cacheRef.current.set(key, { data: finalSuggestions, ts: Date.now() })
+        setSuggestions(finalSuggestions)
+        setShowSuggestions(finalSuggestions.length > 0)
+      } catch (error: any) {
+        if (error?.name === 'AbortError' || error?.code === 'ERR_CANCELED') return
         console.error('Error fetching suggestions:', error)
       } finally {
-        setIsLoadingSuggestions(false)
+        if (!signal.aborted) setIsLoadingSuggestions(false)
       }
     }, 300)
 
     return () => {
-      if (debounceTimer.current) {
-        clearTimeout(debounceTimer.current)
-      }
+      if (debounceTimer.current) clearTimeout(debounceTimer.current)
     }
   }, [searchQuery])
 
