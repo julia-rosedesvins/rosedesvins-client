@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Search, Loader2, MapPin, Wine, Building2 } from "lucide-react"
@@ -254,12 +255,19 @@ const HeroSection = () => {
             )}
 
             <section
-                className="relative min-h-[350px] flex items-center justify-center bg-cover"
-                style={{
-                    backgroundImage: `url('/assets/hero.jpg')`,
-                    backgroundPosition: 'center 60%'
-                }}
+                className="relative min-h-[350px] flex items-center justify-center overflow-hidden"
             >
+            {/* Hero background — priority-loaded, auto WebP/AVIF */}
+            <Image
+                src="/assets/hero.jpg"
+                alt=""
+                fill
+                priority
+                quality={85}
+                sizes="100vw"
+                className="object-cover object-[center_60%]"
+                aria-hidden
+            />
             {/* Overlay */}
             <div className="absolute inset-0 bg-gradient-to-r from-[#318160]/50 to-[#318160]/40"></div>
 
