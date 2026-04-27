@@ -111,12 +111,13 @@ const RegionsSection = () => {
             className="w-full max-w-7xl mx-auto"
           >
             <CarouselContent className="-ml-2 md:-ml-12 items-center">
-              {regions.map((region) => (
+              {regions.map((region, index) => (
                 <CarouselItem key={region._id} className="pl-2 md:pl-12 basis-full md:basis-1/3">
                   <RegionCard 
                     title={region.denom}
                     image={region.thumbnailUrl || "/assets/loire-valley-new.jpg"}
                     href={`/region/${encodeURIComponent(region.denom)}`}
+                    priority={index < 3}
                   />
                 </CarouselItem>
               ))}

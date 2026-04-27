@@ -255,26 +255,29 @@ const HeroSection = () => {
             )}
 
             <section
-                className="relative min-h-[350px] flex items-center justify-center overflow-hidden"
+                className="relative min-h-[350px] flex items-center justify-center"
             >
-            {/* Hero background — priority-loaded, auto WebP/AVIF */}
-            <Image
-                src="/assets/hero.webp"
-                alt=""
-                fill
-                priority
-                quality={85}
-                sizes="100vw"
-                placeholder="blur"
-                blurDataURL="data:image/webp;base64,UklGRlYAAABXRUJQVlA4IEoAAADQAQCdASoIAAgAAUAmJZQCdAEO/gHOAAD++Knv3n7f////////7f////////7f////////7f////////7f////////wAA"
-                className="object-cover object-[center_60%]"
-                aria-hidden
-            />
-            {/* Overlay */}
-            <div className="absolute inset-0 bg-gradient-to-r from-[#318160]/50 to-[#318160]/40"></div>
+            {/* Hero background — clipped by its own wrapper, NOT the section,
+                so the search dropdown can overflow outside the section bounds */}
+            <div className="absolute inset-0 overflow-hidden">
+                <Image
+                    src="/assets/hero.webp"
+                    alt=""
+                    fill
+                    priority
+                    quality={85}
+                    sizes="100vw"
+                    placeholder="blur"
+                    blurDataURL="data:image/webp;base64,UklGRlYAAABXRUJQVlA4IEoAAADQAQCdASoIAAgAAUAmJZQCdAEO/gHOAAD++Knv3n7f////////7f////////7f////////7f////////7f////////wAA"
+                    className="object-cover object-[center_60%]"
+                    aria-hidden
+                />
+                {/* Overlay */}
+                <div className="absolute inset-0 bg-gradient-to-r from-[#318160]/50 to-[#318160]/40"></div>
+            </div>
 
             {/* Content */}
-            <div className="relative z-10 max-w-4xl mx-auto px-4 text-center text-white">
+            <div className="relative z-20 max-w-4xl mx-auto px-4 text-center text-white">
                 <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4 leading-tight max-w-3xl mx-auto">
                     Partez à la découverte des domaines viticoles
                 </h1>
@@ -312,7 +315,7 @@ const HeroSection = () => {
 
                     {/* Autocomplete Dropdown */}
                     {showSuggestions && (suggestions.length > 0 || isLoadingSuggestions) && (
-                        <div className="absolute w-full mt-2 bg-white rounded-lg shadow-2xl overflow-hidden z-50 max-h-96 overflow-y-auto">
+                        <div className="absolute w-full mt-2 bg-white rounded-lg shadow-2xl overflow-hidden z-[100] max-h-96 overflow-y-auto">
                             {isLoadingSuggestions ? (
                                 <div className="p-4 text-center text-gray-500">
                                     <Loader2 className="h-5 w-5 animate-spin mx-auto" />
