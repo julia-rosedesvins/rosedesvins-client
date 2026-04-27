@@ -2,6 +2,8 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
+import heroImg from "/public/assets/loire-valley-new-bg.webp";
 import { ArrowLeft, MapPin, Home, Euro, ChevronDown, Locate, Map, List, Navigation } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -289,17 +291,24 @@ const LoireValley = ({ params }: { params: Promise<{ name: string }> }) => {
         <LandingPageLayout>
 
             {/* Hero Section */}
-            <section
-                className="relative bg-cover bg-center text-white min-h-[400px]"
-                style={{
-                    backgroundImage: `linear-gradient(rgba(59, 130, 91, 0.7), rgba(59, 130, 91, 0.5)), url(/assets/loire-valley-new-bg.png)`,
-                    backgroundSize: 'cover',
-                    backgroundPosition: 'center top',
-                    backgroundRepeat: 'no-repeat'
-                }}
-            >
+            <section className="relative text-white min-h-[400px]">
+                {/* Background image */}
+                <div className="absolute inset-0 overflow-hidden">
+                    <Image
+                        src={heroImg}
+                        alt=""
+                        fill
+                        priority
+                        quality={85}
+                        placeholder="blur"
+                        className="object-cover object-[center_top]"
+                        sizes="100vw"
+                    />
+                    {/* Green gradient overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-b from-[rgba(59,130,91,0.7)] to-[rgba(59,130,91,0.5)]" />
+                </div>
                 {/* Back Button */}
-                <div className="max-w-6xl mx-auto px-4 pt-4">
+                <div className="relative z-10 max-w-6xl mx-auto px-4 pt-4">
                     <Button
                         onClick={() => router.back()}
                         variant="outline"
@@ -311,7 +320,7 @@ const LoireValley = ({ params }: { params: Promise<{ name: string }> }) => {
                 </div>
 
                 {/* Breadcrumb */}
-                <div className="max-w-6xl mx-auto px-4 pt-6">
+                <div className="relative z-10 max-w-6xl mx-auto px-4 pt-6">
                     <div className="flex items-center text-white/80 text-sm mb-6">
                         <Home className="w-4 h-4 mr-2" />
                         <Link href="/regions" className="hover:text-white transition-colors">
@@ -324,7 +333,7 @@ const LoireValley = ({ params }: { params: Promise<{ name: string }> }) => {
                 </div>
 
                 {/* Content */}
-                <div className="max-w-6xl mx-auto px-4 pb-12">
+                <div className="relative z-10 max-w-6xl mx-auto px-4 pb-12">
                     {searchQuery && (
                         <div className="mb-4">
                             <p className="text-white/90 text-lg">
@@ -565,11 +574,15 @@ const LoireValley = ({ params }: { params: Promise<{ name: string }> }) => {
                                 return (
                                     <div key={index} className="bg-background rounded-lg shadow-sm overflow-hidden">
                                         {(domain.mainImage || domain.domainProfilePictureUrl) && (
-                                            <img
-                                                src={domain.mainImage || domain.domainProfilePictureUrl || ''}
-                                                alt={domain.domainName}
-                                                className="w-full h-40 object-cover"
-                                            />
+                                            <div className="relative w-full h-40">
+                                                <Image
+                                                    src={domain.mainImage || domain.domainProfilePictureUrl || ''}
+                                                    alt={domain.domainName}
+                                                    fill
+                                                    sizes="(max-width: 768px) 100vw, 40vw"
+                                                    className="object-cover"
+                                                />
+                                            </div>
                                         )}
                                         <div className="p-4">
                                             <div className="flex items-start justify-between gap-2">

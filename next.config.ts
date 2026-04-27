@@ -29,6 +29,24 @@ const nextConfig: NextConfig = {
         hostname: 's3.us-east-1.amazonaws.com',
         pathname: '/rosedesvins/**',
       },
+      // Google user content (domain profile pictures from Google)
+      {
+        protocol: 'https',
+        hostname: 'lh3.googleusercontent.com',
+        pathname: '/**',
+      },
+      // Google Street View thumbnails
+      {
+        protocol: 'https',
+        hostname: 'streetviewpixels-pa.googleapis.com',
+        pathname: '/**',
+      },
+      // Google Maps / Places API images
+      {
+        protocol: 'https',
+        hostname: '*.googleapis.com',
+        pathname: '/**',
+      },
     ],
   },
   async headers() {
