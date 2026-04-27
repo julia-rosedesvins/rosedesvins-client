@@ -9,13 +9,8 @@ interface RegionCardProps {
   priority?: boolean;
 }
 
-/** External URLs (S3, http) are served directly — no Next.js proxy needed. */
-const isExternalUrl = (url: string): boolean =>
-  url.startsWith('http://') || url.startsWith('https://');
-
 const RegionCard = ({ title, image, href, priority = false }: RegionCardProps) => {
   const imageUrl = typeof image === 'string' ? image : image.src;
-  const external = isExternalUrl(imageUrl);
 
   const content = (
     <div className="flex flex-col items-center group cursor-pointer">
@@ -24,10 +19,6 @@ const RegionCard = ({ title, image, href, priority = false }: RegionCardProps) =
           src={imageUrl}
           alt={title}
           fill
-          // External S3 URLs: skip Next.js proxy (avoids 500s from missing config),
-          // image is served directly from S3 which has its own CDN cache.
-          // Local assets: go through Next.js optimizer for WebP + resizing.
-          unoptimized={external}
           priority={priority}
           sizes="(max-width: 768px) 256px, 288px"
           className="object-cover"
