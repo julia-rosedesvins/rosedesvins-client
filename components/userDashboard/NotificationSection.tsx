@@ -190,7 +190,10 @@ export const NotificationSection = () => {
           </div>
 
           {/* Booking Advance Limit Section */}
-          <div className="space-y-4">
+          <div className="space-y-4 pt-4 border-t border-gray-200">
+            <Label className="text-base lg:text-lg font-semibold text-gray-800 block">
+              Restrictions de réservation
+            </Label>
             <Label className="text-base lg:text-lg font-semibold text-gray-800">
               Jusqu'à quel moment un client peut-il réserver avant le début d'une visite ?
             </Label>
