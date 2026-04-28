@@ -267,14 +267,14 @@ export const AddBookingModal = ({ isOpen, onClose, onBookingCreated }: AddBookin
             <div className="space-y-2 w-full">
               <Label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
                 <Wine size={14} className="sm:w-4 sm:h-4 shrink-0" />
-                Service *
+                Expérience *
               </Label>
               <Select
                 value={formData.serviceId}
                 onValueChange={(value) => setFormData(prev => ({ ...prev, serviceId: value }))}
               >
                 <SelectTrigger className={`w-full text-sm sm:text-base border-2 focus:border-[#3A7B59] rounded-lg h-11 sm:h-auto ${errors.serviceId ? 'border-red-300 focus:border-red-500' : ''}`}>
-                  <SelectValue placeholder="Sélectionner un service" />
+                  <SelectValue placeholder="Sélectionner une expérience" />
                 </SelectTrigger>
                 <SelectContent>
                   {servicesLoading ? (
