@@ -102,7 +102,7 @@ export const NotificationSection = () => {
           {/* Customer Notification Section */}
           <div className="space-y-4">
             <Label className="text-base lg:text-lg font-semibold text-gray-800">
-              Combien de temps avant le début de la réservation pour le client ?
+              Quand souhaitez-vous recevoir un e-mail de rappel avant la réservation ?
             </Label>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:gap-4">
               <div className="flex items-center space-x-3 p-3 rounded-lg bg-gray-50/50 hover:bg-gray-50 transition-colors">
