@@ -101,6 +101,8 @@ function ConfirmationSuccessContent({ id, serviceId }: { id: string, serviceId: 
     if (lang === 'anglais' || lang === 'english') return 'Anglais';
     if (lang === 'español' || lang === 'spanish') return 'Espagnol';
     if (lang === 'deutsch' || lang === 'german') return 'Allemand';
+    if (lang === 'italien' || lang === 'italian') return 'Italien';
+    if (lang === 'russe' || lang === 'russian') return 'Russe';
     return language; // Return original if no match
   };
 
