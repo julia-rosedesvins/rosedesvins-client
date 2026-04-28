@@ -97,7 +97,7 @@ function ReservationContent({ id, serviceId }: { id: string, serviceId: string }
                             <div className="flex items-center gap-2 text-muted-foreground min-w-0">
                                 <Wine className="w-5 h-5 md:w-6 md:h-6 flex-shrink-0" style={{ color: colorCode }} />
                                 <span className="font-medium text-xs md:text-base whitespace-nowrap overflow-hidden text-ellipsis">
-                                    {widgetData?.service?.numberOfWinesTasted ?? '-'} vins
+                                    {widgetData?.service?.numberOfWinesTasted ?? '-'} {widgetData?.service?.numberOfWinesTasted === 1 ? 'vin' : 'vins'}
                                 </span>
                             </div>
                             <div className="flex items-center gap-2 text-muted-foreground min-w-0">

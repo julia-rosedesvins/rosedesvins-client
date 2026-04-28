@@ -1198,7 +1198,7 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
             </div>
             <div className="flex items-center gap-2 justify-center">
               <Wine className="w-4 h-4 md:w-5 md:h-5 flex-shrink-0" style={{ color: colorCode }} />
-              <span className="text-xs md:text-base">{widgetData?.service?.numberOfWinesTasted ?? 5} vins</span>
+              <span className="text-xs md:text-base">{widgetData?.service?.numberOfWinesTasted ?? 5} {(widgetData?.service?.numberOfWinesTasted ?? 5) === 1 ? 'vin' : 'vins'}</span>
             </div>
             <div className="flex items-center gap-2 justify-center">
               <Users className="w-4 h-4 md:w-5 md:h-5 flex-shrink-0" style={{ color: colorCode }} />
