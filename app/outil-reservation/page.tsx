@@ -206,7 +206,7 @@ export default function OldHomePage() {
             </h3>
             <p className="text-gray-600 max-w-3xl mx-auto">
               Dites adieu aux aller-retours sur votre messagerie et à la gestion compliquée des réservations. Définissez
-              vos créneaux, et le reste se gère automatiquement : efficacité pour vous, autonomie pour vos visiteurs.
+              vos créneaux, connectez votre agenda et le reste se gère automatiquement : efficacité pour vous, autonomie pour vos visiteurs.
             </p>
           </div>
 
@@ -260,14 +260,10 @@ export default function OldHomePage() {
                   <Calendar className="w-8 h-8" style={{ color: "#3A7B59" }} />
                 </div>
                 <h4 className="font-semibold text-lg mb-3">
-                  Gagner du temps dans
-                  <br />
-                  la gestion des demandes
+                  Gagner du temps et gardez la main sur vos disponibilités
                 </h4>
                 <p className="text-gray-600 text-sm">
-                  Calendrier synchronisé en temps
-                  <br />
-                  réel avec votre agenda
+                  Outil synchronisé avec votre agenda & calendriers personnalisables par expérience
                 </p>
               </CardContent>
             </Card>
@@ -339,7 +335,7 @@ export default function OldHomePage() {
             </div>
 
             <div className="mb-8">
-              <h4 className="text-lg font-semibold text-gray-900 mb-2">Abonnement annuel - 29 € / mois</h4>
+              <h4 className="text-lg font-semibold text-gray-900 mb-2">Abonnement annuel - 29 € / mois (HT)</h4>
             </div>
 
             <div className="space-y-4 text-left max-w-md mx-auto">
