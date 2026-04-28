@@ -286,25 +286,6 @@ export const EditBookingModal = ({ bookingData, isOpen, onClose, onSuccess }: Ed
             </div>
           </div>
 
-          {/* Status */}
-          <div className="space-y-2">
-            <Label htmlFor="status">Statut</Label>
-            <Select
-              value={formData.bookingStatus || ''}
-              onValueChange={(value) => handleInputChange('bookingStatus', value as any)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Sélectionner un statut" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="pending">En attente</SelectItem>
-                <SelectItem value="confirmed">Confirmé</SelectItem>
-                <SelectItem value="completed">Terminé</SelectItem>
-                <SelectItem value="cancelled">Annulé</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
           {/* Additional Notes */}
           <div className="space-y-2">
             <Label htmlFor="notes">Notes supplémentaires</Label>

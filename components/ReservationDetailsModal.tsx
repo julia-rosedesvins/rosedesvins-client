@@ -1,4 +1,4 @@
-import { Dialog, DialogContent, DialogHeader } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Clock, Users, Grape, Globe, Phone, Mail, Edit2, Trash2, Loader2 } from "lucide-react";
 import { parseISO, format } from "date-fns";
@@ -144,13 +144,13 @@ export const ReservationDetailsModal = ({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-xs sm:max-w-lg lg:max-w-2xl p-0 overflow-hidden mx-4">
         <DialogHeader className="text-white p-4 lg:p-6 text-center" style={{ backgroundColor: reservation.backgroundColor || '#3A7B59' }}>
-          <h2 className="text-lg lg:text-2xl font-semibold">
+          <DialogTitle className="text-lg lg:text-2xl font-semibold text-white">
             {reservation.eventType === 'booking' ? 'Votre réservation' : 
              reservation.eventType === 'personal' ? 'Événement personnel' :
              reservation.eventType === 'external' ? 'Événement externe' :
              reservation.eventType === 'blocked' ? 'Temps bloqué' :
              'Votre réservation'}
-          </h2>
+          </DialogTitle>
         </DialogHeader>
         
         <div className="p-4 lg:p-6 space-y-6 lg:space-y-8">
