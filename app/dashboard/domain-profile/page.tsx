@@ -1149,7 +1149,7 @@ export default function UserDomainProfile() {
                                 {/* Section Prestations œnotouristiques */}
                                 <div className="border-t pt-4 lg:pt-6">
                                     <div className="flex items-center justify-between mb-4">
-                                        <h3 className="text-base lg:text-lg font-semibold">Mes prestations œnotouristiques</h3>
+                                        <h3 className="text-base lg:text-lg font-semibold">Mes expériences œnotouristiques</h3>
                                         {isReloadingServices && (
                                             <div className="flex items-center text-sm text-muted-foreground">
                                                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
