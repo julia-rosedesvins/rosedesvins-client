@@ -195,7 +195,7 @@ export const NotificationSection = () => {
               Restrictions de réservation
             </Label>
             <Label className="text-base lg:text-lg font-semibold text-gray-800">
-              Jusqu'à quel moment un client peut-il réserver avant le début d'une visite ?
+              Jusqu'à quand un client peut-il réserver avant le début de l'expérience ?
             </Label>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:gap-4">
               <div className="flex items-center space-x-3 p-3 rounded-lg bg-gray-50/50 hover:bg-gray-50 transition-colors">
