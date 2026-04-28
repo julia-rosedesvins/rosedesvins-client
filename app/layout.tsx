@@ -30,8 +30,23 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning={true}>
       <head>
+        {/* Fix: Google Translate splits text nodes causing React removeChild errors */}
+        <script dangerouslySetInnerHTML={{ __html: `
+          (function() {
+            var orig = Node.prototype.removeChild;
+            Node.prototype.removeChild = function(child) {
+              if (child.parentNode !== this) { return child; }
+              return orig.apply(this, arguments);
+            };
+            var origInsert = Node.prototype.insertBefore;
+            Node.prototype.insertBefore = function(newNode, refNode) {
+              if (refNode && refNode.parentNode !== this) { return newNode; }
+              return origInsert.apply(this, arguments);
+            };
+          })();
+        ` }} />
         {/* Google Tag Manager */}
         <Script id="google-tag-manager" strategy="afterInteractive">
           {`(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':

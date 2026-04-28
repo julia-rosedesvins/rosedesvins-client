@@ -22,6 +22,9 @@ export default function AdminSubscriptions() {
     const [loading, setLoading] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
+    const [sortOrder, setSortOrder] = useState<'newest' | 'oldest' | 'expiring_soon' | 'expiring_late'>('newest');
+    const [dateFrom, setDateFrom] = useState('');
+    const [dateTo, setDateTo] = useState('');
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
     const [selectedUser, setSelectedUser] = useState<string>('');
@@ -45,10 +48,12 @@ export default function AdminSubscriptions() {
     const fetchSubscriptions = async (page: number = 1, limit: number = 10) => {
         setLoading(true);
         try {
-            const query: any = { page, limit };
+            const query: any = { page, limit, sortBy: sortOrder };
             if (statusFilter !== 'all') {
                 query.status = statusFilter;
             }
+            if (dateFrom) query.dateFrom = dateFrom;
+            if (dateTo) query.dateTo = dateTo;
 
             const response = await subscriptionService.getAllSubscriptions(query);
             setSubscriptions(response.data.subscriptions);
@@ -250,13 +255,12 @@ export default function AdminSubscriptions() {
                            subscription.userId.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            subscription.userId.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            subscription.userId.domainName?.toLowerCase().includes(searchTerm.toLowerCase());
-        
         return searchMatch;
     });
 
     useEffect(() => {
         fetchSubscriptions();
-    }, [statusFilter]);
+    }, [statusFilter, sortOrder, dateFrom, dateTo]);
 
     useEffect(() => {
         if (isCreateModalOpen) {
@@ -487,6 +491,46 @@ export default function AdminSubscriptions() {
                                     </SelectContent>
                                 </Select>
                             </div>
+                            <div className="lg:w-56">
+                                <Select value={sortOrder} onValueChange={(value: any) => setSortOrder(value)}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Trier par date" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="newest">Début : plus récent</SelectItem>
+                                        <SelectItem value="oldest">Début : plus ancien</SelectItem>
+                                        <SelectItem value="expiring_soon">Fin : expire bientôt</SelectItem>
+                                        <SelectItem value="expiring_late">Fin : expire le plus tard</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+                        <div className="flex flex-col lg:flex-row gap-4 mt-4 items-end">
+                            <div className="flex-1">
+                                <Label className="text-xs text-muted-foreground mb-1 block">Date de début (depuis)</Label>
+                                <Input
+                                    type="date"
+                                    value={dateFrom}
+                                    onChange={(e) => setDateFrom(e.target.value)}
+                                />
+                            </div>
+                            <div className="flex-1">
+                                <Label className="text-xs text-muted-foreground mb-1 block">Date de début (jusqu'à)</Label>
+                                <Input
+                                    type="date"
+                                    value={dateTo}
+                                    onChange={(e) => setDateTo(e.target.value)}
+                                />
+                            </div>
+                            {(dateFrom || dateTo) && (
+                                <Button
+                                    variant="outline"
+                                    onClick={() => { setDateFrom(''); setDateTo(''); }}
+                                    className="shrink-0"
+                                >
+                                    Réinitialiser les dates
+                                </Button>
+                            )}
                         </div>
                     </CardContent>
                 </Card>

@@ -45,6 +45,9 @@ export interface GetAllSubscriptionsQuery {
   limit?: number;
   status?: 'active' | 'inactive';
   userId?: string;
+  sortBy?: 'newest' | 'oldest' | 'expiring_soon' | 'expiring_late';
+  dateFrom?: string;
+  dateTo?: string;
 }
 
 export interface PaginatedSubscriptionsResponse {
@@ -89,6 +92,9 @@ class SubscriptionService {
       if (query.limit) params.append('limit', query.limit.toString());
       if (query.status) params.append('status', query.status);
       if (query.userId) params.append('userId', query.userId);
+      if (query.sortBy) params.append('sortBy', query.sortBy);
+      if (query.dateFrom) params.append('dateFrom', query.dateFrom);
+      if (query.dateTo) params.append('dateTo', query.dateTo);
 
       const response = await apiClient.get(`/subscription/admin/all?${params.toString()}`);
       return response.data;
