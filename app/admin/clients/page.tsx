@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
-import { Search, ChevronLeft, ChevronRight, Mail, UserCheck, Clock, UserX, Loader2, CheckCircle, XCircle, Pencil } from "lucide-react"
+import { Search, ChevronLeft, ChevronRight, Mail, UserCheck, Clock, UserX, Loader2, CheckCircle, XCircle, Pencil, Trash2 } from "lucide-react"
 import DashboardLayout from "@/components/admin/DashboardLayout"
 import { useAdmin } from '@/contexts/AdminContext'
 import { newsletterService, NewsletterSubscription } from '@/services/newsletter.service'
@@ -40,6 +40,11 @@ export default function AdminClients() {
         domainName: ''
     });
     const [isSaving, setIsSaving] = useState(false);
+    
+    // Delete modal state
+    const [deletingUser, setDeletingUser] = useState<AdminUser | null>(null);
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
     
     // Approve modal state
     const [approvingSubscription, setApprovingSubscription] = useState<NewsletterSubscription | null>(null);
@@ -82,6 +87,27 @@ export default function AdminClients() {
             domainName: user.domainName || ''
         });
         setIsEditModalOpen(true);
+    };
+
+    const handleDeleteClick = (user: AdminUser) => {
+        setDeletingUser(user);
+        setIsDeleteModalOpen(true);
+    };
+
+    const handleDeleteConfirm = async () => {
+        if (!deletingUser) return;
+        setIsDeleting(true);
+        try {
+            await adminService.deleteUser(deletingUser._id);
+            toast.success('Compte et abonnement supprimés avec succès');
+            setIsDeleteModalOpen(false);
+            setDeletingUser(null);
+            fetchApprovedUsers();
+        } catch (error: any) {
+            toast.error(error.message || 'Erreur lors de la suppression');
+        } finally {
+            setIsDeleting(false);
+        }
     };
 
     const handleSaveEdit = async () => {
@@ -345,7 +371,7 @@ export default function AdminClients() {
                                     }) : '-'}
                                 </td>
                                 <td className="py-3 px-4">
-                                    <div className="flex items-center justify-center">
+                                    <div className="flex items-center justify-center gap-2">
                                         <Button
                                             size="sm"
                                             variant="outline"
@@ -353,6 +379,14 @@ export default function AdminClients() {
                                         >
                                             <Pencil className="h-4 w-4 mr-1" />
                                             Modifier
+                                        </Button>
+                                        <Button
+                                            size="sm"
+                                            variant="destructive"
+                                            onClick={() => handleDeleteClick(user)}
+                                        >
+                                            <Trash2 className="h-4 w-4 mr-1" />
+                                            Supprimer
                                         </Button>
                                     </div>
                                 </td>
@@ -738,6 +772,50 @@ export default function AdminClients() {
                                 </>
                             ) : (
                                 'Enregistrer'
+                            )}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+            {/* Delete Confirmation Modal */}
+            <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+                <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                        <DialogTitle>Supprimer le compte</DialogTitle>
+                    </DialogHeader>
+                    <div className="py-4">
+                        <p className="text-sm text-gray-700">
+                            Êtes-vous sûr de vouloir supprimer définitivement le compte de{' '}
+                            <span className="font-semibold">{deletingUser?.firstName} {deletingUser?.lastName}</span>{' '}
+                            (<span className="font-semibold">{deletingUser?.email}</span>) ?
+                        </p>
+                        <p className="text-sm text-red-600 mt-2">
+                            Cette action est irréversible. Le compte et l'abonnement associé seront définitivement supprimés.
+                        </p>
+                    </div>
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => setIsDeleteModalOpen(false)}
+                            disabled={isDeleting}
+                        >
+                            Annuler
+                        </Button>
+                        <Button
+                            variant="destructive"
+                            onClick={handleDeleteConfirm}
+                            disabled={isDeleting}
+                        >
+                            {isDeleting ? (
+                                <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Suppression...
+                                </>
+                            ) : (
+                                <>
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Supprimer définitivement
+                                </>
                             )}
                         </Button>
                     </DialogFooter>
