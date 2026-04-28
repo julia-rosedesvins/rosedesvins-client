@@ -284,7 +284,7 @@ export const ReservationDetailsModal = ({
                 ) : (
                   <Trash2 className="h-4 w-4 mr-2" />
                 )}
-                {isDeleting ? 'Suppression...' : 'Supprimer'}
+                {isDeleting ? 'Suppression...' : 'Annuler'}
               </Button>
             </div>
           )}
