@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -202,10 +202,10 @@ export default function AdminClients() {
         }
     };
 
-    const fetchApprovedUsers = async (page: number = 1, limit: number = 10) => {
+    const fetchApprovedUsers = async (page: number = 1, limit: number = 10, search: string = '') => {
         setLoadingApproved(true);
         try {
-            const response = await adminService.getApprovedUsers({ page, limit });
+            const response = await adminService.getApprovedUsers({ page, limit, search });
             console.log('Approved users response:', JSON.stringify(response, null, 2));
             setApprovedUsers(response.data || []);
             setApprovedPagination(response.pagination || null);
@@ -237,6 +237,16 @@ export default function AdminClients() {
         fetchRejectedSubscriptions();
     }, []);
 
+    // Debounced server-side search for approved users
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            if (activeTab === 'approved') {
+                fetchApprovedUsers(1, 10, searchTerm);
+            }
+        }, 400);
+        return () => clearTimeout(timer);
+    }, [searchTerm, activeTab]);
+
     if (isLoading) {
         return (
             <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -266,12 +276,7 @@ export default function AdminClients() {
         sub.email.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    const filteredApprovedUsers = (approvedUsers || []).filter(user =>
-        user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (user.domainName || '').toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredApprovedUsers = approvedUsers || [];
 
     const filteredRejectedSubs = (rejectedSubs || []).filter(sub =>
         sub.email.toLowerCase().includes(searchTerm.toLowerCase())

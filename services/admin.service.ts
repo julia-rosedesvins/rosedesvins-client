@@ -35,6 +35,7 @@ export interface AdminUser {
 export interface PaginationQuery {
   page?: number;
   limit?: number;
+  search?: string;
 }
 
 export interface PaginatedUsersResponse {
@@ -224,6 +225,7 @@ class AdminService {
       const params = new URLSearchParams();
       if (query.page) params.append('page', query.page.toString());
       if (query.limit) params.append('limit', query.limit.toString());
+      if (query.search) params.append('search', query.search);
       
       const response = await apiClient.get(`/users/admin/approved?${params.toString()}`);
       return response.data;
