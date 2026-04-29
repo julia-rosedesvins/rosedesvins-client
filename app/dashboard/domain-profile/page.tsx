@@ -103,6 +103,7 @@ export default function UserDomainProfile() {
     const [logoPreview, setLogoPreview] = useState<string | null>(null);
     const [services, setServices] = useState<EnhancedDomainService[]>([]);
     const [isReloadingServices, setIsReloadingServices] = useState(false);
+    const [showAllDates, setShowAllDates] = useState<{ [prestationId: string]: boolean }>({});
 
     const hydrateServices = (servicesData: DomainService[] | any): EnhancedDomainService[] => {
         if (!Array.isArray(servicesData)) return [];
@@ -1412,7 +1413,7 @@ export default function UserDomainProfile() {
                                                                     <div className="flex flex-wrap gap-1 max-h-32 sm:max-h-20 overflow-y-auto">
                                                                         {prestation.selectedDates
                                                                             .sort((a, b) => a.getTime() - b.getTime())
-                                                                            .slice(0, 10)
+                                                                            .slice(0, showAllDates[prestation.id] ? undefined : 10)
                                                                             .map((date, idx) => (
                                                                                 <span 
                                                                                     key={idx} 
@@ -1434,9 +1435,14 @@ export default function UserDomainProfile() {
                                                                                 </span>
                                                                             ))}
                                                                         {prestation.selectedDates.length > 10 && (
-                                                                            <span className="text-xs text-muted-foreground px-2 py-1">
-                                                                                +{prestation.selectedDates.length - 10} autres
-                                                                            </span>
+                                                                            <button
+                                                                                onClick={() => setShowAllDates(prev => ({ ...prev, [prestation.id]: !prev[prestation.id] }))}
+                                                                                className="text-xs text-[#3A7B59] font-medium px-2 py-1 rounded hover:bg-green-50 transition-colors underline-offset-2 hover:underline"
+                                                                            >
+                                                                                {showAllDates[prestation.id]
+                                                                                    ? 'Voir moins ▲'
+                                                                                    : `+${prestation.selectedDates.length - 10} autres ▼`}
+                                                                            </button>
                                                                         )}
                                                                     </div>
                                                                 )}
