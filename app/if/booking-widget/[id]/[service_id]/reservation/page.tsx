@@ -23,6 +23,8 @@ function ReservationContent({ id, serviceId }: { id: string, serviceId: string }
         if (lang === 'anglais' || lang === 'english') return 'Anglais';
         if (lang === 'español' || lang === 'spanish') return 'Espagnol';
         if (lang === 'deutsch' || lang === 'german') return 'Allemand';
+        if (lang === 'italien' || lang === 'italian') return 'Italien';
+        if (lang === 'russe' || lang === 'russian') return 'Russe';
         return language; // Return original if no match
     };
 
@@ -97,7 +99,7 @@ function ReservationContent({ id, serviceId }: { id: string, serviceId: string }
                             <div className="flex items-center gap-2 text-muted-foreground min-w-0">
                                 <Wine className="w-5 h-5 md:w-6 md:h-6 flex-shrink-0" style={{ color: colorCode }} />
                                 <span className="font-medium text-xs md:text-base whitespace-nowrap overflow-hidden text-ellipsis">
-                                    {widgetData?.service?.numberOfWinesTasted ?? '-'} vins
+                                    {widgetData?.service?.numberOfWinesTasted ?? '-'} {widgetData?.service?.numberOfWinesTasted === 1 ? 'vin' : 'vins'}
                                 </span>
                             </div>
                             <div className="flex items-center gap-2 text-muted-foreground min-w-0">
@@ -120,12 +122,19 @@ function ReservationContent({ id, serviceId }: { id: string, serviceId: string }
                                 language.toLowerCase() !== 'autre' && language.toLowerCase() !== 'other'
                             ).map((language, index) => (
                                 <div key={index} className="flex items-center gap-2 md:gap-3">
-                                    <span className="text-2xl md:text-4xl">
-                                        {language.toLowerCase() === 'français' || language.toLowerCase() === 'french' ? '🇫🇷' : 
-                                         language.toLowerCase() === 'anglais' || language.toLowerCase() === 'english' ? '🇬🇧' : 
-                                         language.toLowerCase() === 'español' || language.toLowerCase() === 'spanish' ? '🇪🇸' : 
-                                         language.toLowerCase() === 'deutsch' || language.toLowerCase() === 'german' ? '🇩🇪' : '🌐'}
-                                    </span>
+                                    {language.toLowerCase() === 'russe' || language.toLowerCase() === 'russian' ? (
+                                        <span className="text-2xl md:text-4xl flex items-center justify-center w-8 h-8 md:w-12 md:h-12 rounded-sm overflow-hidden leading-none" style={{ background: 'linear-gradient(to bottom, #fff 33.3%, #0039a6 33.3%, #0039a6 66.6%, #d52b1e 66.6%)', fontSize: '0', minWidth: '2rem' }}>
+                                            <span className="sr-only">Russie</span>
+                                        </span>
+                                    ) : (
+                                        <span className="text-2xl md:text-4xl">
+                                            {language.toLowerCase() === 'français' || language.toLowerCase() === 'french' ? '🇫🇷' :
+                                             language.toLowerCase() === 'anglais' || language.toLowerCase() === 'english' ? '🇬🇧' :
+                                             language.toLowerCase() === 'español' || language.toLowerCase() === 'spanish' ? '🇪🇸' :
+                                             language.toLowerCase() === 'deutsch' || language.toLowerCase() === 'german' ? '🇩🇪' :
+                                             language.toLowerCase() === 'italien' || language.toLowerCase() === 'italian' ? '🇮🇹' : '🌐'}
+                                        </span>
+                                    )}
                                     <span className="text-muted-foreground text-base md:text-xl font-medium">{getLanguageInFrench(language)}</span>
                                 </div>
                             )) || (

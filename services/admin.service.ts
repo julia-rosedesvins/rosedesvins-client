@@ -35,6 +35,7 @@ export interface AdminUser {
 export interface PaginationQuery {
   page?: number;
   limit?: number;
+  search?: string;
 }
 
 export interface PaginatedUsersResponse {
@@ -224,6 +225,7 @@ class AdminService {
       const params = new URLSearchParams();
       if (query.page) params.append('page', query.page.toString());
       if (query.limit) params.append('limit', query.limit.toString());
+      if (query.search) params.append('search', query.search);
       
       const response = await apiClient.get(`/users/admin/approved?${params.toString()}`);
       return response.data;
@@ -373,6 +375,18 @@ class AdminService {
   }> {
     try {
       const response = await apiClient.post('/users/admin/change-password', request);
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response) {
+        throw error.response.data as ApiError;
+      }
+      throw new Error('Network error occurred');
+    }
+  }
+
+  async deleteUser(userId: string): Promise<{ success: boolean; message: string }> {
+    try {
+      const response = await apiClient.delete(`/users/admin/users/${userId}`);
       return response.data;
     } catch (error) {
       if (axios.isAxiosError(error) && error.response) {

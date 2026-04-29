@@ -92,9 +92,9 @@ export const NotificationSection = () => {
   return (
     <Card className="mb-6 lg:mb-8 relative shadow-sm border-0 bg-white ring-1 ring-gray-200 hover:ring-gray-300 transition-all duration-200">
       <CardHeader className="pb-4">
-        <CardTitle className="text-xl lg:text-2xl font-semibold text-gray-900">Préférences de notifications</CardTitle>
+        <CardTitle className="text-xl lg:text-2xl font-semibold text-gray-900">Préférences de notification et paramètres</CardTitle>
         <p className="text-gray-600 text-sm lg:text-base leading-relaxed mt-1">
-          Configurez vos préférences de notification pour les réservations.
+          Définissez jusqu'à quand vos clients peuvent réserver et quand chacun reçoit un rappel avant la visite.
         </p>
       </CardHeader>
       <CardContent className="pt-2 space-y-6 lg:space-y-8">        
@@ -102,7 +102,7 @@ export const NotificationSection = () => {
           {/* Customer Notification Section */}
           <div className="space-y-4">
             <Label className="text-base lg:text-lg font-semibold text-gray-800">
-              Combien de temps avant le début de la réservation pour le client ?
+              Quand souhaitez-vous recevoir un e-mail de rappel avant la réservation ?
             </Label>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:gap-4">
               <div className="flex items-center space-x-3 p-3 rounded-lg bg-gray-50/50 hover:bg-gray-50 transition-colors">
@@ -147,7 +147,7 @@ export const NotificationSection = () => {
           {/* Provider Notification Section */}
           <div className="space-y-4">
             <Label className="text-base lg:text-lg font-semibold text-gray-800">
-              Combien de temps avant le début de la réservation pour vous ?
+              Quand le client doit-il recevoir un e-mail de rappel avant la réservation ?
             </Label>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:gap-4">
               <div className="flex items-center space-x-3 p-3 rounded-lg bg-gray-50/50 hover:bg-gray-50 transition-colors">
@@ -190,9 +190,12 @@ export const NotificationSection = () => {
           </div>
 
           {/* Booking Advance Limit Section */}
-          <div className="space-y-4">
+          <div className="space-y-4 pt-4 border-t border-gray-200">
+            <Label className="text-base lg:text-lg font-semibold text-gray-800 block">
+              Restrictions de réservation
+            </Label>
             <Label className="text-base lg:text-lg font-semibold text-gray-800">
-              Jusqu'à quel moment un client peut-il réserver avant le début d'une visite ?
+              Jusqu'à quand un client peut-il réserver avant le début de l'expérience ?
             </Label>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:gap-4">
               <div className="flex items-center space-x-3 p-3 rounded-lg bg-gray-50/50 hover:bg-gray-50 transition-colors">

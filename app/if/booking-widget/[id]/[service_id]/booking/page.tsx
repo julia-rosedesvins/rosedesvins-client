@@ -40,6 +40,8 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
       if (lang === 'anglais' || lang === 'english') return 'Anglais';
       if (lang === 'español' || lang === 'spanish') return 'Espagnol';
       if (lang === 'deutsch' || lang === 'german') return 'Allemand';
+      if (lang === 'italien' || lang === 'italian') return 'Italien';
+      if (lang === 'russe' || lang === 'russian') return 'Russe';
       return language; // Return original if no match
     };
     
@@ -1242,7 +1244,7 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
             </div>
             <div className="flex items-center gap-2 justify-center">
               <Wine className="w-4 h-4 md:w-5 md:h-5 flex-shrink-0" style={{ color: colorCode }} />
-              <span className="text-xs md:text-base">{widgetData?.service?.numberOfWinesTasted ?? 5} vins</span>
+              <span className="text-xs md:text-base">{widgetData?.service?.numberOfWinesTasted ?? 5} {(widgetData?.service?.numberOfWinesTasted ?? 5) === 1 ? 'vin' : 'vins'}</span>
             </div>
             <div className="flex items-center gap-2 justify-center">
               <Users className="w-4 h-4 md:w-5 md:h-5 flex-shrink-0" style={{ color: colorCode }} />

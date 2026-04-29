@@ -52,6 +52,26 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
+        // Never cache HTML pages — ensures users always get fresh chunk references after deploy
+        source: '/((?!_next/static|_next/image|assets|favicon.ico).*)',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'no-cache, no-store, must-revalidate',
+          },
+        ],
+      },
+      {
+        // Long-term immutable cache for hashed JS/CSS chunks
+        source: '/_next/static/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
+          },
+        ],
+      },
+      {
         // Long-term cache for all static assets in /public
         source: '/assets/:path*',
         headers: [

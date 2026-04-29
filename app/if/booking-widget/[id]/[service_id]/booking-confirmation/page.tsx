@@ -393,6 +393,8 @@ function BookingConfirmationContent({ id, serviceId }: { id: string; serviceId: 
     if (l === "anglais" || l === "english") return "Anglais";
     if (l === "español" || l === "spanish") return "Espagnol";
     if (l === "deutsch" || l === "german") return "Allemand";
+    if (l === "italien" || l === "italian") return "Italien";
+    if (l === "russe" || l === "russian") return "Russe";
     return language;
   };
 
