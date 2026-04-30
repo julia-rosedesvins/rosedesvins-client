@@ -189,7 +189,7 @@ export const NotificationSection = () => {
             </div>
           </div>
 
-          {/* Booking Advance Limit Section */}
+          {/* Booking Advance Limit Section — TEMPORARILY HIDDEN (feature disabled)
           <div className="space-y-4 pt-4 border-t border-gray-200">
             <Label className="text-base lg:text-lg font-semibold text-gray-800 block">
               Restrictions de réservation
@@ -236,6 +236,7 @@ export const NotificationSection = () => {
               </div>
             </div>
           </div>
+          */}
         </div>
 
         {/* Save Button */}
