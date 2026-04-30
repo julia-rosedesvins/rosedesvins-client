@@ -71,7 +71,7 @@ export default function UserMyAccount() {
                         nom: data.lastName || "",
                         email: data.email || "",
                         telephone: data.phoneNumber || "",
-                        nomDomaine: data.domainName || "",
+                        nomDomaine: data.domainName || user?.domainName || "",
                         adresse: data.address || "",
                         codePostal: data.codePostal || "",
                         ville: data.city || "",
