@@ -395,6 +395,24 @@ class AdminService {
       throw new Error('Network error occurred');
     }
   }
+
+  /**
+   * Quick login as a user by email (admin only).
+   * Clears any existing user session and sets a new user_token cookie.
+   */
+  async quickLoginAsUser(email: string): Promise<{ success: boolean; message: string; data: { user: any } }> {
+    try {
+      // First clear any existing user session
+      try { await apiClient.post('/users/logout'); } catch (_) { /* ignore */ }
+      const response = await apiClient.post('/users/quick-login', { email });
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response) {
+        throw error.response.data as ApiError;
+      }
+      throw new Error('Network error occurred');
+    }
+  }
 }
 
 // Export singleton instance

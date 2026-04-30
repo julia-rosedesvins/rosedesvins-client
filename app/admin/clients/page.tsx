@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
-import { Search, ChevronLeft, ChevronRight, Mail, UserCheck, Clock, UserX, Loader2, CheckCircle, XCircle, Pencil, Trash2 } from "lucide-react"
+import { Search, ChevronLeft, ChevronRight, Mail, UserCheck, Clock, UserX, Loader2, CheckCircle, XCircle, Pencil, Trash2, LogIn } from "lucide-react"
 import DashboardLayout from "@/components/admin/DashboardLayout"
 import { useAdmin } from '@/contexts/AdminContext'
 import { newsletterService, NewsletterSubscription } from '@/services/newsletter.service'
@@ -45,6 +45,22 @@ export default function AdminClients() {
     const [deletingUser, setDeletingUser] = useState<AdminUser | null>(null);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+
+    // Quick login state
+    const [quickLoginLoading, setQuickLoginLoading] = useState<string | null>(null);
+
+    const handleQuickLogin = async (user: AdminUser) => {
+        setQuickLoginLoading(user._id);
+        try {
+            await adminService.quickLoginAsUser(user.email);
+            toast.success(`Connexion rapide en tant que ${user.firstName} ${user.lastName}`);
+            window.open('/dashboard', '_blank');
+        } catch (error: any) {
+            toast.error(error.message || 'Erreur lors de la connexion rapide');
+        } finally {
+            setQuickLoginLoading(null);
+        }
+    };
     
     // Approve modal state
     const [approvingSubscription, setApprovingSubscription] = useState<NewsletterSubscription | null>(null);
@@ -377,6 +393,20 @@ export default function AdminClients() {
                                 </td>
                                 <td className="py-3 px-4">
                                     <div className="flex items-center justify-center gap-2">
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            className="text-green-700 border-green-300 hover:bg-green-50"
+                                            onClick={() => handleQuickLogin(user)}
+                                            disabled={quickLoginLoading === user._id}
+                                        >
+                                            {quickLoginLoading === user._id ? (
+                                                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                                            ) : (
+                                                <LogIn className="h-4 w-4 mr-1" />
+                                            )}
+                                            Connexion rapide
+                                        </Button>
                                         <Button
                                             size="sm"
                                             variant="outline"
