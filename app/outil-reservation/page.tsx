@@ -357,15 +357,7 @@ export default function OldHomePage() {
               </div>
               <div className="flex items-start gap-3">
                 <Check className="w-5 h-5 mt-0.5 flex-shrink-0" style={{ color: "#3A7B59" }} />
-                <span className="text-gray-700">Comptes utilisateurs illimités</span>
-              </div>
-              <div className="flex items-start gap-3">
-                <Check className="w-5 h-5 mt-0.5 flex-shrink-0" style={{ color: "#3A7B59" }} />
                 <span className="text-gray-700">Un accompagnement 7/7</span>
-              </div>
-              <div className="flex items-start gap-3">
-                <Check className="w-5 h-5 mt-0.5 flex-shrink-0" style={{ color: "#3A7B59" }} />
-                <span className="text-gray-700">3 langues disponibles</span>
               </div>
             </div>
           </div>

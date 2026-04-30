@@ -92,7 +92,7 @@ export const NotificationSection = () => {
   return (
     <Card className="mb-6 lg:mb-8 relative shadow-sm border-0 bg-white ring-1 ring-gray-200 hover:ring-gray-300 transition-all duration-200">
       <CardHeader className="pb-4">
-        <CardTitle className="text-xl lg:text-2xl font-semibold text-gray-900">Préférences de notification et paramètres</CardTitle>
+        <CardTitle className="text-xl lg:text-2xl font-semibold text-gray-900">Préférences de notification</CardTitle>
         <p className="text-gray-600 text-sm lg:text-base leading-relaxed mt-1">
           Définissez jusqu'à quand vos clients peuvent réserver et quand chacun reçoit un rappel avant la visite.
         </p>
