@@ -347,7 +347,7 @@ export default function OldHomePage() {
               </div>
               <div className="flex items-start gap-3">
                 <Check className="w-5 h-5 mt-0.5 flex-shrink-0" style={{ color: "#3A7B59" }} />
-                <span className="text-gray-700">Calendriers synchronisés</span>
+                <span className="text-gray-700">Outil synchronisé avec votre agenda</span>
               </div>
               <div className="flex items-start gap-3">
                 <Check className="w-5 h-5 mt-0.5 flex-shrink-0" style={{ color: "#3A7B59" }} />
