@@ -220,7 +220,7 @@ export default function OldHomePage() {
                   <Users className="w-8 h-8" style={{ color: "#3A7B59" }} />
                 </div>
                 <h4 className="font-semibold text-lg mb-3">
-                  Augmenter le nombre
+                  Augmentez le nombre
                   <br />
                   de réservations
                 </h4>
