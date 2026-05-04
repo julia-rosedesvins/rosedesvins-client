@@ -292,7 +292,7 @@ export const AvailabilitySection = () => {
       <CardHeader className="pb-4">
         <CardTitle className="text-xl lg:text-2xl font-semibold text-gray-900">Disponibilités</CardTitle>
         <p className="text-gray-600 text-sm lg:text-base leading-relaxed mt-1">
-          Définissez vos créneaux de disponibilité pour recevoir des réservations.
+          Définissez vos créneaux ouverts aux réservations.
         </p>
       </CardHeader>
       <CardContent className="pt-2">
