@@ -206,7 +206,7 @@ export default function OldHomePage() {
             </h3>
             <p className="text-gray-600 max-w-3xl mx-auto">
               Dites adieu aux aller-retours sur votre messagerie et à la gestion compliquée des réservations. Définissez
-              vos créneaux, connectez votre agenda et le reste se gère automatiquement : efficacité pour vous, autonomie pour vos visiteurs.
+              vos créneaux, connectez votre agenda et le reste se gère automatiquement : efficacité pour vous, autonomie pour vos clients.
             </p>
           </div>
 
