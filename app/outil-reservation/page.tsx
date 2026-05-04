@@ -260,7 +260,7 @@ export default function OldHomePage() {
                   <Calendar className="w-8 h-8" style={{ color: "#3A7B59" }} />
                 </div>
                 <h4 className="font-semibold text-lg mb-3">
-                  Gagner du temps et gardez la main sur vos disponibilités
+                  Gagnez du temps et gardez la main sur vos disponibilités
                 </h4>
                 <p className="text-gray-600 text-sm">
                   Outil synchronisé avec votre agenda & calendriers personnalisables par expérience
