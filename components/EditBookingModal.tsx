@@ -218,7 +218,7 @@ export const EditBookingModal = ({ bookingData, isOpen, onClose, onSuccess }: Ed
 
           {/* Language */}
           <div className="space-y-2">
-            <Label htmlFor="language">Langue préférée *</Label>
+            <Label htmlFor="language">Langue *</Label>
             <Select
               value={formData.selectedLanguage || ''}
               onValueChange={(value) => handleInputChange('selectedLanguage', value)}
