@@ -147,7 +147,7 @@ export const NotificationSection = () => {
           {/* Provider Notification Section */}
           <div className="space-y-4">
             <Label className="text-base lg:text-lg font-semibold text-gray-800">
-              Quand le client doit-il recevoir un e-mail de rappel avant la réservation ?
+              Quand souhaitez-vous que le client reçoive un e-mail de rappel avant la réservation ?
             </Label>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:gap-4">
               <div className="flex items-center space-x-3 p-3 rounded-lg bg-gray-50/50 hover:bg-gray-50 transition-colors">
