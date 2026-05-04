@@ -1513,7 +1513,7 @@ export default function UserDomainProfile() {
                                                     style={{ color: '#3A7B59', borderColor: '#3A7B59' }}
                                                 >
                                                     <Plus className="h-4 w-4 mr-2" />
-                                                    <span className="hidden sm:inline">Ajouter une prestation</span>
+                                                    <span className="hidden sm:inline">Ajouter une expérience</span>
                                                     <span className="sm:hidden">Ajouter</span>
                                                 </Button>
                                             </div>

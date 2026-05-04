@@ -216,7 +216,7 @@ export const AddServiceModal = ({ isOpen, onClose, onSave }: AddServiceModalProp
           <div className="flex items-center justify-center gap-2 sm:gap-3">
             <Wine className="h-5 w-5 sm:h-6 sm:w-6 shrink-0" />
             <DialogTitle className="text-lg sm:text-xl font-semibold text-center">
-              Ajouter une prestation œnotouristique
+              Ajouter une expérience
             </DialogTitle>
           </div>
         </DialogHeader>
