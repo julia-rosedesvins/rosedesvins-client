@@ -1252,7 +1252,7 @@ export default function UserDomainProfile() {
                                                         <div className="space-y-4 mb-3">
                                                             {/* Booking Restrictions */}
                                                             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                                                                <span className="text-sm font-medium text-gray-700">Restrictions de réservations</span>
+                                                                <span className="text-sm font-medium text-gray-700">Restriction de réservation</span>
                                                                 <div className="flex items-center space-x-2">
                                                                     <Switch
                                                                         checked={prestation.bookingRestrictionActive}
