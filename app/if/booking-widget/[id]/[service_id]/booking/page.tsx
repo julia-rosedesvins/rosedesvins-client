@@ -240,7 +240,13 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
       
       // Override with service-specific restriction if available
       if (serviceBookingRestriction) {
-        if (serviceBookingRestriction === '4h') {
+        if (serviceBookingRestriction === 'last_minute') {
+          bookingAdvanceLimit = 'last_minute';
+        } else if (serviceBookingRestriction === '1h') {
+          bookingAdvanceLimit = '1_hour';
+        } else if (serviceBookingRestriction === '2h') {
+          bookingAdvanceLimit = '2_hours';
+        } else if (serviceBookingRestriction === '4h') {
           bookingAdvanceLimit = '4_hours';
         } else if (serviceBookingRestriction === '24h') {
           bookingAdvanceLimit = '24_hours';
@@ -514,7 +520,13 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
       
       // Override with service-specific restriction if available
       if (serviceBookingRestriction) {
-        if (serviceBookingRestriction === '4h') {
+        if (serviceBookingRestriction === 'last_minute') {
+          bookingAdvanceLimit = 'last_minute';
+        } else if (serviceBookingRestriction === '1h') {
+          bookingAdvanceLimit = '1_hour';
+        } else if (serviceBookingRestriction === '2h') {
+          bookingAdvanceLimit = '2_hours';
+        } else if (serviceBookingRestriction === '4h') {
           bookingAdvanceLimit = '4_hours';
         } else if (serviceBookingRestriction === '24h') {
           bookingAdvanceLimit = '24_hours';

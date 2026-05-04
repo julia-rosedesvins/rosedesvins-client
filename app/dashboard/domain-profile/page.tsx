@@ -1271,6 +1271,9 @@ export default function UserDomainProfile() {
                                                                             <SelectValue placeholder="Sélectionner" />
                                                                         </SelectTrigger>
                                                                         <SelectContent>
+                                                                            <SelectItem value="last_minute">Dernière minute</SelectItem>
+                                                                            <SelectItem value="1h">1h</SelectItem>
+                                                                            <SelectItem value="2h">2h</SelectItem>
                                                                             <SelectItem value="4h">4h</SelectItem>
                                                                             <SelectItem value="24h">24h</SelectItem>
                                                                             <SelectItem value="48h">48h</SelectItem>
