@@ -351,6 +351,10 @@ export default function OldHomePage() {
               </div>
               <div className="flex items-start gap-3">
                 <Check className="w-5 h-5 mt-0.5 flex-shrink-0" style={{ color: "#3A7B59" }} />
+                <span className="text-gray-700">Calendriers personnalisables par expérience</span>
+              </div>
+              <div className="flex items-start gap-3">
+                <Check className="w-5 h-5 mt-0.5 flex-shrink-0" style={{ color: "#3A7B59" }} />
                 <span className="text-gray-700">
                   E-mails de confirmation et de rappel automatiques et personnalisables
                 </span>
