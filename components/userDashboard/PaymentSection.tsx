@@ -163,7 +163,7 @@ export const PaymentSection = () => {
   return (
     <Card className="mt-5 relative shadow-sm border-0 bg-white ring-1 ring-gray-200 hover:ring-gray-300 transition-all duration-200">
       <CardHeader className="pb-4">
-        <CardTitle className="text-xl lg:text-2xl font-semibold text-gray-900">Moyens de paiement acceptés</CardTitle>
+        <CardTitle className="text-xl lg:text-2xl font-semibold text-gray-900">Moyens de paiement</CardTitle>
         <p className="text-gray-600 text-sm lg:text-base leading-relaxed mt-1">
           Sélectionnez les moyens de paiement que vous acceptez sur place et en ligne.
         </p>
