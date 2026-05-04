@@ -240,7 +240,7 @@ export default function OldHomePage() {
                 >
                   <Clock className="w-8 h-8" style={{ color: "#3A7B59" }} />
                 </div>
-                <h4 className="font-semibold text-lg mb-3">Limiter les no shows</h4>
+                <h4 className="font-semibold text-lg mb-3">Limitez les no shows</h4>
                 <p className="text-gray-600 text-sm">
                   Confirmations immédiates et
                   <br />
