@@ -422,7 +422,7 @@ export default function Navbar() {
               </h1>
             </Link>
             {/* <p className="text-sm" style={{ color: "#8BB5A3" }}>
-              La technologie au service de l’œnotourisme
+              La technologie au service des domaines viticoles
             </p> */}
           </div>
         </div>

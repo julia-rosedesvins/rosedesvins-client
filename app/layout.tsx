@@ -17,8 +17,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Rose des Vins - La technologie au service de l’œnotourisme",
-  description: "La technologie au service de l’œnotourisme",
+  title: "Rose des Vins - La technologie au service des domaines viticoles",
+  description: "La technologie au service des domaines viticoles",
   icons: {
     icon: '/assets/logo.png',
   }
