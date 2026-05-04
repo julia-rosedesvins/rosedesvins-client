@@ -1275,7 +1275,7 @@ export default function UserDomainProfile() {
                                                                             <SelectItem value="24h">24h</SelectItem>
                                                                             <SelectItem value="48h">48h</SelectItem>
                                                                             <SelectItem value="72h">72h</SelectItem>
-                                                                            <SelectItem value="7d">Une semaine</SelectItem>
+                                                                            <SelectItem value="7d">7 jours</SelectItem>
                                                                             <SelectItem value="10d">10 jours</SelectItem>
                                                                         </SelectContent>
                                                                     </Select>
