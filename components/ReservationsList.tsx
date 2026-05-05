@@ -108,7 +108,7 @@ export const ReservationsList = () => {
       time: event.eventTime,
       people: totalPeople,
       activity: event.eventName,
-      language: getLanguageDisplay(event.bookingId?.selectedLanguage),
+      language: event.bookingId ? getLanguageDisplay(event.bookingId?.selectedLanguage) : '',
       comments: event.bookingId ? (event.bookingId.additionalNotes || '') : (event.eventDescription || ''),
       serviceName: event.serviceInfo?.name || null,
       date: event.eventDate,
