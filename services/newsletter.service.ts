@@ -49,15 +49,14 @@ export interface ApiResponse<T = any> {
 class NewsletterService {
   async subscribe(email: string): Promise<ApiResponse> {
     try {
-      const response = await axios.post(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5001'}/v1/newsletter/subscribe`, {
-        email,
-      });
+      const response = await axios.post(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5001'}/v1/newsletter/subscribe`,
+        { email },
+        { validateStatus: () => true }
+      );
       return response.data;
     } catch (error: any) {
-      if (axios.isAxiosError(error) && error.response) {
-        throw error.response.data;
-      }
-      throw new Error('Network error occurred');
+      throw new Error('Erreur réseau. Veuillez vérifier votre connexion.');
     }
   }
 

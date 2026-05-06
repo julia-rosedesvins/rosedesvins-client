@@ -19,14 +19,21 @@ const NewsletterSection = () => {
 
     try {
       setIsSubmitting(true);
-      const response = await newsletterService.subscribe(email);
-      if (response.success) {
-        toast.success(response.message || "Merci pour votre inscription !");
-        setEmail("");
+      let response: any = null;
+      try {
+        response = await newsletterService.subscribe(email);
+      } catch {
+        toast.error("Erreur réseau. Veuillez réessayer.");
+        return;
       }
-    } catch (error: any) {
-      console.error('Subscription error:', error);
-      toast.error(error.message || "Erreur lors de l'inscription");
+      if (response?.success) {
+        toast.success("Merci pour votre inscription !");
+        setEmail("");
+      } else {
+        toast.error("Cet email est déjà inscrit ou une erreur est survenue.");
+      }
+    } catch {
+      toast.error("Une erreur est survenue. Veuillez réessayer.");
     } finally {
       setIsSubmitting(false);
     }
