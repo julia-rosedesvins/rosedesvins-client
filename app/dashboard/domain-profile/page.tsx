@@ -1158,24 +1158,13 @@ export default function UserDomainProfile() {
                                             </div>
                                         )}
                                     </div>
-                                    <div className={`grid gap-4 lg:gap-6 ${selectedPrestation ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1'}`}>
+                                    <div className="grid gap-4 lg:gap-6 grid-cols-1">
                                         {/* Liste des prestations */}
                                         <div className="space-y-3">
                                             {prestations.map((prestation) => (
                                                 <div key={prestation.id} className="border rounded-lg bg-white">
                                                     <div
-                                                        className={`flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 cursor-pointer transition-colors ${selectedPrestation === prestation.id.toString()
-                                                            ? 'bg-green-50'
-                                                            : 'hover:bg-gray-50'
-                                                            }`}
-                                                        style={
-                                                            selectedPrestation === prestation.id.toString()
-                                                                ? { borderColor: '#3A7B59' }
-                                                                : {}
-                                                        }
-                                                        onClick={() => setSelectedPrestation(
-                                                            selectedPrestation === prestation.id.toString() ? null : prestation.id.toString()
-                                                        )}
+                                                        className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 transition-colors hover:bg-gray-50"
                                                     >
                                                         <span className="text-gray-700 font-medium mb-3 sm:mb-0">{prestation.name}</span>
                                                         <div className="flex flex-wrap items-center gap-2 sm:gap-1">
@@ -1522,28 +1511,6 @@ export default function UserDomainProfile() {
                                             </div>
                                         </div>
 
-                                        {/* Preview de la prestation sélectionnée */}
-                                        {selectedPrestation && (
-                                            <div className="border border-gray-200 rounded-lg p-4 lg:p-6 bg-white">
-                                                <h4 className="text-base lg:text-lg font-semibold mb-4">Aperçu de la prestation</h4>
-                                                {(() => {
-                                                    const prestation = prestations.find(p => p.id.toString() === selectedPrestation);
-                                                    if (!prestation) return null;
-                                                    return (
-                                                        <div className="space-y-4">
-                                                            <div>
-                                                                <h5 className="font-medium text-gray-900 text-sm lg:text-base">{prestation.name}</h5>
-                                                                <p className="text-xs lg:text-sm text-gray-600 mt-1">{prestation.description}</p>
-                                                            </div>
-                                                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center pt-4 border-t border-gray-100 gap-2">
-                                                                <span className="text-lg font-semibold" style={{ color: '#3A7B59' }}>{prestation.price}</span>
-                                                                <span className="text-xs lg:text-sm text-gray-500">Durée: {prestation.duration}</span>
-                                                            </div>
-                                                        </div>
-                                                    );
-                                                })()}
-                                            </div>
-                                        )}
                                     </div>
                                 </div>
                             </CardContent>
