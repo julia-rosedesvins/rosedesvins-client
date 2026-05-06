@@ -396,11 +396,22 @@ export const AddBookingModal = ({ isOpen, onClose, onBookingCreated }: AddBookin
                   <SelectValue placeholder="Sélectionner une langue" />
                 </SelectTrigger>
                 <SelectContent>
-                  {selectedService?.languagesOffered.map((language) => (
-                    <SelectItem key={language} value={language}>
-                      {language}
-                    </SelectItem>
-                  )) || (
+                  {selectedService?.languagesOffered.map((language) => {
+                    const languageMap: Record<string, string> = {
+                      'french': 'Français',
+                      'english': 'Anglais',
+                      'german': 'Allemand',
+                      'spanish': 'Espagnol',
+                      'autre': '',
+                    };
+                    const label = languageMap[language.toLowerCase()];
+                    if (label === '') return null; // skip 'autre'
+                    return (
+                      <SelectItem key={language} value={language}>
+                        {label || language}
+                      </SelectItem>
+                    );
+                  }) || (
                     <>
                       <SelectItem value="French">Français</SelectItem>
                       <SelectItem value="English">Anglais</SelectItem>
