@@ -201,7 +201,7 @@ export const PaymentSection = () => {
               />
               <CreditCard className="h-5 w-5 text-[#3A7B59]" />
               <Label htmlFor="stripe" className="text-sm lg:text-base font-semibold cursor-pointer text-black flex-1">
-                Stripe — Prépaiements en ligne
+                Stripe — Prépaiement en ligne
               </Label>
               {/* Status badge when connected */}
               {isStripeSelected && stripeStatus && (
