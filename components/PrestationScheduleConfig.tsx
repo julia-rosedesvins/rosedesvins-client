@@ -30,6 +30,7 @@ export const PrestationScheduleConfig = ({ selectedDates, onChange, existingAvai
   const [schedules, setSchedules] = useState<{ [dayOfWeek: string]: ScheduleConfig }>({});
 
   const isInitializingRef = useRef(false);
+  const hasInitializedFromApiRef = useRef(false);
   const lastEmittedRef = useRef<string>("");
 
   const selectedDateKeys = useMemo(() => {
@@ -39,67 +40,48 @@ export const PrestationScheduleConfig = ({ selectedDates, onChange, existingAvai
       .sort();
   }, [selectedDates]);
 
-  // Initialize schedules from existing availability data
+  // Initialize schedules from existing availability data — only ONCE on first non-empty load.
+  // After that, the component's own schedules state is the source of truth.
+  // This prevents the circular feedback loop: onChange → parent updates dateAvailability
+  // → existingAvailability prop changes → re-initialization overwrites user's edits.
   useEffect(() => {
-    if (existingAvailability && existingAvailability.length > 0) {
-      console.log('PrestationScheduleConfig existingAvailability:', existingAvailability);
-      const initialSchedules: { [dayOfWeek: string]: ScheduleConfig } = {};
+    if (hasInitializedFromApiRef.current) return; // Never re-initialize after first init
+    if (!existingAvailability || existingAvailability.length === 0) return;
 
-      existingAvailability.forEach((availability: any) => {
-        // Validate and parse the date
-        if (!availability.date) {
-          console.warn('Availability item missing date:', availability);
-          return;
-        }
+    const initialSchedules: { [dayOfWeek: string]: ScheduleConfig } = {};
 
-        const date = new Date(availability.date);
+    existingAvailability.forEach((availability: any) => {
+      if (!availability.date) return;
+      const date = new Date(availability.date);
+      if (isNaN(date.getTime())) return;
 
-        // Check if date is valid
-        if (isNaN(date.getTime())) {
-          console.warn('Invalid date in availability:', availability.date, availability);
-          return;
-        }
-
-        // Use day of week as key (0 = Sunday, 1 = Monday, etc.)
-        const dayOfWeek = date.getDay().toString();
-
-        console.log(`Processing date ${availability.date} (day ${dayOfWeek}):`, {
-          availability,
+      const dayOfWeek = date.getDay().toString();
+      // Group by day of week — use first occurrence's settings (later ones for the same day are identical)
+      if (!initialSchedules[dayOfWeek]) {
+        initialSchedules[dayOfWeek] = {
+          enabled: Boolean(availability.enabled),
           morningEnabled: Boolean(availability.morningEnabled),
-          afternoonEnabled: Boolean(availability.afternoonEnabled)
-        });
+          morningFrom: availability.morningFrom || '',
+          morningTo: availability.morningTo || '',
+          afternoonEnabled: Boolean(availability.afternoonEnabled),
+          afternoonFrom: availability.afternoonFrom || '',
+          afternoonTo: availability.afternoonTo || ''
+        };
+      }
+    });
 
-        // Group by day of week - use first occurrence's settings
-        if (!initialSchedules[dayOfWeek]) {
-          initialSchedules[dayOfWeek] = {
-            enabled: Boolean(availability.enabled),
-            morningEnabled: Boolean(availability.morningEnabled),
-            morningFrom: availability.morningFrom || '',
-            morningTo: availability.morningTo || '',
-            afternoonEnabled: Boolean(availability.afternoonEnabled),
-            afternoonFrom: availability.afternoonFrom || '',
-            afternoonTo: availability.afternoonTo || ''
-          };
-        }
-      });
-
-      console.log('Setting schedules from API data (grouped by day):', initialSchedules);
-      isInitializingRef.current = true;
-      setSchedules(prevSchedules => {
-        if (JSON.stringify(initialSchedules) !== JSON.stringify(prevSchedules)) {
-          return initialSchedules;
-        }
-        return prevSchedules;
-      });
-    }
-  }, [JSON.stringify(existingAvailability)]); // Use JSON.stringify to properly detect changes
-
-  // Clear initialization flag after schedules are applied (effect order matters: this must run before onChange effect)
-  useEffect(() => {
-    if (isInitializingRef.current) {
+    hasInitializedFromApiRef.current = true;
+    isInitializingRef.current = true;
+    setSchedules(prevSchedules => {
+      if (JSON.stringify(initialSchedules) !== JSON.stringify(prevSchedules)) {
+        return initialSchedules;
+      }
+      // Schedules already match — clear isInitializingRef now since the
+      // schedules-change effect won't fire (no state change happened).
       isInitializingRef.current = false;
-    }
-  }, [schedules]);
+      return prevSchedules;
+    });
+  }, [JSON.stringify(existingAvailability)]);
 
   // Group dates by day of week
   const groupedByDayOfWeek = selectedDates.reduce((acc, date) => {
@@ -150,7 +132,13 @@ export const PrestationScheduleConfig = ({ selectedDates, onChange, existingAvai
 
   useEffect(() => {
     if (!onChange) return;
-    if (isInitializingRef.current) return;
+    if (isInitializingRef.current) {
+      // Always clear the flag here so it can never get permanently stuck.
+      // This handles the case where setSchedules returned the same state
+      // (no re-render), so the schedules-change effect never fired.
+      isInitializingRef.current = false;
+      return;
+    }
 
     // Convert day-of-week schedules back to individual dates for API
     const dateSchedules: { [dateKey: string]: ScheduleConfig } = {};

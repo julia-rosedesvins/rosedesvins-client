@@ -435,58 +435,62 @@ export default function UserDomainProfile() {
 
     // Save service booking settings
     const saveServiceBookingSettings = async (service: EnhancedDomainService) => {
-        console.log('saveServiceBookingSettings called for service:', service._id, service.serviceName);
-        if (!service.hasChanges || savingServices[service._id!]) return;
+        console.log('=== saveServiceBookingSettings ===');
+        console.log('service._id:', service._id);
+        console.log('service.hasChanges:', service.hasChanges);
+        console.log('service.selectedDates count:', service.selectedDates?.length);
+        console.log('service.selectedDates:', service.selectedDates?.map((d: Date) => d?.toISOString?.() ?? d));
+        console.log('service.dateAvailability count:', Array.isArray(service.dateAvailability) ? service.dateAvailability.length : 'not array');
+        console.log('serviceSchedules for this service:', serviceSchedules[service._id!]);
+        if (!service.hasChanges || savingServices[service._id!]) {
+            console.warn('Skipping save: hasChanges=', service.hasChanges, 'savingServices=', savingServices[service._id!]);
+            return;
+        }
 
         setSavingServices(prev => ({ ...prev, [service._id!]: true }));
 
         try {
-            // Convert schedules to actual date-based availability for API
-            let dateAvailability = [];
-            if (service.dateAvailability && service.selectedDates) {
-                // Create a set of selected date strings for quick lookup
-                const selectedDateStrings = new Set(
-                    service.selectedDates.map((date: Date) => 
-                        `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`
-                    )
-                );
+            // Build dateAvailability using service.selectedDates as the MASTER LIST of dates.
+            // This ensures newly added (or removed) dates are always reflected correctly.
+            // Schedule configs come from: pending changes (serviceSchedules) → saved API data → defaults.
+            let dateAvailability: any[] = [];
+            if (service.selectedDates && service.selectedDates.length > 0) {
+                const pendingSchedules: any[] = serviceSchedules[service._id!] || [];
+                const savedSchedules: any[] = Array.isArray(service.dateAvailability) ? service.dateAvailability : [];
 
-                if (Array.isArray(service.dateAvailability)) {
-                    // Filter by both: enabled AND still in selectedDates (not removed)
-                    dateAvailability = service.dateAvailability
-                        .filter((item: any) => {
-                            const itemDateString = item.date instanceof Date 
-                                ? `${item.date.getFullYear()}-${(item.date.getMonth() + 1).toString().padStart(2, '0')}-${item.date.getDate().toString().padStart(2, '0')}`
-                                : item.date;
-                            return item.enabled && selectedDateStrings.has(itemDateString);
-                        })
-                        .map((item: any) => ({
-                            ...item,
-                            date: item.date instanceof Date 
-                                ? `${item.date.getFullYear()}-${(item.date.getMonth() + 1).toString().padStart(2, '0')}-${item.date.getDate().toString().padStart(2, '0')}`
-                                : item.date
-                        }));
-                } else if (typeof service.dateAvailability === 'object') {
-                    // Convert date-keyed schedules to date-based schedules
-                    const dateSchedules = service.dateAvailability;
-                    dateAvailability = [];
-                    
-                    // Only include dates that are enabled AND still in selectedDates (not removed)
-                    Object.entries(dateSchedules).forEach(([dateKey, schedule]: [string, any]) => {
-                        if (schedule && schedule.enabled && selectedDateStrings.has(dateKey)) {
-                            dateAvailability.push({
-                                date: dateKey, // dateKey is already in YYYY-MM-DD format
-                                enabled: schedule.enabled,
-                                morningEnabled: schedule.morningEnabled ?? false,
-                                morningFrom: schedule.morningFrom ?? "09:00",
-                                morningTo: schedule.morningTo ?? "12:00",
-                                afternoonEnabled: schedule.afternoonEnabled ?? false,
-                                afternoonFrom: schedule.afternoonFrom ?? "14:00",
-                                afternoonTo: schedule.afternoonTo ?? "18:00"
-                            });
-                        }
-                    });
-                }
+                // Build fast lookup maps: dateString → schedule config
+                const pendingByDate = new Map<string, any>();
+                pendingSchedules.forEach((item: any) => {
+                    const key = item.date instanceof Date
+                        ? `${item.date.getFullYear()}-${(item.date.getMonth() + 1).toString().padStart(2, '0')}-${item.date.getDate().toString().padStart(2, '0')}`
+                        : item.date;
+                    if (key) pendingByDate.set(key, item);
+                });
+
+                const savedByDate = new Map<string, any>();
+                savedSchedules.forEach((item: any) => {
+                    const key = item.date instanceof Date
+                        ? `${item.date.getFullYear()}-${(item.date.getMonth() + 1).toString().padStart(2, '0')}-${item.date.getDate().toString().padStart(2, '0')}`
+                        : item.date;
+                    if (key) savedByDate.set(key, item);
+                });
+
+                // For every selected date, find its schedule config or use defaults
+                dateAvailability = service.selectedDates.map((date: Date) => {
+                    const dateKey = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
+                    const config = pendingByDate.get(dateKey) || savedByDate.get(dateKey);
+                    return {
+                        date: dateKey,
+                        enabled: config?.enabled ?? true,
+                        morningEnabled: config?.morningEnabled ?? false,
+                        morningFrom: config?.morningFrom ?? '09:00',
+                        morningTo: config?.morningTo ?? '12:00',
+                        afternoonEnabled: config?.afternoonEnabled ?? false,
+                        afternoonFrom: config?.afternoonFrom ?? '14:00',
+                        afternoonTo: config?.afternoonTo ?? '18:00',
+                    };
+                });
+                console.log('Built dateAvailability:', dateAvailability.map(d => d.date));
             }
 
             const bookingSettings = {
@@ -498,10 +502,17 @@ export default function UserDomainProfile() {
                 dateAvailability
             };
 
-            console.log('Sending booking settings to API:', bookingSettings);
-
-            await userService.updateServiceBookingSettings(service._id!, bookingSettings);
+            console.log('Sending booking settings to API:', JSON.stringify({ dateCount: dateAvailability.length, dates: dateAvailability.map(d => d.date) }));
+            const apiResult = await userService.updateServiceBookingSettings(service._id!, bookingSettings);
+            console.log('API response dateAvailability count:', apiResult?.data?.services?.find?.((s: any) => s._id?.toString() === service._id)?.dateAvailability?.length ?? 'N/A');
             
+            // Clear pending schedule changes now that they're saved
+            setServiceSchedules(prev => {
+                const next = { ...prev };
+                delete next[service._id!];
+                return next;
+            });
+
             // Update the original settings and clear changes flag
             setServices(prevServices =>
                 prevServices.map(s => {
@@ -509,13 +520,14 @@ export default function UserDomainProfile() {
                         return {
                             ...s,
                             hasChanges: false,
+                            dateAvailability: bookingSettings.dateAvailability,
                             originalBookingSettings: {
                                 bookingRestrictionActive: s.bookingRestrictionActive ?? false,
                                 bookingRestrictionTime: s.bookingRestrictionTime ?? "24h",
                                 multipleBookings: s.multipleBookings ?? false,
                                 hasCustomAvailability: s.hasCustomAvailability ?? false,
                                 stripeEnabled: s.stripeEnabled ?? true,
-                                dateAvailability: s.dateAvailability ?? []
+                                dateAvailability: bookingSettings.dateAvailability
                             }
                         };
                     }
@@ -836,7 +848,7 @@ export default function UserDomainProfile() {
             setServices(prevServices =>
                 prevServices.map(s =>
                     s._id === prestationId
-                        ? { ...s, selectedDates: newDates }
+                        ? { ...s, selectedDates: newDates, hasChanges: true }
                         : s
                 )
             );
@@ -850,7 +862,7 @@ export default function UserDomainProfile() {
             setServices(prevServices =>
                 prevServices.map(s =>
                     s._id === prestationId
-                        ? { ...s, selectedDates: newDates }
+                        ? { ...s, selectedDates: newDates, hasChanges: true }
                         : s
                 )
             );
@@ -1444,18 +1456,20 @@ export default function UserDomainProfile() {
                                                                         <PrestationScheduleConfig 
                                                                             selectedDates={prestation.selectedDates}
                                                                             existingAvailability={(() => {
+                                                                                // Use originalBookingSettings.dateAvailability (last saved state),
+                                                                                // NOT service.dateAvailability which gets mutated by onChange and
+                                                                                // would cause a circular re-initialization loop.
                                                                                 const service = services.find(s => s._id === prestation.id);
-                                                                                const availability = service?.dateAvailability || [];
+                                                                                const availability = service?.originalBookingSettings?.dateAvailability || [];
 
                                                                                 if (Array.isArray(availability)) {
-                                                                                    // Validate array items have valid dates
-                                                                                    return availability.filter(item => 
+                                                                                    return availability.filter((item: any) => 
                                                                                         item && item.date && !isNaN(new Date(item.date).getTime())
                                                                                     );
                                                                                 }
                                                                                 if (availability && typeof availability === 'object') {
                                                                                     return Object.entries(availability)
-                                                                                        .filter(([date, config]) => date && !isNaN(new Date(date).getTime()))
+                                                                                        .filter(([date]) => date && !isNaN(new Date(date).getTime()))
                                                                                         .map(([date, config]) => ({ 
                                                                                             date, 
                                                                                             ...(config && typeof config === 'object' ? config as any : {})
@@ -1464,7 +1478,9 @@ export default function UserDomainProfile() {
                                                                                 return [];
                                                                             })()}
                                                                             onChange={(schedules) => {
-                                                                                // Convert object format to array format for backend compatibility
+                                                                                // Store pending schedule changes in serviceSchedules state,
+                                                                                // NOT in services.dateAvailability — that would change existingAvailability
+                                                                                // and trigger a re-initialization loop inside PrestationScheduleConfig.
                                                                                 const scheduleArray = Object.entries(schedules).map(([dateKey, config]) => ({
                                                                                     date: dateKey,
                                                                                     enabled: config.enabled,
@@ -1476,15 +1492,20 @@ export default function UserDomainProfile() {
                                                                                     afternoonTo: config.afternoonTo
                                                                                 }));
                                                                                 
-                                                                                // Update service with new schedule data
-                                                                                updateServiceBookingSettings(prestation.id, 'dateAvailability', scheduleArray);
-                                                                                // Only update hasCustomAvailability if there are actual enabled schedules
+                                                                                // Save pending changes to serviceSchedules
+                                                                                setServiceSchedules(prev => ({ ...prev, [prestation.id]: scheduleArray }));
+
+                                                                                // Mark service as having changes (without touching dateAvailability)
                                                                                 const hasEnabledSchedules = Object.values(schedules).some((schedule: any) => 
                                                                                     schedule.enabled && (schedule.morningEnabled || schedule.afternoonEnabled)
                                                                                 );
-                                                                                if (hasEnabledSchedules) {
-                                                                                    updateServiceBookingSettings(prestation.id, 'hasCustomAvailability', true);
-                                                                                }
+                                                                                setServices(prevServices =>
+                                                                                    prevServices.map(s =>
+                                                                                        s._id === prestation.id
+                                                                                            ? { ...s, hasChanges: true, ...(hasEnabledSchedules ? { hasCustomAvailability: true } : {}) }
+                                                                                            : s
+                                                                                    )
+                                                                                );
                                                                             }}
                                                                         />
                                                                     </div>
