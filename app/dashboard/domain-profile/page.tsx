@@ -139,7 +139,7 @@ export default function UserDomainProfile() {
                     hasChanges: false,
                     originalBookingSettings: {
                         bookingRestrictionActive: true,
-                        bookingRestrictionTime: (service as any).bookingRestrictionTime ?? "24h",
+                        bookingRestrictionTime: (service as any).bookingRestrictionTime ?? "last_minute",
                         multipleBookings: (service as any).multipleBookings ?? false,
                         hasCustomAvailability: computedHasCustom,
                         stripeEnabled: (service as any).stripeEnabled ?? true,
@@ -155,7 +155,7 @@ export default function UserDomainProfile() {
                     hasChanges: false,
                     originalBookingSettings: {
                         bookingRestrictionActive: true,
-                        bookingRestrictionTime: "24h",
+                        bookingRestrictionTime: "last_minute",
                         multipleBookings: false,
                         hasCustomAvailability: false,
                         stripeEnabled: true,
@@ -385,7 +385,7 @@ export default function UserDomainProfile() {
                 if (service._id === serviceId) {
                     const originalSettings = service.originalBookingSettings || {
                         bookingRestrictionActive: true,
-                        bookingRestrictionTime: service.bookingRestrictionTime ?? "24h",
+                        bookingRestrictionTime: service.bookingRestrictionTime ?? "last_minute",
                         multipleBookings: service.multipleBookings ?? false,
                         hasCustomAvailability: service.hasCustomAvailability ?? false,
                         stripeEnabled: service.stripeEnabled ?? true,
@@ -496,7 +496,7 @@ export default function UserDomainProfile() {
 
             const bookingSettings = {
                 bookingRestrictionActive: true,
-                bookingRestrictionTime: service.bookingRestrictionTime ?? "24h",
+                bookingRestrictionTime: service.bookingRestrictionTime ?? "last_minute",
                 multipleBookings: service.multipleBookings ?? false,
                 hasCustomAvailability: service.hasCustomAvailability ?? false,
                 stripeEnabled: service.stripeEnabled ?? true,
@@ -524,7 +524,7 @@ export default function UserDomainProfile() {
                             dateAvailability: bookingSettings.dateAvailability,
                             originalBookingSettings: {
                                 bookingRestrictionActive: true,
-                                bookingRestrictionTime: s.bookingRestrictionTime ?? "24h",
+                                bookingRestrictionTime: s.bookingRestrictionTime ?? "last_minute",
                                 multipleBookings: s.multipleBookings ?? false,
                                 hasCustomAvailability: s.hasCustomAvailability ?? false,
                                 stripeEnabled: s.stripeEnabled ?? true,
@@ -582,7 +582,7 @@ export default function UserDomainProfile() {
             hasCustomAvailability: service.hasCustomAvailability || false,
             multipleBookings: service.multipleBookings || false,
             bookingRestrictionActive: true,
-            bookingRestrictionTime: service.bookingRestrictionTime || "24h",
+            bookingRestrictionTime: service.bookingRestrictionTime || "last_minute",
             stripeEnabled: service.stripeEnabled ?? true,
             selectedDates: selectedDates
         };
