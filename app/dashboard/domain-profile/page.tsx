@@ -133,11 +133,12 @@ export default function UserDomainProfile() {
 
                 return {
                     ...service,
+                    bookingRestrictionActive: true,
                     selectedDates,
                     hasCustomAvailability: computedHasCustom,
                     hasChanges: false,
                     originalBookingSettings: {
-                        bookingRestrictionActive: (service as any).bookingRestrictionActive ?? false,
+                        bookingRestrictionActive: true,
                         bookingRestrictionTime: (service as any).bookingRestrictionTime ?? "24h",
                         multipleBookings: (service as any).multipleBookings ?? false,
                         hasCustomAvailability: computedHasCustom,
@@ -153,7 +154,7 @@ export default function UserDomainProfile() {
                     hasCustomAvailability: false,
                     hasChanges: false,
                     originalBookingSettings: {
-                        bookingRestrictionActive: false,
+                        bookingRestrictionActive: true,
                         bookingRestrictionTime: "24h",
                         multipleBookings: false,
                         hasCustomAvailability: false,
@@ -383,7 +384,7 @@ export default function UserDomainProfile() {
             prevServices.map(service => {
                 if (service._id === serviceId) {
                     const originalSettings = service.originalBookingSettings || {
-                        bookingRestrictionActive: service.bookingRestrictionActive ?? false,
+                        bookingRestrictionActive: true,
                         bookingRestrictionTime: service.bookingRestrictionTime ?? "24h",
                         multipleBookings: service.multipleBookings ?? false,
                         hasCustomAvailability: service.hasCustomAvailability ?? false,
@@ -494,7 +495,7 @@ export default function UserDomainProfile() {
             }
 
             const bookingSettings = {
-                bookingRestrictionActive: service.bookingRestrictionActive ?? false,
+                bookingRestrictionActive: true,
                 bookingRestrictionTime: service.bookingRestrictionTime ?? "24h",
                 multipleBookings: service.multipleBookings ?? false,
                 hasCustomAvailability: service.hasCustomAvailability ?? false,
@@ -522,7 +523,7 @@ export default function UserDomainProfile() {
                             hasChanges: false,
                             dateAvailability: bookingSettings.dateAvailability,
                             originalBookingSettings: {
-                                bookingRestrictionActive: s.bookingRestrictionActive ?? false,
+                                bookingRestrictionActive: true,
                                 bookingRestrictionTime: s.bookingRestrictionTime ?? "24h",
                                 multipleBookings: s.multipleBookings ?? false,
                                 hasCustomAvailability: s.hasCustomAvailability ?? false,
@@ -580,7 +581,7 @@ export default function UserDomainProfile() {
             periodActive: service.hasCustomAvailability || selectedDates.length > 0,
             hasCustomAvailability: service.hasCustomAvailability || false,
             multipleBookings: service.multipleBookings || false,
-            bookingRestrictionActive: service.bookingRestrictionActive || false,
+            bookingRestrictionActive: true,
             bookingRestrictionTime: service.bookingRestrictionTime || "24h",
             stripeEnabled: service.stripeEnabled ?? true,
             selectedDates: selectedDates
@@ -796,13 +797,6 @@ export default function UserDomainProfile() {
         const service = services.find(s => s._id === prestationId);
         if (service) {
             updateServiceBookingSettings(prestationId, 'stripeEnabled', !(service.stripeEnabled ?? true));
-        }
-    };
-
-    const handleToggleBookingRestriction = (prestationId: string) => {
-        const service = services.find(s => s._id === prestationId);
-        if (service) {
-            updateServiceBookingSettings(prestationId, 'bookingRestrictionActive', !service.bookingRestrictionActive);
         }
     };
 
@@ -1254,37 +1248,26 @@ export default function UserDomainProfile() {
                                                             {/* Booking Restrictions */}
                                                             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                                                                 <span className="text-sm font-medium text-gray-700">Restriction de réservation</span>
-                                                                <div className="flex items-center space-x-2">
-                                                                    <Switch
-                                                                        checked={prestation.bookingRestrictionActive}
-                                                                        onCheckedChange={() => handleToggleBookingRestriction(prestation.id)}
-                                                                    />
-                                                                    <span className="text-sm text-gray-600">Activer</span>
-                                                                </div>
+                                                                <Select
+                                                                    value={prestation.bookingRestrictionTime}
+                                                                    onValueChange={(value) => handleBookingRestrictionTimeChange(prestation.id, value)}
+                                                                >
+                                                                    <SelectTrigger className="w-45">
+                                                                        <SelectValue placeholder="Sélectionner" />
+                                                                    </SelectTrigger>
+                                                                    <SelectContent>
+                                                                        <SelectItem value="last_minute">Dernière minute</SelectItem>
+                                                                        <SelectItem value="1h">1h</SelectItem>
+                                                                        <SelectItem value="2h">2h</SelectItem>
+                                                                        <SelectItem value="4h">4h</SelectItem>
+                                                                        <SelectItem value="24h">24h</SelectItem>
+                                                                        <SelectItem value="48h">48h</SelectItem>
+                                                                        <SelectItem value="72h">72h</SelectItem>
+                                                                        <SelectItem value="7d">7 jours</SelectItem>
+                                                                        <SelectItem value="10d">10 jours</SelectItem>
+                                                                    </SelectContent>
+                                                                </Select>
                                                             </div>
-                                                            {prestation.bookingRestrictionActive && (
-                                                                <div className="ml-4 mt-2">
-                                                                    <Select
-                                                                        value={prestation.bookingRestrictionTime}
-                                                                        onValueChange={(value) => handleBookingRestrictionTimeChange(prestation.id, value)}
-                                                                    >
-                                                                        <SelectTrigger className="w-45">
-                                                                            <SelectValue placeholder="Sélectionner" />
-                                                                        </SelectTrigger>
-                                                                        <SelectContent>
-                                                                            <SelectItem value="last_minute">Dernière minute</SelectItem>
-                                                                            <SelectItem value="1h">1h</SelectItem>
-                                                                            <SelectItem value="2h">2h</SelectItem>
-                                                                            <SelectItem value="4h">4h</SelectItem>
-                                                                            <SelectItem value="24h">24h</SelectItem>
-                                                                            <SelectItem value="48h">48h</SelectItem>
-                                                                            <SelectItem value="72h">72h</SelectItem>
-                                                                            <SelectItem value="7d">7 jours</SelectItem>
-                                                                            <SelectItem value="10d">10 jours</SelectItem>
-                                                                        </SelectContent>
-                                                                    </Select>
-                                                                </div>
-                                                            )}
                                                             
                                                             {/* Multiple Bookings */}
                                                             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
