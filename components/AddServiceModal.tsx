@@ -112,9 +112,9 @@ export const AddServiceModal = ({ isOpen, onClose, onSave }: AddServiceModalProp
     const newErrors: {[key: string]: string} = {};
     
     if (!formData.nom.trim()) {
-      newErrors.nom = "Le nom de la prestation est requis";
+      newErrors.nom = "Le nom de l'expérience est requis";
     } else if (formData.nom.trim().length < 5) {
-      newErrors.nom = "Le nom de la prestation doit contenir au moins 5 caractères";
+      newErrors.nom = "Le nom de l'expérience doit contenir au moins 5 caractères";
     }
     
     if (!formData.description.trim()) {
@@ -228,7 +228,7 @@ export const AddServiceModal = ({ isOpen, onClose, onSave }: AddServiceModalProp
             <div className="space-y-2 w-full">
               <Label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
                 <Wine size={14} className="sm:w-4 sm:h-4 shrink-0" />
-                Nom de la prestation *
+                Nom de l'expérience *
               </Label>
               <Input
                 value={formData.nom}
