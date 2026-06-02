@@ -87,7 +87,9 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
         setSelectedLanguage(slotRequiredLanguage);
       } else {
         // Constraint lifted — reset to the first offered language (or keep blank if none loaded yet)
-        const firstLang = widgetData?.service?.languagesOffered?.[0];
+        const firstLang = widgetData?.service?.languagesOffered?.find(
+          (l: string) => l && l.trim().toLowerCase() !== 'autre'
+        );
         if (firstLang) {
           setSelectedLanguage(firstLang);
         }
@@ -405,8 +407,11 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
   useEffect(() => {
     if (!loading && widgetData && !languageAutoSelected.current && selectedLanguage === "") {
       if (widgetData?.service?.languagesOffered && widgetData.service.languagesOffered.length > 0) {
-        console.log('Auto-selecting language:', widgetData.service.languagesOffered[0]);
-        setSelectedLanguage(widgetData.service.languagesOffered[0]);
+        const firstLang = widgetData.service.languagesOffered.find(
+          (l: string) => l && l.trim().toLowerCase() !== 'autre'
+        );
+        console.log('Auto-selecting language:', firstLang);
+        if (firstLang) setSelectedLanguage(firstLang);
         languageAutoSelected.current = true;
       } else {
         // Fallback to default if no languages are provided
@@ -1383,7 +1388,7 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
             </p>
           )}
           <div className="flex flex-wrap justify-center gap-3 md:gap-4 px-2">
-            {(widgetData?.service?.languagesOffered ?? ['Français', 'English']).filter((lang) => lang.toLowerCase() !== 'autre').map((language, index) => {
+            {(widgetData?.service?.languagesOffered ?? ['Français', 'English']).filter((lang) => lang && lang.trim().toLowerCase() !== 'autre').map((language, index) => {
               const isDisabled = slotRequiredLanguage !== null && language !== slotRequiredLanguage;
               return (
                 <Button
