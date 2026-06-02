@@ -304,7 +304,7 @@ export default function OldHomePage() {
           <div className="max-w-7xl mx-auto">
             <div className="mb-8 text-center">
               <h2 className="text-2xl md:text-3xl font-bold text-[#318160] mb-4">
-                Notre outil de réservation en action
+                Ils nous font confiance
               </h2>
             </div>
             <div className="relative px-4 md:px-20">
@@ -322,11 +322,11 @@ export default function OldHomePage() {
                         rel="noopener noreferrer"
                         className="flex flex-col items-center group cursor-pointer"
                       >
-                        <div className="relative w-64 h-64 md:w-72 md:h-72 rounded-full overflow-hidden mb-4 shadow-[0_8px_30px_rgba(0,0,0,0.25)]">
+                        <div className="w-full">
                           <img
                             src={item.thumbnail}
                             alt={item.title}
-                            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                            className="w-full h-auto object-contain"
                           />
                         </div>
                       </a>
