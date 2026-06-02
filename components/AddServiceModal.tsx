@@ -156,7 +156,7 @@ export const AddServiceModal = ({ isOpen, onClose, onSave }: AddServiceModalProp
 
     // Transform form data to match the expected format
     const selectedLanguages = Object.entries(formData.langues)
-      .filter(([_, selected]) => selected)
+      .filter(([key, selected]) => selected && key !== 'autre')
       .map(([langue, _]) => langue === 'francais' ? 'French' : 
                            langue === 'anglais' ? 'English' :
                            langue === 'allemand' ? 'German' :

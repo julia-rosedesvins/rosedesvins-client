@@ -1383,7 +1383,7 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
             </p>
           )}
           <div className="flex flex-wrap justify-center gap-3 md:gap-4 px-2">
-            {(widgetData?.service?.languagesOffered ?? ['Français', 'English']).map((language, index) => {
+            {(widgetData?.service?.languagesOffered ?? ['Français', 'English']).filter((lang) => lang.toLowerCase() !== 'autre').map((language, index) => {
               const isDisabled = slotRequiredLanguage !== null && language !== slotRequiredLanguage;
               return (
                 <Button

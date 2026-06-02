@@ -307,7 +307,7 @@ export const EditServiceModal = ({ isOpen, onClose, prestation, onSave }: EditSe
     if (prestation) {
       // Transform form data to match the expected API format exactly like parent component expects
       const selectedLanguages = Object.entries(formData.langues)
-        .filter(([_, selected]) => selected)
+        .filter(([key, selected]) => selected && key !== 'autre')
         .map(([langue, _]) => {
           switch(langue) {
             case 'francais': return 'French';
