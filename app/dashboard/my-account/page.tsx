@@ -424,16 +424,6 @@ export default function UserMyAccount() {
                                         </div>
                                     </div>
 
-                                    {/* Subscription Notes */}
-                                    {user.subscription.notes && (
-                                        <div>
-                                            <Label className="font-medium text-sm">Notes:</Label>
-                                            <p className="text-sm text-muted-foreground mt-1">
-                                                {user.subscription.notes}
-                                            </p>
-                                        </div>
-                                    )}
-
                                     {/* Cancellation Info */}
                                     {user.subscription.cancelledById && (
                                         <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
