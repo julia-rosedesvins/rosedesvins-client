@@ -45,7 +45,7 @@ export default function AdminSubscriptions() {
         isActive: true
     });
 
-    const fetchSubscriptions = async (page: number = 1, limit: number = 10) => {
+    const fetchSubscriptions = async (page: number = 1, limit: number = 10, search: string = searchTerm) => {
         setLoading(true);
         try {
             const query: any = { page, limit, sortBy: sortOrder };
@@ -54,6 +54,7 @@ export default function AdminSubscriptions() {
             }
             if (dateFrom) query.dateFrom = dateFrom;
             if (dateTo) query.dateTo = dateTo;
+            if (search) query.search = search;
 
             const response = await subscriptionService.getAllSubscriptions(query);
             setSubscriptions(response.data.subscriptions);
@@ -250,17 +251,17 @@ export default function AdminSubscriptions() {
         }
     };
 
-    const filteredSubscriptions = subscriptions.filter(subscription => {
-        const searchMatch = subscription.userId.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           subscription.userId.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           subscription.userId.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           subscription.userId.domainName?.toLowerCase().includes(searchTerm.toLowerCase());
-        return searchMatch;
-    });
-
     useEffect(() => {
-        fetchSubscriptions();
+        fetchSubscriptions(1, 10, '');
     }, [statusFilter, sortOrder, dateFrom, dateTo]);
+
+    // Debounced server-side search
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            fetchSubscriptions(1, 10, searchTerm);
+        }, 400);
+        return () => clearTimeout(timer);
+    }, [searchTerm]);
 
     useEffect(() => {
         if (isCreateModalOpen) {
@@ -553,13 +554,13 @@ export default function AdminSubscriptions() {
                             <div className="flex justify-center py-8">
                                 <Loader2 className="h-8 w-8 animate-spin" />
                             </div>
-                        ) : filteredSubscriptions.length === 0 ? (
+                        ) : subscriptions.length === 0 ? (
                             <div className="text-center py-8 text-muted-foreground">
                                 Aucun abonnement trouvé
                             </div>
                         ) : (
                             <div className="space-y-4">
-                                {filteredSubscriptions.map((subscription) => (
+                                {subscriptions.map((subscription) => (
                                     <div key={subscription._id} className="border rounded-lg p-4 space-y-3">
                                         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-2">
                                             <div className="flex-1">
@@ -642,7 +643,7 @@ export default function AdminSubscriptions() {
                                     <Button
                                         variant="outline"
                                         size="sm"
-                                        onClick={() => fetchSubscriptions(pagination.page - 1)}
+                                        onClick={() => fetchSubscriptions(pagination.page - 1, 10, searchTerm)}
                                         disabled={pagination.page <= 1 || loading}
                                     >
                                         <ChevronLeft className="h-4 w-4" />
@@ -650,7 +651,7 @@ export default function AdminSubscriptions() {
                                     <Button
                                         variant="outline"
                                         size="sm"
-                                        onClick={() => fetchSubscriptions(pagination.page + 1)}
+                                        onClick={() => fetchSubscriptions(pagination.page + 1, 10, searchTerm)}
                                         disabled={pagination.page >= pagination.totalPages || loading}
                                     >
                                         <ChevronRight className="h-4 w-4" />
