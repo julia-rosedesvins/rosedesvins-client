@@ -3,6 +3,8 @@ import { LogOut, Home, Calendar, Users, Wine, BarChart3, Settings, CreditCard, M
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useAdmin } from "@/contexts/AdminContext"
+import { useEffect, useState } from "react"
+import { adminService } from "@/services/admin.service"
 
 interface SidebarItem {
   icon: any
@@ -34,16 +36,27 @@ const sidebarItems: SidebarItem[] = [
 export default function DashboardSidebar({ isOpen, onClose, currentPath = "/admin/dashboard" }: SidebarProps) {
   const router = useRouter();
   const { logout } = useAdmin();
+  const [unreadSupportCount, setUnreadSupportCount] = useState(0);
+
+  useEffect(() => {
+    const fetchUnread = async () => {
+      const count = await adminService.getUnreadSupportCount();
+      setUnreadSupportCount(count);
+    };
+    fetchUnread();
+    // Refresh every 60 seconds
+    const interval = setInterval(fetchUnread, 60_000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleNavigation = (href: string) => {
     router.push(href);
-    onClose(); // Close mobile sidebar after navigation
+    onClose();
   };
 
   const handleLogout = async () => {
     try {
       await logout();
-      // logout function already handles redirect to /admin
     } catch (error) {
       console.error('Logout error:', error);
     }
@@ -72,7 +85,8 @@ export default function DashboardSidebar({ isOpen, onClose, currentPath = "/admi
         <nav className="mt-6">
           <div className="px-3 space-y-1">
             {sidebarItems.map((item, index) => {
-              const isActive = currentPath === item.href
+              const isActive = currentPath === item.href;
+              const isSupport = item.href === "/admin/support-tickets";
               return (
                 <Button
                   key={index}
@@ -84,8 +98,13 @@ export default function DashboardSidebar({ isOpen, onClose, currentPath = "/admi
                   }`}
                   onClick={() => handleNavigation(item.href!)}
                 >
-                  <item.icon className="mr-3 h-5 w-5" />
-                  <span className="font-medium">{item.label}</span>
+                  <item.icon className="mr-3 h-5 w-5 flex-shrink-0" />
+                  <span className="font-medium flex-1">{item.label}</span>
+                  {isSupport && unreadSupportCount > 0 && (
+                    <span className="ml-auto flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-bold bg-red-500 text-white">
+                      {unreadSupportCount > 99 ? '99+' : unreadSupportCount}
+                    </span>
+                  )}
                 </Button>
               )
             })}

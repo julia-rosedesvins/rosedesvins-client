@@ -292,6 +292,18 @@ class AdminService {
     }
   }
 
+  /**
+   * Get count of pending (unread) support tickets
+   */
+  async getUnreadSupportCount(): Promise<number> {
+    try {
+      const response = await apiClient.get('/support-contact/admin/unread-count');
+      return response.data?.data?.count ?? 0;
+    } catch {
+      return 0;
+    }
+  }
+
   /**   * Get all support tickets (requires admin authentication)
    * @param query - Pagination parameters
    * @returns Promise with paginated support tickets
