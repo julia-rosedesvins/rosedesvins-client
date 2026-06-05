@@ -215,7 +215,7 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
           // 🔒 LANGUAGE CONSTRAINT: all bookings for the same slot must share the same language
           const bookingWithLanguage = overlappingBookings.find(b => b.selectedLanguage && b.selectedLanguage.trim() !== '');
           if (bookingWithLanguage && selectedLanguage && selectedLanguage !== bookingWithLanguage.selectedLanguage) {
-            errors.push(`Ce créneau est déjà réservé en ${getLanguageInFrench(bookingWithLanguage.selectedLanguage!)}. Veuillez sélectionner cette langue ou choisir un autre horaire.`);
+            errors.push(`Veuillez sélectionner la langue ${getLanguageInFrench(bookingWithLanguage.selectedLanguage!)} ou choisir un autre horaire.`);
           } else {
             // Calculate total existing participants (only for same service)
             const totalExistingParticipants = overlappingBookings.reduce((sum, booking) => {
@@ -1384,7 +1384,7 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
           {/* When a slot already has bookings, inform the user that only one language is available */}
           {slotRequiredLanguage && (
             <p className="text-center text-sm md:text-base text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-4 py-2 mb-4 max-w-md mx-auto">
-              Ce créneau est déjà réservé en <strong>{getLanguageInFrench(slotRequiredLanguage)}</strong>. Vous ne pouvez réserver ce créneau qu'en <strong>{getLanguageInFrench(slotRequiredLanguage)}</strong>.
+              Vous ne pouvez réserver ce créneau qu'en <strong>{getLanguageInFrench(slotRequiredLanguage)}</strong>.
             </p>
           )}
           <div className="flex flex-wrap justify-center gap-3 md:gap-4 px-2">
