@@ -396,7 +396,7 @@ const ExperienceDomain = ({ params }: { params: Promise<{ name: string; domain: 
                         onClick={() => router.push(`/region/${unwrappedParams.name}`)}
                         className="bg-primary hover:bg-primary-dark text-white px-8 py-3 text-lg"
                     >
-                        Retour aux expériences
+                        Retour aux domaines
                     </Button>
                 </div>
             </div>
