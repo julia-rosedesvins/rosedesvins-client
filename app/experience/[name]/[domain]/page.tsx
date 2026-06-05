@@ -37,7 +37,14 @@ function parseTimeTo24h(timeStr: string, fallbackPeriod?: 'AM' | 'PM'): string {
   return `${h}h${min}`;
 }
 
+const HOURS_FR: Record<string, string> = {
+  'open 24 hours': 'Ouvert 24h/24',
+  'closed': 'Fermé',
+};
+
 function convertTimeRange(range: string): string {
+  const lower = range.trim().toLowerCase();
+  if (HOURS_FR[lower]) return HOURS_FR[lower];
   const parts = range.split('–');
   if (parts.length === 2) {
     const endPeriodMatch = parts[1].match(/(AM|PM)$/i);
