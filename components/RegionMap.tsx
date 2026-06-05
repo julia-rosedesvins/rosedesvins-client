@@ -9,6 +9,7 @@ interface RegionMapProps {
   centerLat: number;
   centerLon: number;
   domains: Domain[];
+  regionName?: string;
   onMapLoad?: () => void;
   userLocation?: { lat: number; lon: number } | null;
 }
@@ -17,7 +18,7 @@ export interface RegionMapRef {
   focusOnDomain: (domainId: string) => void;
 }
 
-const RegionMap = forwardRef<RegionMapRef, RegionMapProps>(({ centerLat, centerLon, domains, onMapLoad, userLocation }, ref) => {
+const RegionMap = forwardRef<RegionMapRef, RegionMapProps>(({ centerLat, centerLon, domains, regionName, onMapLoad, userLocation }, ref) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
   const markersRef = useRef<Map<string, maplibregl.Marker>>(new Map());
@@ -136,6 +137,14 @@ const RegionMap = forwardRef<RegionMapRef, RegionMapProps>(({ centerLat, centerL
           img.style.objectFit = 'contain';
           el.appendChild(img);
 
+        // Pre-compute the href — avoids nested backtick evaluation issues
+        const experienceHref = domain.domainId
+          ? (regionName
+              ? `/experience/${encodeURIComponent(regionName)}/${domain.domainId}`
+              : `/experience/${domain.domainId}`)
+          : (domain.siteUrl || '#');
+        const buttonLabel = domain.producer === 'client' ? 'R\u00e9server maintenant' : 'Voir le profil';
+
         // Create popup HTML
         const popupHTML = `
           <div class="bg-white" style="width: 100%; max-width: 100%; box-sizing: border-box;">
@@ -169,14 +178,13 @@ const RegionMap = forwardRef<RegionMapRef, RegionMapProps>(({ centerLat, centerL
               <div style="border-top: 1px solid #E5E7EB;"></div>
               
               <a
-                href="${domain.producer === 'client' ? `/experience/${domain.domainId}` : domain.siteUrl || '#'}"
-                target="${domain.producer === 'non-client' ? '_blank' : '_self'}"
-                ${domain.producer === 'non-client' ? 'rel="noopener noreferrer"' : ''}
+                href="${experienceHref}"
+                target="_self"
                 style="display: block; width: 100%; padding: 8px 12px; font-size: 12px; font-weight: 600; color: white; background: #3A7E53; border-radius: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); text-align: center; text-decoration: none; transition: background-color 0.2s; box-sizing: border-box; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"
                 onmouseover="this.style.background='#2d6340'"
                 onmouseout="this.style.background='#3A7E53'"
               >
-                ${domain.producer === 'client' ? 'Réserver maintenant' : 'En savoir plus'}
+                ${buttonLabel}
               </a>
             </div>
           </div>
@@ -277,7 +285,7 @@ const RegionMap = forwardRef<RegionMapRef, RegionMapProps>(({ centerLat, centerL
     } else {
       map.current.once('load', addMarkers);
     }
-  }, [domains, centerLat, centerLon, onMapLoad, userLocation]);
+  }, [domains, centerLat, centerLon, onMapLoad, userLocation, regionName]);
 
   return (
     <>
