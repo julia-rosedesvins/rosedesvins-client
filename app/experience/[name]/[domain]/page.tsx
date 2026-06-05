@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, MapPin, Home, Euro, Clock, Users, Languages, Heart, Accessibility, PawPrint } from "lucide-react";
+import { ArrowLeft, MapPin, Home, Euro, Clock, Users, Languages } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import LandingPageLayout from "@/components/LandingPageLayout";
@@ -389,25 +389,6 @@ const ExperienceDomain = ({ params }: { params: Promise<{ name: string; domain: 
                         </div>
                     </section>
                 )}
-
-                {/* Practical Information */}
-                <section className="mb-12">
-                    <h2 className="text-2xl font-bold text-gray-800 mb-6">Informations pratiques</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div className="flex items-center">
-                            <PawPrint className="w-6 h-6 mr-3 text-primary" />
-                            <span className="text-gray-700">Animaux bienvenus</span>
-                        </div>
-                        <div className="flex items-center">
-                            <Accessibility className="w-6 h-6 mr-3 text-primary" />
-                            <span className="text-gray-700">Accessible aux fauteuils roulants</span>
-                        </div>
-                        <div className="flex items-center">
-                            <Heart className="w-6 h-6 mr-3 text-primary" />
-                            <span className="text-gray-700">Lieu romantique</span>
-                        </div>
-                    </div>
-                </section>
 
                 {/* Return Button */}
                 <div className="flex justify-center">
