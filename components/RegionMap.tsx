@@ -63,6 +63,15 @@ const RegionMap = forwardRef<RegionMapRef, RegionMapProps>(({ centerLat, centerL
             ],
             tileSize: 256,
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+          },
+          'label-tiles': {
+            type: 'raster',
+            tiles: [
+              'https://a.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}.png',
+              'https://b.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}.png',
+              'https://c.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}.png'
+            ],
+            tileSize: 256
           }
         },
         layers: [
@@ -70,6 +79,13 @@ const RegionMap = forwardRef<RegionMapRef, RegionMapProps>(({ centerLat, centerL
             id: 'simple-tiles',
             type: 'raster',
             source: 'raster-tiles',
+            minzoom: 0,
+            maxzoom: 22
+          },
+          {
+            id: 'label-tiles',
+            type: 'raster',
+            source: 'label-tiles',
             minzoom: 0,
             maxzoom: 22
           }
