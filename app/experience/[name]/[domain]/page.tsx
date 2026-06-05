@@ -16,6 +16,39 @@ const DomainMap = dynamic(() => import('@/components/DomainMap'), {
     loading: () => <div className="w-full h-96 bg-gray-200 flex items-center justify-center rounded-lg">Chargement de la carte...</div>
 });
 
+const DAY_FR: Record<string, string> = {
+  Monday: 'Lundi',
+  Tuesday: 'Mardi',
+  Wednesday: 'Mercredi',
+  Thursday: 'Jeudi',
+  Friday: 'Vendredi',
+  Saturday: 'Samedi',
+  Sunday: 'Dimanche',
+};
+
+function parseTimeTo24h(timeStr: string, fallbackPeriod?: 'AM' | 'PM'): string {
+  const m = timeStr.trim().match(/^(\d{1,2})(?::(\d{2}))?\s*(AM|PM)?$/i);
+  if (!m) return timeStr;
+  let h = parseInt(m[1]);
+  const min = m[2] ?? '00';
+  const period = (m[3]?.toUpperCase() ?? fallbackPeriod) as 'AM' | 'PM' | undefined;
+  if (period === 'PM' && h < 12) h += 12;
+  if (period === 'AM' && h === 12) h = 0;
+  return `${h}h${min}`;
+}
+
+function convertTimeRange(range: string): string {
+  const parts = range.split('–');
+  if (parts.length === 2) {
+    const endPeriodMatch = parts[1].match(/(AM|PM)$/i);
+    const endPeriod = endPeriodMatch ? endPeriodMatch[1].toUpperCase() as 'AM' | 'PM' : undefined;
+    const start = parseTimeTo24h(parts[0].trim(), endPeriod);
+    const end = parseTimeTo24h(parts[1].trim(), endPeriod);
+    return `${start}–${end}`;
+  }
+  return parseTimeTo24h(range.trim());
+}
+
 const ExperienceDomain = ({ params }: { params: Promise<{ name: string; domain: string }> }) => {
     const router = useRouter();
     const unwrappedParams = React.use(params);
@@ -168,7 +201,7 @@ const ExperienceDomain = ({ params }: { params: Promise<{ name: string; domain: 
                                     {domainProfile.mainImage && (
                                         <img
                                             src={domainProfile.mainImage}
-                                            alt={domainProfile.domainName || 'Domain'}
+                                            alt={domainProfile.domainName || 'Domaine'}
                                             className="w-full h-48 object-cover"
                                         />
                                     )}
@@ -198,8 +231,8 @@ const ExperienceDomain = ({ params }: { params: Promise<{ name: string; domain: 
                                                 <div className="space-y-1 text-xs text-gray-600">
                                                     {Object.entries(domainProfile.openingHours).map(([day, hours]) => (
                                                         <div key={day} className="flex justify-between">
-                                                            <span className="font-medium capitalize">{day}</span>
-                                                            <span>{Array.isArray(hours) ? hours.join(', ') : hours}</span>
+                                                            <span className="font-medium">{DAY_FR[day] ?? day}</span>
+                                                            <span>{Array.isArray(hours) ? hours.map(convertTimeRange).join(', ') : convertTimeRange(hours as string)}</span>
                                                         </div>
                                                     ))}
                                                 </div>
@@ -219,7 +252,7 @@ const ExperienceDomain = ({ params }: { params: Promise<{ name: string; domain: 
                                     {domainProfile.mainImage && (
                                         <img
                                             src={domainProfile.mainImage}
-                                            alt={domainProfile.domainName || 'Domain'}
+                                            alt={domainProfile.domainName || 'Domaine'}
                                             className="w-full h-48 object-cover"
                                         />
                                     )}
@@ -249,8 +282,8 @@ const ExperienceDomain = ({ params }: { params: Promise<{ name: string; domain: 
                                                 <div className="space-y-1 text-xs text-gray-600">
                                                     {Object.entries(domainProfile.openingHours).map(([day, hours]) => (
                                                         <div key={day} className="flex justify-between">
-                                                            <span className="font-medium capitalize">{day}</span>
-                                                            <span>{Array.isArray(hours) ? hours.join(', ') : hours}</span>
+                                                            <span className="font-medium">{DAY_FR[day] ?? day}</span>
+                                                            <span>{Array.isArray(hours) ? hours.map(convertTimeRange).join(', ') : convertTimeRange(hours as string)}</span>
                                                         </div>
                                                     ))}
                                                 </div>
