@@ -7,7 +7,7 @@ import { useState, useEffect, useMemo, useRef } from "react";
 const timeOptions = [
   "08:00", "08:30", "09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
   "12:00", "12:30", "13:00", "13:30", "14:00", "14:30", "15:00", "15:30",
-  "16:00", "16:30", "17:00", "17:30", "18:00", "18:30", "19:00", "19:30", "20:00"
+  "16:00", "16:30", "17:00", "17:30", "18:00", "18:30", "19:00", "19:30", "20:00", "20:30", "21:00", "21:30", "22:00", "22:30", "23:00"
 ];
 
 interface ScheduleConfig {
@@ -30,6 +30,7 @@ export const PrestationScheduleConfig = ({ selectedDates, onChange, existingAvai
   const [schedules, setSchedules] = useState<{ [dayOfWeek: string]: ScheduleConfig }>({});
 
   const isInitializingRef = useRef(false);
+  const hasInitializedFromApiRef = useRef(false);
   const lastEmittedRef = useRef<string>("");
 
   const selectedDateKeys = useMemo(() => {
@@ -39,67 +40,48 @@ export const PrestationScheduleConfig = ({ selectedDates, onChange, existingAvai
       .sort();
   }, [selectedDates]);
 
-  // Initialize schedules from existing availability data
+  // Initialize schedules from existing availability data — only ONCE on first non-empty load.
+  // After that, the component's own schedules state is the source of truth.
+  // This prevents the circular feedback loop: onChange → parent updates dateAvailability
+  // → existingAvailability prop changes → re-initialization overwrites user's edits.
   useEffect(() => {
-    if (existingAvailability && existingAvailability.length > 0) {
-      console.log('PrestationScheduleConfig existingAvailability:', existingAvailability);
-      const initialSchedules: { [dayOfWeek: string]: ScheduleConfig } = {};
+    if (hasInitializedFromApiRef.current) return; // Never re-initialize after first init
+    if (!existingAvailability || existingAvailability.length === 0) return;
 
-      existingAvailability.forEach((availability: any) => {
-        // Validate and parse the date
-        if (!availability.date) {
-          console.warn('Availability item missing date:', availability);
-          return;
-        }
+    const initialSchedules: { [dayOfWeek: string]: ScheduleConfig } = {};
 
-        const date = new Date(availability.date);
+    existingAvailability.forEach((availability: any) => {
+      if (!availability.date) return;
+      const date = new Date(availability.date);
+      if (isNaN(date.getTime())) return;
 
-        // Check if date is valid
-        if (isNaN(date.getTime())) {
-          console.warn('Invalid date in availability:', availability.date, availability);
-          return;
-        }
-
-        // Use day of week as key (0 = Sunday, 1 = Monday, etc.)
-        const dayOfWeek = date.getDay().toString();
-
-        console.log(`Processing date ${availability.date} (day ${dayOfWeek}):`, {
-          availability,
+      const dayOfWeek = date.getDay().toString();
+      // Group by day of week — use first occurrence's settings (later ones for the same day are identical)
+      if (!initialSchedules[dayOfWeek]) {
+        initialSchedules[dayOfWeek] = {
+          enabled: Boolean(availability.enabled),
           morningEnabled: Boolean(availability.morningEnabled),
-          afternoonEnabled: Boolean(availability.afternoonEnabled)
-        });
+          morningFrom: availability.morningFrom || '',
+          morningTo: availability.morningTo || '',
+          afternoonEnabled: Boolean(availability.afternoonEnabled),
+          afternoonFrom: availability.afternoonFrom || '',
+          afternoonTo: availability.afternoonTo || ''
+        };
+      }
+    });
 
-        // Group by day of week - use first occurrence's settings
-        if (!initialSchedules[dayOfWeek]) {
-          initialSchedules[dayOfWeek] = {
-            enabled: Boolean(availability.enabled),
-            morningEnabled: Boolean(availability.morningEnabled),
-            morningFrom: availability.morningFrom || '',
-            morningTo: availability.morningTo || '',
-            afternoonEnabled: Boolean(availability.afternoonEnabled),
-            afternoonFrom: availability.afternoonFrom || '',
-            afternoonTo: availability.afternoonTo || ''
-          };
-        }
-      });
-
-      console.log('Setting schedules from API data (grouped by day):', initialSchedules);
-      isInitializingRef.current = true;
-      setSchedules(prevSchedules => {
-        if (JSON.stringify(initialSchedules) !== JSON.stringify(prevSchedules)) {
-          return initialSchedules;
-        }
-        return prevSchedules;
-      });
-    }
-  }, [JSON.stringify(existingAvailability)]); // Use JSON.stringify to properly detect changes
-
-  // Clear initialization flag after schedules are applied (effect order matters: this must run before onChange effect)
-  useEffect(() => {
-    if (isInitializingRef.current) {
+    hasInitializedFromApiRef.current = true;
+    isInitializingRef.current = true;
+    setSchedules(prevSchedules => {
+      if (JSON.stringify(initialSchedules) !== JSON.stringify(prevSchedules)) {
+        return initialSchedules;
+      }
+      // Schedules already match — clear isInitializingRef now since the
+      // schedules-change effect won't fire (no state change happened).
       isInitializingRef.current = false;
-    }
-  }, [schedules]);
+      return prevSchedules;
+    });
+  }, [JSON.stringify(existingAvailability)]);
 
   // Group dates by day of week
   const groupedByDayOfWeek = selectedDates.reduce((acc, date) => {
@@ -150,7 +132,13 @@ export const PrestationScheduleConfig = ({ selectedDates, onChange, existingAvai
 
   useEffect(() => {
     if (!onChange) return;
-    if (isInitializingRef.current) return;
+    if (isInitializingRef.current) {
+      // Always clear the flag here so it can never get permanently stuck.
+      // This handles the case where setSchedules returned the same state
+      // (no re-render), so the schedules-change effect never fired.
+      isInitializingRef.current = false;
+      return;
+    }
 
     // Convert day-of-week schedules back to individual dates for API
     const dateSchedules: { [dateKey: string]: ScheduleConfig } = {};
@@ -235,24 +223,6 @@ export const PrestationScheduleConfig = ({ selectedDates, onChange, existingAvai
         Les horaires définis pour chaque jour s'appliqueront à toutes les dates sélectionnées de ce jour.
       </div>
 
-      {/* Desktop headers */}
-      <div className="hidden md:grid md:grid-cols-7 gap-4 mb-2 text-center font-medium text-xs">
-        <div></div>
-        <div></div>
-        <div className="col-span-2">Matin</div>
-        <div></div>
-        <div className="col-span-2">Après-midi</div>
-      </div>
-
-      <div className="hidden md:grid md:grid-cols-7 gap-2 mb-3 text-center text-xs text-muted-foreground">
-        <div></div>
-        <div></div>
-        <div>de</div>
-        <div>à</div>
-        <div></div>
-        <div>de</div>
-        <div>à</div>
-      </div>
 
       {uniqueDays.map(({ dayOfWeek, dayName, dateList }) => {
         return (
@@ -282,7 +252,7 @@ export const PrestationScheduleConfig = ({ selectedDates, onChange, existingAvai
                 <div className="space-y-3 ml-6">
                   {/* Morning Section - Mobile */}
                   <div className="space-y-2">
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center justify-center space-x-2">
                       <Checkbox
                         id={`${dayOfWeek}-morning-mobile`}
                         checked={schedules[dayOfWeek]?.morningEnabled || false}
@@ -291,46 +261,42 @@ export const PrestationScheduleConfig = ({ selectedDates, onChange, existingAvai
                       <span className="text-sm font-medium">Matin</span>
                     </div>
                     {schedules[dayOfWeek]?.morningEnabled && (
-                      <div className="flex space-x-2 ml-6">
-                        <div className="flex-1">
-                          <label className="text-xs text-muted-foreground">De</label>
-                          <Select
-                            value={schedules[dayOfWeek]?.morningFrom || ""}
-                            onValueChange={(value) => handleTimeChange(dayOfWeek, 'morningFrom', value)}
-                          >
-                            <SelectTrigger className="h-8 text-xs">
-                              <SelectValue placeholder="08:00" />
-                            </SelectTrigger>
-                            <SelectContent className="bg-white z-50">
-                              {timeOptions.slice(0, 11).map((time) => (
-                                <SelectItem key={time} value={time}>{time}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="flex-1">
-                          <label className="text-xs text-muted-foreground">À</label>
-                          <Select
-                            value={schedules[dayOfWeek]?.morningTo || ""}
-                            onValueChange={(value) => handleTimeChange(dayOfWeek, 'morningTo', value)}
-                          >
-                            <SelectTrigger className="h-8 text-xs">
-                              <SelectValue placeholder="13:00" />
-                            </SelectTrigger>
-                            <SelectContent className="bg-white z-50">
-                              {timeOptions.slice(0, 11).map((time) => (
-                                <SelectItem key={time} value={time}>{time}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
+                      <div className="flex items-center gap-2 ml-6">
+                        <span className="text-xs text-muted-foreground shrink-0">de</span>
+                        <Select
+                          value={schedules[dayOfWeek]?.morningFrom || ""}
+                          onValueChange={(value) => handleTimeChange(dayOfWeek, 'morningFrom', value)}
+                        >
+                          <SelectTrigger className="h-8 text-xs flex-1">
+                            <SelectValue placeholder="08:00" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-white z-50">
+                            {timeOptions.slice(0, 11).map((time) => (
+                              <SelectItem key={time} value={time}>{time}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <span className="text-xs text-muted-foreground shrink-0">à</span>
+                        <Select
+                          value={schedules[dayOfWeek]?.morningTo || ""}
+                          onValueChange={(value) => handleTimeChange(dayOfWeek, 'morningTo', value)}
+                        >
+                          <SelectTrigger className="h-8 text-xs flex-1">
+                            <SelectValue placeholder="13:00" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-white z-50">
+                            {timeOptions.slice(0, 11).map((time) => (
+                              <SelectItem key={time} value={time}>{time}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                     )}
                   </div>
 
                   {/* Afternoon Section - Mobile */}
                   <div className="space-y-2">
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center justify-center space-x-2">
                       <Checkbox
                         id={`${dayOfWeek}-afternoon-mobile`}
                         checked={schedules[dayOfWeek]?.afternoonEnabled || false}
@@ -339,39 +305,35 @@ export const PrestationScheduleConfig = ({ selectedDates, onChange, existingAvai
                       <span className="text-sm font-medium">Après-midi</span>
                     </div>
                     {schedules[dayOfWeek]?.afternoonEnabled && (
-                      <div className="flex space-x-2 ml-6">
-                        <div className="flex-1">
-                          <label className="text-xs text-muted-foreground">De</label>
-                          <Select
-                            value={schedules[dayOfWeek]?.afternoonFrom || ""}
-                            onValueChange={(value) => handleTimeChange(dayOfWeek, 'afternoonFrom', value)}
-                          >
-                            <SelectTrigger className="h-8 text-xs">
-                              <SelectValue placeholder="13:00" />
-                            </SelectTrigger>
-                            <SelectContent className="bg-white z-50">
-                              {timeOptions.slice(10).map((time) => (
-                                <SelectItem key={time} value={time}>{time}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="flex-1">
-                          <label className="text-xs text-muted-foreground">À</label>
-                          <Select
-                            value={schedules[dayOfWeek]?.afternoonTo || ""}
-                            onValueChange={(value) => handleTimeChange(dayOfWeek, 'afternoonTo', value)}
-                          >
-                            <SelectTrigger className="h-8 text-xs">
-                              <SelectValue placeholder="20:00" />
-                            </SelectTrigger>
-                            <SelectContent className="bg-white z-50">
-                              {timeOptions.slice(10).map((time) => (
-                                <SelectItem key={time} value={time}>{time}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
+                      <div className="flex items-center gap-2 ml-6">
+                        <span className="text-xs text-muted-foreground shrink-0">de</span>
+                        <Select
+                          value={schedules[dayOfWeek]?.afternoonFrom || ""}
+                          onValueChange={(value) => handleTimeChange(dayOfWeek, 'afternoonFrom', value)}
+                        >
+                          <SelectTrigger className="h-8 text-xs flex-1">
+                            <SelectValue placeholder="13:00" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-white z-50">
+                            {timeOptions.slice(10).map((time) => (
+                              <SelectItem key={time} value={time}>{time}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <span className="text-xs text-muted-foreground shrink-0">à</span>
+                        <Select
+                          value={schedules[dayOfWeek]?.afternoonTo || ""}
+                          onValueChange={(value) => handleTimeChange(dayOfWeek, 'afternoonTo', value)}
+                        >
+                          <SelectTrigger className="h-8 text-xs flex-1">
+                            <SelectValue placeholder="20:00" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-white z-50">
+                            {timeOptions.slice(10).map((time) => (
+                              <SelectItem key={time} value={time}>{time}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                     )}
                   </div>
@@ -407,37 +369,41 @@ export const PrestationScheduleConfig = ({ selectedDates, onChange, existingAvai
                   onCheckedChange={() => handlePeriodToggle(dayOfWeek, 'morning')}
                   disabled={!schedules[dayOfWeek]?.enabled}
                 />
+                <label htmlFor={`${dayOfWeek}-morning-desktop`} className="text-xs font-medium ml-1">Matin</label>
               </div>
 
               {schedules[dayOfWeek]?.enabled && schedules[dayOfWeek]?.morningEnabled ? (
                 <>
-                  <Select
-                    value={schedules[dayOfWeek]?.morningFrom || ""}
-                    onValueChange={(value) => handleTimeChange(dayOfWeek, 'morningFrom', value)}
-                  >
-                    <SelectTrigger className="h-8 text-xs">
-                      <SelectValue placeholder="08:00" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-white z-50">
-                      {timeOptions.slice(0, 11).map((time) => (
-                        <SelectItem key={time} value={time}>{time}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-
-                  <Select
-                    value={schedules[dayOfWeek]?.morningTo || ""}
-                    onValueChange={(value) => handleTimeChange(dayOfWeek, 'morningTo', value)}
-                  >
-                    <SelectTrigger className="h-8 text-xs">
-                      <SelectValue placeholder="13:00" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-white z-50">
-                      {timeOptions.slice(0, 11).map((time) => (
-                        <SelectItem key={time} value={time}>{time}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="col-span-2 flex items-center gap-1">
+                    <span className="text-xs text-muted-foreground shrink-0">de</span>
+                    <Select
+                      value={schedules[dayOfWeek]?.morningFrom || ""}
+                      onValueChange={(value) => handleTimeChange(dayOfWeek, 'morningFrom', value)}
+                    >
+                      <SelectTrigger className="h-8 text-xs flex-1">
+                        <SelectValue placeholder="08:00" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white z-50">
+                        {timeOptions.slice(0, 11).map((time) => (
+                          <SelectItem key={time} value={time}>{time}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <span className="text-xs text-muted-foreground shrink-0">à</span>
+                    <Select
+                      value={schedules[dayOfWeek]?.morningTo || ""}
+                      onValueChange={(value) => handleTimeChange(dayOfWeek, 'morningTo', value)}
+                    >
+                      <SelectTrigger className="h-8 text-xs flex-1">
+                        <SelectValue placeholder="13:00" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white z-50">
+                        {timeOptions.slice(0, 11).map((time) => (
+                          <SelectItem key={time} value={time}>{time}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </>
               ) : (
                 <div className="col-span-2"></div>
@@ -450,37 +416,41 @@ export const PrestationScheduleConfig = ({ selectedDates, onChange, existingAvai
                   onCheckedChange={() => handlePeriodToggle(dayOfWeek, 'afternoon')}
                   disabled={!schedules[dayOfWeek]?.enabled}
                 />
+                <label htmlFor={`${dayOfWeek}-afternoon-desktop`} className="text-xs font-medium ml-1">Après-midi</label>
               </div>
 
               {schedules[dayOfWeek]?.enabled && schedules[dayOfWeek]?.afternoonEnabled ? (
                 <>
-                  <Select
-                    value={schedules[dayOfWeek]?.afternoonFrom || ""}
-                    onValueChange={(value) => handleTimeChange(dayOfWeek, 'afternoonFrom', value)}
-                  >
-                    <SelectTrigger className="h-8 text-xs">
-                      <SelectValue placeholder="13:00" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-white z-50">
-                      {timeOptions.slice(10).map((time) => (
-                        <SelectItem key={time} value={time}>{time}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-
-                  <Select
-                    value={schedules[dayOfWeek]?.afternoonTo || ""}
-                    onValueChange={(value) => handleTimeChange(dayOfWeek, 'afternoonTo', value)}
-                  >
-                    <SelectTrigger className="h-8 text-xs">
-                      <SelectValue placeholder="20:00" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-white z-50">
-                      {timeOptions.slice(10).map((time) => (
-                        <SelectItem key={time} value={time}>{time}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="col-span-2 flex items-center gap-1">
+                    <span className="text-xs text-muted-foreground shrink-0">de</span>
+                    <Select
+                      value={schedules[dayOfWeek]?.afternoonFrom || ""}
+                      onValueChange={(value) => handleTimeChange(dayOfWeek, 'afternoonFrom', value)}
+                    >
+                      <SelectTrigger className="h-8 text-xs flex-1">
+                        <SelectValue placeholder="13:00" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white z-50">
+                        {timeOptions.slice(10).map((time) => (
+                          <SelectItem key={time} value={time}>{time}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <span className="text-xs text-muted-foreground shrink-0">à</span>
+                    <Select
+                      value={schedules[dayOfWeek]?.afternoonTo || ""}
+                      onValueChange={(value) => handleTimeChange(dayOfWeek, 'afternoonTo', value)}
+                    >
+                      <SelectTrigger className="h-8 text-xs flex-1">
+                        <SelectValue placeholder="20:00" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white z-50">
+                        {timeOptions.slice(10).map((time) => (
+                          <SelectItem key={time} value={time}>{time}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </>
               ) : (
                 <div className="col-span-2"></div>

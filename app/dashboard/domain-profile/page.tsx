@@ -16,6 +16,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState, useEffect, useMemo } from "react";
 import { userService, DomainProfile, DomainService } from "@/services/user.service";
+import { paymentMethodsService } from "@/services/payment-methods.service";
 import toast from "react-hot-toast";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -51,6 +52,7 @@ interface EnhancedDomainService extends DomainService {
     id?: number;
     active?: boolean;
     periodActive?: boolean;
+    stripeEnabled?: boolean;
     selectedDates?: Date[];
     hasChanges?: boolean;
     originalBookingSettings?: {
@@ -58,11 +60,19 @@ interface EnhancedDomainService extends DomainService {
         bookingRestrictionTime: string;
         multipleBookings: boolean;
         hasCustomAvailability: boolean;
+        stripeEnabled: boolean;
         dateAvailability: any[];
     };
 }
 
 export default function UserDomainProfile() {
+    const resolveImageUrl = (url?: string | null): string => {
+        if (!url) return '';
+        if (url.startsWith('http://') || url.startsWith('https://')) return url;
+        const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5001';
+        return `${baseUrl}${url.startsWith('/') ? '' : '/'}${url}`;
+    };
+
     const [isAddServiceModalOpen, setIsAddServiceModalOpen] = useState(false);
     const [selectedPrestation, setSelectedPrestation] = useState<string | null>(null);
     const [isEditServiceModalOpen, setIsEditServiceModalOpen] = useState(false);
@@ -77,6 +87,7 @@ export default function UserDomainProfile() {
     const [isShiftPressed, setIsShiftPressed] = useState(false);
     const [serviceSchedules, setServiceSchedules] = useState<{ [serviceId: string]: any }>({});
     const [savingServices, setSavingServices] = useState<{ [serviceId: string]: boolean }>({});
+    const [isStripeConnected, setIsStripeConnected] = useState(false);
 
     // Form states
     const [formData, setFormData] = useState({
@@ -92,6 +103,7 @@ export default function UserDomainProfile() {
     const [logoPreview, setLogoPreview] = useState<string | null>(null);
     const [services, setServices] = useState<EnhancedDomainService[]>([]);
     const [isReloadingServices, setIsReloadingServices] = useState(false);
+    const [showAllDates, setShowAllDates] = useState<{ [prestationId: string]: boolean }>({});
 
     const hydrateServices = (servicesData: DomainService[] | any): EnhancedDomainService[] => {
         if (!Array.isArray(servicesData)) return [];
@@ -121,14 +133,16 @@ export default function UserDomainProfile() {
 
                 return {
                     ...service,
+                    bookingRestrictionActive: true,
                     selectedDates,
                     hasCustomAvailability: computedHasCustom,
                     hasChanges: false,
                     originalBookingSettings: {
-                        bookingRestrictionActive: (service as any).bookingRestrictionActive ?? false,
-                        bookingRestrictionTime: (service as any).bookingRestrictionTime ?? "24h",
+                        bookingRestrictionActive: true,
+                        bookingRestrictionTime: (service as any).bookingRestrictionTime ?? "last_minute",
                         multipleBookings: (service as any).multipleBookings ?? false,
                         hasCustomAvailability: computedHasCustom,
+                        stripeEnabled: (service as any).stripeEnabled ?? true,
                         dateAvailability: (service as any).dateAvailability ?? []
                     }
                 } as EnhancedDomainService;
@@ -140,10 +154,11 @@ export default function UserDomainProfile() {
                     hasCustomAvailability: false,
                     hasChanges: false,
                     originalBookingSettings: {
-                        bookingRestrictionActive: false,
-                        bookingRestrictionTime: "24h",
+                        bookingRestrictionActive: true,
+                        bookingRestrictionTime: "last_minute",
                         multipleBookings: false,
                         hasCustomAvailability: false,
+                        stripeEnabled: true,
                         dateAvailability: []
                     }
                 } as EnhancedDomainService;
@@ -208,18 +223,25 @@ export default function UserDomainProfile() {
                 });
 
                 // Set existing image previews if available
-                const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || '';
                 if (profileResponse.data.domainProfilePictureUrl) {
-                    setProfilePicturePreview(`${baseUrl}${profileResponse.data.domainProfilePictureUrl}`);
+                    setProfilePicturePreview(resolveImageUrl(profileResponse.data.domainProfilePictureUrl));
                 }
                 if (profileResponse.data.domainLogoUrl) {
-                    setLogoPreview(`${baseUrl}${profileResponse.data.domainLogoUrl}`);
+                    setLogoPreview(resolveImageUrl(profileResponse.data.domainLogoUrl));
                 }
             }
 
             // Load services separately and initialize original settings
             const servicesResponse = await userService.getServices();
             setServices(hydrateServices(servicesResponse?.data));
+
+            // Check if Stripe is connected and charges enabled
+            try {
+                const stripeStatus = await paymentMethodsService.getStripeStatus();
+                setIsStripeConnected(!!(stripeStatus?.data?.chargesEnabled));
+            } catch {
+                setIsStripeConnected(false);
+            }
 
         } catch (error: any) {
             console.error('Error loading domain profile:', error);
@@ -324,12 +346,11 @@ export default function UserDomainProfile() {
                 setDomainLogo(null);
 
                 // Update previews with new URLs if uploaded
-                const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || '';
                 if (response.data.domainProfile.domainProfilePictureUrl) {
-                    setProfilePicturePreview(`${baseUrl}${response.data.domainProfile.domainProfilePictureUrl}`);
+                    setProfilePicturePreview(resolveImageUrl(response.data.domainProfile.domainProfilePictureUrl));
                 }
                 if (response.data.domainProfile.domainLogoUrl) {
-                    setLogoPreview(`${baseUrl}${response.data.domainProfile.domainLogoUrl}`);
+                    setLogoPreview(resolveImageUrl(response.data.domainProfile.domainLogoUrl));
                 }
 
                 // Clear HTML file inputs
@@ -363,10 +384,11 @@ export default function UserDomainProfile() {
             prevServices.map(service => {
                 if (service._id === serviceId) {
                     const originalSettings = service.originalBookingSettings || {
-                        bookingRestrictionActive: service.bookingRestrictionActive ?? false,
-                        bookingRestrictionTime: service.bookingRestrictionTime ?? "24h",
+                        bookingRestrictionActive: true,
+                        bookingRestrictionTime: service.bookingRestrictionTime ?? "last_minute",
                         multipleBookings: service.multipleBookings ?? false,
                         hasCustomAvailability: service.hasCustomAvailability ?? false,
+                        stripeEnabled: service.stripeEnabled ?? true,
                         dateAvailability: service.dateAvailability ?? []
                     };
 
@@ -385,6 +407,7 @@ export default function UserDomainProfile() {
                         updatedService.bookingRestrictionTime !== originalSettings.bookingRestrictionTime ||
                         updatedService.multipleBookings !== originalSettings.multipleBookings ||
                         updatedService.hasCustomAvailability !== originalSettings.hasCustomAvailability ||
+                        (updatedService.stripeEnabled ?? true) !== (originalSettings.stripeEnabled ?? true) ||
                         JSON.stringify(currentDateAvailability) !== JSON.stringify(originalDateAvailability)
                     );
 
@@ -413,72 +436,84 @@ export default function UserDomainProfile() {
 
     // Save service booking settings
     const saveServiceBookingSettings = async (service: EnhancedDomainService) => {
-        console.log('saveServiceBookingSettings called for service:', service._id, service.serviceName);
-        if (!service.hasChanges || savingServices[service._id!]) return;
+        console.log('=== saveServiceBookingSettings ===');
+        console.log('service._id:', service._id);
+        console.log('service.hasChanges:', service.hasChanges);
+        console.log('service.selectedDates count:', service.selectedDates?.length);
+        console.log('service.selectedDates:', service.selectedDates?.map((d: Date) => d?.toISOString?.() ?? d));
+        console.log('service.dateAvailability count:', Array.isArray(service.dateAvailability) ? service.dateAvailability.length : 'not array');
+        console.log('serviceSchedules for this service:', serviceSchedules[service._id!]);
+        if (!service.hasChanges || savingServices[service._id!]) {
+            console.warn('Skipping save: hasChanges=', service.hasChanges, 'savingServices=', savingServices[service._id!]);
+            return;
+        }
 
         setSavingServices(prev => ({ ...prev, [service._id!]: true }));
 
         try {
-            // Convert schedules to actual date-based availability for API
-            let dateAvailability = [];
-            if (service.dateAvailability && service.selectedDates) {
-                // Create a set of selected date strings for quick lookup
-                const selectedDateStrings = new Set(
-                    service.selectedDates.map((date: Date) => 
-                        `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`
-                    )
-                );
+            // Build dateAvailability using service.selectedDates as the MASTER LIST of dates.
+            // This ensures newly added (or removed) dates are always reflected correctly.
+            // Schedule configs come from: pending changes (serviceSchedules) → saved API data → defaults.
+            let dateAvailability: any[] = [];
+            if (service.selectedDates && service.selectedDates.length > 0) {
+                const pendingSchedules: any[] = serviceSchedules[service._id!] || [];
+                const savedSchedules: any[] = Array.isArray(service.dateAvailability) ? service.dateAvailability : [];
 
-                if (Array.isArray(service.dateAvailability)) {
-                    // Filter by both: enabled AND still in selectedDates (not removed)
-                    dateAvailability = service.dateAvailability
-                        .filter((item: any) => {
-                            const itemDateString = item.date instanceof Date 
-                                ? `${item.date.getFullYear()}-${(item.date.getMonth() + 1).toString().padStart(2, '0')}-${item.date.getDate().toString().padStart(2, '0')}`
-                                : item.date;
-                            return item.enabled && selectedDateStrings.has(itemDateString);
-                        })
-                        .map((item: any) => ({
-                            ...item,
-                            date: item.date instanceof Date 
-                                ? `${item.date.getFullYear()}-${(item.date.getMonth() + 1).toString().padStart(2, '0')}-${item.date.getDate().toString().padStart(2, '0')}`
-                                : item.date
-                        }));
-                } else if (typeof service.dateAvailability === 'object') {
-                    // Convert date-keyed schedules to date-based schedules
-                    const dateSchedules = service.dateAvailability;
-                    dateAvailability = [];
-                    
-                    // Only include dates that are enabled AND still in selectedDates (not removed)
-                    Object.entries(dateSchedules).forEach(([dateKey, schedule]: [string, any]) => {
-                        if (schedule && schedule.enabled && selectedDateStrings.has(dateKey)) {
-                            dateAvailability.push({
-                                date: dateKey, // dateKey is already in YYYY-MM-DD format
-                                enabled: schedule.enabled,
-                                morningEnabled: schedule.morningEnabled ?? false,
-                                morningFrom: schedule.morningFrom ?? "09:00",
-                                morningTo: schedule.morningTo ?? "12:00",
-                                afternoonEnabled: schedule.afternoonEnabled ?? false,
-                                afternoonFrom: schedule.afternoonFrom ?? "14:00",
-                                afternoonTo: schedule.afternoonTo ?? "18:00"
-                            });
-                        }
-                    });
-                }
+                // Build fast lookup maps: dateString → schedule config
+                const pendingByDate = new Map<string, any>();
+                pendingSchedules.forEach((item: any) => {
+                    const key = item.date instanceof Date
+                        ? `${item.date.getFullYear()}-${(item.date.getMonth() + 1).toString().padStart(2, '0')}-${item.date.getDate().toString().padStart(2, '0')}`
+                        : item.date;
+                    if (key) pendingByDate.set(key, item);
+                });
+
+                const savedByDate = new Map<string, any>();
+                savedSchedules.forEach((item: any) => {
+                    const key = item.date instanceof Date
+                        ? `${item.date.getFullYear()}-${(item.date.getMonth() + 1).toString().padStart(2, '0')}-${item.date.getDate().toString().padStart(2, '0')}`
+                        : item.date;
+                    if (key) savedByDate.set(key, item);
+                });
+
+                // For every selected date, find its schedule config or use defaults
+                dateAvailability = service.selectedDates.map((date: Date) => {
+                    const dateKey = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
+                    const config = pendingByDate.get(dateKey) || savedByDate.get(dateKey);
+                    return {
+                        date: dateKey,
+                        enabled: config?.enabled ?? true,
+                        morningEnabled: config?.morningEnabled ?? false,
+                        morningFrom: config?.morningFrom ?? '09:00',
+                        morningTo: config?.morningTo ?? '12:00',
+                        afternoonEnabled: config?.afternoonEnabled ?? false,
+                        afternoonFrom: config?.afternoonFrom ?? '14:00',
+                        afternoonTo: config?.afternoonTo ?? '18:00',
+                    };
+                });
+                console.log('Built dateAvailability:', dateAvailability.map(d => d.date));
             }
 
             const bookingSettings = {
-                bookingRestrictionActive: service.bookingRestrictionActive ?? false,
-                bookingRestrictionTime: service.bookingRestrictionTime ?? "24h",
+                bookingRestrictionActive: true,
+                bookingRestrictionTime: service.bookingRestrictionTime ?? "last_minute",
                 multipleBookings: service.multipleBookings ?? false,
                 hasCustomAvailability: service.hasCustomAvailability ?? false,
+                stripeEnabled: service.stripeEnabled ?? true,
                 dateAvailability
             };
 
-            console.log('Sending booking settings to API:', bookingSettings);
-
-            await userService.updateServiceBookingSettings(service._id!, bookingSettings);
+            console.log('Sending booking settings to API:', JSON.stringify({ dateCount: dateAvailability.length, dates: dateAvailability.map(d => d.date) }));
+            const apiResult = await userService.updateServiceBookingSettings(service._id!, bookingSettings);
+            console.log('API response dateAvailability count:', apiResult?.data?.services?.find?.((s: any) => s._id?.toString() === service._id)?.dateAvailability?.length ?? 'N/A');
             
+            // Clear pending schedule changes now that they're saved
+            setServiceSchedules(prev => {
+                const next = { ...prev };
+                delete next[service._id!];
+                return next;
+            });
+
             // Update the original settings and clear changes flag
             setServices(prevServices =>
                 prevServices.map(s => {
@@ -486,12 +521,14 @@ export default function UserDomainProfile() {
                         return {
                             ...s,
                             hasChanges: false,
+                            dateAvailability: bookingSettings.dateAvailability,
                             originalBookingSettings: {
-                                bookingRestrictionActive: s.bookingRestrictionActive ?? false,
-                                bookingRestrictionTime: s.bookingRestrictionTime ?? "24h",
+                                bookingRestrictionActive: true,
+                                bookingRestrictionTime: s.bookingRestrictionTime ?? "last_minute",
                                 multipleBookings: s.multipleBookings ?? false,
                                 hasCustomAvailability: s.hasCustomAvailability ?? false,
-                                dateAvailability: s.dateAvailability ?? []
+                                stripeEnabled: s.stripeEnabled ?? true,
+                                dateAvailability: bookingSettings.dateAvailability
                             }
                         };
                     }
@@ -544,8 +581,9 @@ export default function UserDomainProfile() {
             periodActive: service.hasCustomAvailability || selectedDates.length > 0,
             hasCustomAvailability: service.hasCustomAvailability || false,
             multipleBookings: service.multipleBookings || false,
-            bookingRestrictionActive: service.bookingRestrictionActive || false,
-            bookingRestrictionTime: service.bookingRestrictionTime || "24h",
+            bookingRestrictionActive: true,
+            bookingRestrictionTime: service.bookingRestrictionTime || "last_minute",
+            stripeEnabled: service.stripeEnabled ?? true,
             selectedDates: selectedDates
         };
     });
@@ -601,6 +639,7 @@ export default function UserDomainProfile() {
             serviceId: service._id, // Use _id instead of index
             numberOfPeople: service.numberOfPeople,
             winesTasted: service.numberOfWinesTasted.toString(),
+            category: service.category,
             languages: languagesState,
             otherLanguage: otherLanguage
         };
@@ -621,6 +660,7 @@ export default function UserDomainProfile() {
                 timeOfServiceInMinutes: newService.timeOfServiceInMinutes || 60,
                 numberOfWinesTasted: newService.numberOfWinesTasted || 0,
                 languagesOffered: newService.languagesOffered || ['French'],
+                category: newService.category || undefined,
                 isActive: newService.isActive !== undefined ? newService.isActive : true
             };
 
@@ -655,8 +695,11 @@ export default function UserDomainProfile() {
                 timeOfServiceInMinutes: updatedService.timeOfServiceInMinutes || 60,
                 numberOfWinesTasted: updatedService.numberOfWinesTasted || 0,
                 languagesOffered: updatedService.languagesOffered || ['French'],
+                category: updatedService.category !== undefined ? updatedService.category : undefined,
                 isActive: updatedService.isActive !== undefined ? updatedService.isActive : true
             };
+
+            console.log('Update service data with category:', updateData);
 
             await userService.updateService(serviceIndex, updateData, serviceBanner || undefined);
 
@@ -750,10 +793,10 @@ export default function UserDomainProfile() {
         }
     };
 
-    const handleToggleBookingRestriction = (prestationId: string) => {
+    const handleToggleServiceStripe = (prestationId: string) => {
         const service = services.find(s => s._id === prestationId);
         if (service) {
-            updateServiceBookingSettings(prestationId, 'bookingRestrictionActive', !service.bookingRestrictionActive);
+            updateServiceBookingSettings(prestationId, 'stripeEnabled', !(service.stripeEnabled ?? true));
         }
     };
 
@@ -799,7 +842,7 @@ export default function UserDomainProfile() {
             setServices(prevServices =>
                 prevServices.map(s =>
                     s._id === prestationId
-                        ? { ...s, selectedDates: newDates }
+                        ? { ...s, selectedDates: newDates, hasChanges: true }
                         : s
                 )
             );
@@ -813,7 +856,7 @@ export default function UserDomainProfile() {
             setServices(prevServices =>
                 prevServices.map(s =>
                     s._id === prestationId
-                        ? { ...s, selectedDates: newDates }
+                        ? { ...s, selectedDates: newDates, hasChanges: true }
                         : s
                 )
             );
@@ -944,7 +987,7 @@ export default function UserDomainProfile() {
                                             {(profilePicturePreview || (domainProfile?.domainProfilePictureUrl && !domainProfilePicture)) ? (
                                                 <div className="relative">
                                                     <img
-                                                        src={profilePicturePreview || `http://localhost:5001${domainProfile?.domainProfilePictureUrl}`}
+                                                        src={profilePicturePreview || resolveImageUrl(domainProfile?.domainProfilePictureUrl)}
                                                         alt="Profile preview"
                                                         className="w-32 h-32 object-cover rounded-lg mx-auto mb-2"
                                                     />
@@ -1002,7 +1045,7 @@ export default function UserDomainProfile() {
                                             {(logoPreview || (domainProfile?.domainLogoUrl && !domainLogo)) ? (
                                                 <div className="relative">
                                                     <img
-                                                        src={logoPreview || `http://localhost:5001${domainProfile?.domainLogoUrl}`}
+                                                        src={logoPreview || resolveImageUrl(domainProfile?.domainLogoUrl)}
                                                         alt="Logo preview"
                                                         className="w-32 h-32 object-cover rounded-lg mx-auto mb-2"
                                                     />
@@ -1070,7 +1113,7 @@ export default function UserDomainProfile() {
                                             <div className="flex-1 relative">
                                                 <Label htmlFor="color-picker" className="text-sm font-medium">Code couleur</Label>
                                                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-2 mt-1">
-                                                    <div className="relative flex-shrink-0 order-2 sm:order-1">
+                                                    <div className="relative shrink-0 order-2 sm:order-1">
                                                         <input
                                                             type="color"
                                                             value={formData.domainColor}
@@ -1113,7 +1156,7 @@ export default function UserDomainProfile() {
                                 {/* Section Prestations œnotouristiques */}
                                 <div className="border-t pt-4 lg:pt-6">
                                     <div className="flex items-center justify-between mb-4">
-                                        <h3 className="text-base lg:text-lg font-semibold">Mes prestations œnotouristiques</h3>
+                                        <h3 className="text-base lg:text-lg font-semibold">Mes expériences œnotouristiques</h3>
                                         {isReloadingServices && (
                                             <div className="flex items-center text-sm text-muted-foreground">
                                                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -1121,24 +1164,13 @@ export default function UserDomainProfile() {
                                             </div>
                                         )}
                                     </div>
-                                    <div className={`grid gap-4 lg:gap-6 ${selectedPrestation ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1'}`}>
+                                    <div className="grid gap-4 lg:gap-6 grid-cols-1">
                                         {/* Liste des prestations */}
                                         <div className="space-y-3">
                                             {prestations.map((prestation) => (
                                                 <div key={prestation.id} className="border rounded-lg bg-white">
                                                     <div
-                                                        className={`flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 cursor-pointer transition-colors ${selectedPrestation === prestation.id.toString()
-                                                            ? 'bg-green-50'
-                                                            : 'hover:bg-gray-50'
-                                                            }`}
-                                                        style={
-                                                            selectedPrestation === prestation.id.toString()
-                                                                ? { borderColor: '#3A7B59' }
-                                                                : {}
-                                                        }
-                                                        onClick={() => setSelectedPrestation(
-                                                            selectedPrestation === prestation.id.toString() ? null : prestation.id.toString()
-                                                        )}
+                                                        className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 transition-colors hover:bg-gray-50"
                                                     >
                                                         <span className="text-gray-700 font-medium mb-3 sm:mb-0">{prestation.name}</span>
                                                         <div className="flex flex-wrap items-center gap-2 sm:gap-1">
@@ -1215,31 +1247,27 @@ export default function UserDomainProfile() {
                                                         <div className="space-y-4 mb-3">
                                                             {/* Booking Restrictions */}
                                                             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                                                                <span className="text-sm font-medium text-gray-700">Restrictions de réservations</span>
-                                                                <div className="flex items-center space-x-2">
-                                                                    <Switch
-                                                                        checked={prestation.bookingRestrictionActive}
-                                                                        onCheckedChange={() => handleToggleBookingRestriction(prestation.id)}
-                                                                    />
-                                                                    <span className="text-sm text-gray-600">Activer</span>
-                                                                </div>
+                                                                <span className="text-sm font-medium text-gray-700">Restriction de réservation</span>
+                                                                <Select
+                                                                    value={prestation.bookingRestrictionTime}
+                                                                    onValueChange={(value) => handleBookingRestrictionTimeChange(prestation.id, value)}
+                                                                >
+                                                                    <SelectTrigger className="w-45">
+                                                                        <SelectValue placeholder="Sélectionner" />
+                                                                    </SelectTrigger>
+                                                                    <SelectContent>
+                                                                        <SelectItem value="last_minute">Dernière minute</SelectItem>
+                                                                        <SelectItem value="1h">1h</SelectItem>
+                                                                        <SelectItem value="2h">2h</SelectItem>
+                                                                        <SelectItem value="4h">4h</SelectItem>
+                                                                        <SelectItem value="24h">24h</SelectItem>
+                                                                        <SelectItem value="48h">48h</SelectItem>
+                                                                        <SelectItem value="72h">72h</SelectItem>
+                                                                        <SelectItem value="7d">7 jours</SelectItem>
+                                                                        <SelectItem value="10d">10 jours</SelectItem>
+                                                                    </SelectContent>
+                                                                </Select>
                                                             </div>
-                                                            {prestation.bookingRestrictionActive && (
-                                                                <div className="ml-4 mt-2">
-                                                                    <Select
-                                                                        value={prestation.bookingRestrictionTime}
-                                                                        onValueChange={(value) => handleBookingRestrictionTimeChange(prestation.id, value)}
-                                                                    >
-                                                                        <SelectTrigger className="w-[180px]">
-                                                                            <SelectValue placeholder="Sélectionner" />
-                                                                        </SelectTrigger>
-                                                                        <SelectContent>
-                                                                            <SelectItem value="24h">24h</SelectItem>
-                                                                            <SelectItem value="48h">48h</SelectItem>
-                                                                        </SelectContent>
-                                                                    </Select>
-                                                                </div>
-                                                            )}
                                                             
                                                             {/* Multiple Bookings */}
                                                             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
@@ -1252,6 +1280,20 @@ export default function UserDomainProfile() {
                                                                     <span className="text-sm text-gray-600">Activer</span>
                                                                 </div>
                                                             </div>
+
+                                                            {/* Stripe Payment Toggle (per-service) — only shown when Stripe is globally connected */}
+                                                            {isStripeConnected && (
+                                                                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                                                                    <span className="text-sm font-medium text-gray-700">Paiement en ligne (Stripe)</span>
+                                                                    <div className="flex items-center space-x-2">
+                                                                        <Switch
+                                                                            checked={prestation.stripeEnabled ?? true}
+                                                                            onCheckedChange={() => handleToggleServiceStripe(prestation.id)}
+                                                                        />
+                                                                        <span className="text-sm text-gray-600">Activer</span>
+                                                                    </div>
+                                                                </div>
+                                                            )}
                                                             
                                                             {/* Period Availability */}
                                                             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
@@ -1358,7 +1400,7 @@ export default function UserDomainProfile() {
                                                                     <div className="flex flex-wrap gap-1 max-h-32 sm:max-h-20 overflow-y-auto">
                                                                         {prestation.selectedDates
                                                                             .sort((a, b) => a.getTime() - b.getTime())
-                                                                            .slice(0, 10)
+                                                                            .slice(0, showAllDates[prestation.id] ? undefined : 10)
                                                                             .map((date, idx) => (
                                                                                 <span 
                                                                                     key={idx} 
@@ -1380,9 +1422,14 @@ export default function UserDomainProfile() {
                                                                                 </span>
                                                                             ))}
                                                                         {prestation.selectedDates.length > 10 && (
-                                                                            <span className="text-xs text-muted-foreground px-2 py-1">
-                                                                                +{prestation.selectedDates.length - 10} autres
-                                                                            </span>
+                                                                            <button
+                                                                                onClick={() => setShowAllDates(prev => ({ ...prev, [prestation.id]: !prev[prestation.id] }))}
+                                                                                className="text-xs text-[#3A7B59] font-medium px-2 py-1 rounded hover:bg-green-50 transition-colors underline-offset-2 hover:underline"
+                                                                            >
+                                                                                {showAllDates[prestation.id]
+                                                                                    ? 'Voir moins ▲'
+                                                                                    : `+${prestation.selectedDates.length - 10} autres ▼`}
+                                                                            </button>
                                                                         )}
                                                                     </div>
                                                                 )}
@@ -1392,18 +1439,20 @@ export default function UserDomainProfile() {
                                                                         <PrestationScheduleConfig 
                                                                             selectedDates={prestation.selectedDates}
                                                                             existingAvailability={(() => {
+                                                                                // Use originalBookingSettings.dateAvailability (last saved state),
+                                                                                // NOT service.dateAvailability which gets mutated by onChange and
+                                                                                // would cause a circular re-initialization loop.
                                                                                 const service = services.find(s => s._id === prestation.id);
-                                                                                const availability = service?.dateAvailability || [];
+                                                                                const availability = service?.originalBookingSettings?.dateAvailability || [];
 
                                                                                 if (Array.isArray(availability)) {
-                                                                                    // Validate array items have valid dates
-                                                                                    return availability.filter(item => 
+                                                                                    return availability.filter((item: any) => 
                                                                                         item && item.date && !isNaN(new Date(item.date).getTime())
                                                                                     );
                                                                                 }
                                                                                 if (availability && typeof availability === 'object') {
                                                                                     return Object.entries(availability)
-                                                                                        .filter(([date, config]) => date && !isNaN(new Date(date).getTime()))
+                                                                                        .filter(([date]) => date && !isNaN(new Date(date).getTime()))
                                                                                         .map(([date, config]) => ({ 
                                                                                             date, 
                                                                                             ...(config && typeof config === 'object' ? config as any : {})
@@ -1412,7 +1461,9 @@ export default function UserDomainProfile() {
                                                                                 return [];
                                                                             })()}
                                                                             onChange={(schedules) => {
-                                                                                // Convert object format to array format for backend compatibility
+                                                                                // Store pending schedule changes in serviceSchedules state,
+                                                                                // NOT in services.dateAvailability — that would change existingAvailability
+                                                                                // and trigger a re-initialization loop inside PrestationScheduleConfig.
                                                                                 const scheduleArray = Object.entries(schedules).map(([dateKey, config]) => ({
                                                                                     date: dateKey,
                                                                                     enabled: config.enabled,
@@ -1424,15 +1475,20 @@ export default function UserDomainProfile() {
                                                                                     afternoonTo: config.afternoonTo
                                                                                 }));
                                                                                 
-                                                                                // Update service with new schedule data
-                                                                                updateServiceBookingSettings(prestation.id, 'dateAvailability', scheduleArray);
-                                                                                // Only update hasCustomAvailability if there are actual enabled schedules
+                                                                                // Save pending changes to serviceSchedules
+                                                                                setServiceSchedules(prev => ({ ...prev, [prestation.id]: scheduleArray }));
+
+                                                                                // Mark service as having changes (without touching dateAvailability)
                                                                                 const hasEnabledSchedules = Object.values(schedules).some((schedule: any) => 
                                                                                     schedule.enabled && (schedule.morningEnabled || schedule.afternoonEnabled)
                                                                                 );
-                                                                                if (hasEnabledSchedules) {
-                                                                                    updateServiceBookingSettings(prestation.id, 'hasCustomAvailability', true);
-                                                                                }
+                                                                                setServices(prevServices =>
+                                                                                    prevServices.map(s =>
+                                                                                        s._id === prestation.id
+                                                                                            ? { ...s, hasChanges: true, ...(hasEnabledSchedules ? { hasCustomAvailability: true } : {}) }
+                                                                                            : s
+                                                                                    )
+                                                                                );
                                                                             }}
                                                                         />
                                                                     </div>
@@ -1453,34 +1509,12 @@ export default function UserDomainProfile() {
                                                     style={{ color: '#3A7B59', borderColor: '#3A7B59' }}
                                                 >
                                                     <Plus className="h-4 w-4 mr-2" />
-                                                    <span className="hidden sm:inline">Ajouter une prestation</span>
+                                                    <span className="hidden sm:inline">Ajouter une expérience</span>
                                                     <span className="sm:hidden">Ajouter</span>
                                                 </Button>
                                             </div>
                                         </div>
 
-                                        {/* Preview de la prestation sélectionnée */}
-                                        {selectedPrestation && (
-                                            <div className="border border-gray-200 rounded-lg p-4 lg:p-6 bg-white">
-                                                <h4 className="text-base lg:text-lg font-semibold mb-4">Aperçu de la prestation</h4>
-                                                {(() => {
-                                                    const prestation = prestations.find(p => p.id.toString() === selectedPrestation);
-                                                    if (!prestation) return null;
-                                                    return (
-                                                        <div className="space-y-4">
-                                                            <div>
-                                                                <h5 className="font-medium text-gray-900 text-sm lg:text-base">{prestation.name}</h5>
-                                                                <p className="text-xs lg:text-sm text-gray-600 mt-1">{prestation.description}</p>
-                                                            </div>
-                                                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center pt-4 border-t border-gray-100 gap-2">
-                                                                <span className="text-lg font-semibold" style={{ color: '#3A7B59' }}>{prestation.price}</span>
-                                                                <span className="text-xs lg:text-sm text-gray-500">Durée: {prestation.duration}</span>
-                                                            </div>
-                                                        </div>
-                                                    );
-                                                })()}
-                                            </div>
-                                        )}
                                     </div>
                                 </div>
                             </CardContent>

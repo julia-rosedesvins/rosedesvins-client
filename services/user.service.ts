@@ -144,8 +144,10 @@ export interface DomainService {
   timeOfServiceInMinutes: number;
   numberOfWinesTasted: number;
   languagesOffered: string[];
+  category?: string;
   serviceBannerUrl?: string;
   isActive: boolean;
+  stripeEnabled?: boolean;
   // New booking settings fields
   bookingRestrictionActive?: boolean;
   bookingRestrictionTime?: string;
@@ -615,6 +617,7 @@ class UserService {
       bookingRestrictionTime?: string;
       multipleBookings?: boolean;
       hasCustomAvailability?: boolean;
+      stripeEnabled?: boolean;
       dateAvailability?: Array<{
         date: string;
         enabled: boolean;

@@ -109,6 +109,18 @@ export const AddBookingModal = ({ isOpen, onClose, onBookingCreated }: AddBookin
       const eventDate = new Date(event.eventDate);
       return format(eventDate, 'yyyy-MM-dd') === dateString && event.eventStatus !== 'cancelled';
     });
+
+    const allowMultiple = selectedService?.multipleBookings ?? false;
+    // Parse max participants from "1-20" or "10" format
+    const maxParticipants = (() => {
+      const np = selectedService?.numberOfPeople ?? '';
+      if (np.includes('-')) {
+        const parts = np.split('-');
+        return parseInt(parts[parts.length - 1]) || 20;
+      }
+      return parseInt(np) || 20;
+    })();
+    const newParticipants = formData.participantsAdults + formData.participantsEnfants;
     
     for (const event of dayEvents) {
       const [eventHours, eventMinutes] = event.eventTime.split(':').map(Number);
@@ -127,10 +139,54 @@ export const AddBookingModal = ({ isOpen, onClose, onBookingCreated }: AddBookin
         }
       }
       
-      if (startMinutes < eventEndMinutes && endMinutes > eventStartMinutes) {
-        return true; // Blocked
+      const hasOverlap = startMinutes < eventEndMinutes && endMinutes > eventStartMinutes;
+      if (!hasOverlap) continue;
+
+      // Non-booking events: 'blocked' and 'personal' always block.
+      // 'external' events are typically Google Calendar syncs of existing bookings —
+      // only block them when multiple bookings are NOT allowed.
+      if (event.eventType === 'blocked' || event.eventType === 'personal') return true;
+      if (event.eventType === 'external' && !allowMultiple) return true;
+
+      // If multiple bookings are not allowed, any overlap blocks
+      if (!allowMultiple) return true;
+
+      // Multiple bookings allowed: only block if it's a different service with no shared capacity
+      // (same service overlaps are handled by capacity check below)
+      // Note: use toString() to handle ObjectId vs string comparison
+      if (event.bookingId?.serviceId && selectedService?._id &&
+          event.bookingId.serviceId.toString() !== selectedService._id.toString()) {
+        // Different service overlapping — block
+        return true;
       }
     }
+
+    if (allowMultiple) {
+      // Sum existing participants for overlapping booking events of the same service
+      const existingParticipants = dayEvents
+        .filter(event => {
+          if (event.eventStatus === 'cancelled' || event.eventType !== 'booking') return false;
+          const [eh, em] = event.eventTime.split(':').map(Number);
+          const es = eh * 60 + em;
+          let ee: number;
+          if (event.eventEndTime) {
+            const [eh2, em2] = event.eventEndTime.split(':').map(Number);
+            ee = eh2 * 60 + em2;
+            if (ee < es) ee += 24 * 60;
+          } else {
+            ee = es + (event.serviceInfo?.timeOfServiceInMinutes ?? 60);
+          }
+          return startMinutes < ee && endMinutes > es;
+        })
+        .reduce((sum, event) => {
+          const adults = event.bookingId?.participantsAdults ?? 0;
+          const children = event.bookingId?.participantsEnfants ?? 0;
+          return sum + adults + children;
+        }, 0);
+
+      if (existingParticipants + newParticipants > maxParticipants) return true;
+    }
+
     return false;
   };
 
@@ -267,14 +323,14 @@ export const AddBookingModal = ({ isOpen, onClose, onBookingCreated }: AddBookin
             <div className="space-y-2 w-full">
               <Label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
                 <Wine size={14} className="sm:w-4 sm:h-4 shrink-0" />
-                Service *
+                Expérience *
               </Label>
               <Select
                 value={formData.serviceId}
                 onValueChange={(value) => setFormData(prev => ({ ...prev, serviceId: value }))}
               >
                 <SelectTrigger className={`w-full text-sm sm:text-base border-2 focus:border-[#3A7B59] rounded-lg h-11 sm:h-auto ${errors.serviceId ? 'border-red-300 focus:border-red-500' : ''}`}>
-                  <SelectValue placeholder="Sélectionner un service" />
+                  <SelectValue placeholder="Sélectionner une expérience" />
                 </SelectTrigger>
                 <SelectContent>
                   {servicesLoading ? (
@@ -396,11 +452,22 @@ export const AddBookingModal = ({ isOpen, onClose, onBookingCreated }: AddBookin
                   <SelectValue placeholder="Sélectionner une langue" />
                 </SelectTrigger>
                 <SelectContent>
-                  {selectedService?.languagesOffered.map((language) => (
-                    <SelectItem key={language} value={language}>
-                      {language}
-                    </SelectItem>
-                  )) || (
+                  {selectedService?.languagesOffered.map((language) => {
+                    const languageMap: Record<string, string> = {
+                      'french': 'Français',
+                      'english': 'Anglais',
+                      'german': 'Allemand',
+                      'spanish': 'Espagnol',
+                      'autre': '',
+                    };
+                    const label = languageMap[language.toLowerCase()];
+                    if (label === '') return null; // skip 'autre'
+                    return (
+                      <SelectItem key={language} value={language}>
+                        {label || language}
+                      </SelectItem>
+                    );
+                  }) || (
                     <>
                       <SelectItem value="French">Français</SelectItem>
                       <SelectItem value="English">Anglais</SelectItem>

@@ -264,16 +264,8 @@ export const CalendarSection = () => {
             <span>Réservations</span>
           </div>
           <div className="flex items-center gap-1">
-            <div className="w-3 h-3 rounded" style={{ backgroundColor: '#2563eb' }}></div>
-            <span>Personnel</span>
-          </div>
-          <div className="flex items-center gap-1">
             <div className="w-3 h-3 rounded" style={{ backgroundColor: '#7c3aed' }}></div>
             <span>Externe</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="w-3 h-3 rounded" style={{ backgroundColor: '#dc2626' }}></div>
-            <span>Bloqué</span>
           </div>
         </div>
       </CardHeader>

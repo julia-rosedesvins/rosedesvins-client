@@ -72,6 +72,7 @@ export interface PublicScheduleData {
   eventType?: 'booking' | 'personal' | 'external' | 'blocked'; // Event type to differentiate external events
   totalParticipants?: number; // Total participants for booking events
   serviceId?: string; // Service ID for booking events - used to check if multiple bookings are for same service
+  selectedLanguage?: string; // Language of the booking - used to enforce same-language constraint for multi-bookings
 }
 
 export interface GetPublicScheduleResponse {

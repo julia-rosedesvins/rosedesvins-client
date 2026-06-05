@@ -1,41 +1,31 @@
-import Link from "next/link"
+import { Instagram } from "lucide-react";
+import Link from "next/link";
 
-export default function Footer() {
+const Footer = () => {
   return (
-    <footer className="bg-gray-100 py-8 sm:py-12">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-col space-y-6 sm:space-y-8 md:space-y-0 md:flex-row md:justify-between md:items-center">
-          {/* Copyright Section */}
-          <div className="text-center md:text-left">
-            <p className="text-sm sm:text-base text-gray-600 font-medium">
+    <footer className="bg-primary text-white py-8">
+      <div className="max-w-6xl mx-auto px-4">
+        <div className="flex flex-col md:flex-row justify-between items-center gap-6">
+          <div className="mb-4 md:mb-0 text-center md:text-left">
+            <p className="text-sm opacity-90">
               Copyright © {new Date().getFullYear()} Rose des Vins
             </p>
           </div>
           
-          {/* Navigation Links */}
-          <div className="flex flex-col sm:flex-row items-center justify-center md:justify-end gap-4 sm:gap-6 lg:gap-8">
-            <Link 
-              href="/faqs" 
-              className="text-sm sm:text-base text-gray-600 hover:text-gray-900 hover:underline transition-all duration-200 py-2 px-1"
-            >
-              FAQ
-            </Link>
-            <Link 
-              href="/legal-notices" 
-              className="text-sm sm:text-base text-gray-600 hover:text-gray-900 hover:underline transition-all duration-200 py-2 px-1 text-center"
-            >
-              Mentions légales
-            </Link>
-            <Link 
-              href="/privacy-policy" 
-              className="text-sm sm:text-base text-gray-600 hover:text-gray-900 hover:underline transition-all duration-200 py-2 px-1 text-center"
-            >
-              Politique de confidentialité
-            </Link>
+          <div className="grid grid-cols-3 sm:flex sm:flex-row items-center gap-4 sm:gap-6 text-sm justify-center">
+            <a href="https://www.instagram.com/rose_des_vins/" className="hover:opacity-80 transition-opacity flex justify-center">
+              <Instagram className="h-5 w-5" />
+            </a>
+            {/* <Link href="/blog" className="hover:opacity-80 transition-opacity text-center">Blog</Link> */}
+            <Link href="/faqs" className="hover:opacity-80 transition-opacity text-center">FAQ</Link>
+            <Link href="/contact" className="hover:opacity-80 transition-opacity text-center">Contact</Link>
+            <Link href="/legal-notices" className="hover:opacity-80 transition-opacity text-center sm:whitespace-nowrap">Mentions légales</Link>
+            <Link href="/privacy-policy" className="hover:opacity-80 transition-opacity text-center sm:whitespace-nowrap">Politique de confidentialité</Link>
           </div>
         </div>
-        
       </div>
     </footer>
-  )
-}
+  );
+};
+
+export default Footer;

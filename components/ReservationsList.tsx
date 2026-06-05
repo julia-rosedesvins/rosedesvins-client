@@ -108,7 +108,7 @@ export const ReservationsList = () => {
       time: event.eventTime,
       people: totalPeople,
       activity: event.eventName,
-      language: getLanguageDisplay(event.bookingId?.selectedLanguage),
+      language: event.bookingId ? getLanguageDisplay(event.bookingId?.selectedLanguage) : '',
       comments: event.bookingId ? (event.bookingId.additionalNotes || '') : (event.eventDescription || ''),
       serviceName: event.serviceInfo?.name || null,
       date: event.eventDate,
@@ -485,7 +485,7 @@ export const ReservationsList = () => {
                     </TableCell>
                     <TableCell className="text-center text-sm px-4 py-4">
                       <div className="max-w-[200px] mx-auto">
-                        {reservation.serviceName}
+                        {reservation.serviceName || reservation.activity}
                       </div>
                     </TableCell>
                     <TableCell className="text-center font-medium text-base px-4 py-4">

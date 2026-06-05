@@ -19,9 +19,12 @@ interface BookingData {
 function ConfirmationSuccessContent({ id, serviceId }: { id: string, serviceId: string }) {
   const { widgetData, loading, error, colorCode } = useWidget();
   const searchParams = useSearchParams();
+  const withLayout = searchParams.get('withLayout');
+  const cancellationPolicy = searchParams.get('cancellationPolicy') || '';
   
   // Get payment methods from widget data
   const acceptedPaymentMethods = widgetData?.paymentMethods?.methods || ['cash_on_onsite'];
+  const stripeAvailable = acceptedPaymentMethods.includes('stripe') && widgetData?.paymentMethods?.stripeConnect?.chargesEnabled === true;
   
   // Extract booking data from URL parameters
   const bookingData: BookingData = {
@@ -73,11 +76,14 @@ function ConfirmationSuccessContent({ id, serviceId }: { id: string, serviceId: 
   };
 
   const formatPaymentMethods = () => {
-    if (acceptedPaymentMethods.length === 0) {
+    // Exclude stripe — it's an online method, not on-site
+    const onSiteMethods = acceptedPaymentMethods.filter((m: string) => m.toLowerCase() !== 'stripe');
+
+    if (onSiteMethods.length === 0) {
       return 'Paiement sur place';
     }
     
-    const labels = acceptedPaymentMethods.map(method => getPaymentMethodLabel(method));
+    const labels = onSiteMethods.map((method: string) => getPaymentMethodLabel(method));
     
     if (labels.length === 1) {
       return `Paiement sur place (${labels[0].toLowerCase()})`;
@@ -95,7 +101,20 @@ function ConfirmationSuccessContent({ id, serviceId }: { id: string, serviceId: 
     if (lang === 'anglais' || lang === 'english') return 'Anglais';
     if (lang === 'español' || lang === 'spanish') return 'Espagnol';
     if (lang === 'deutsch' || lang === 'german') return 'Allemand';
+    if (lang === 'italien' || lang === 'italian') return 'Italien';
+    if (lang === 'russe' || lang === 'russian') return 'Russe';
     return language; // Return original if no match
+  };
+
+  const getCancellationPolicyLabel = (policy: string) => {
+    switch (policy) {
+      case 'none': return 'Aucun remboursement possible';
+      case '24h': return "Remboursement intégral possible en cas d'annulation 24h avant";
+      case '48h': return "Remboursement intégral possible en cas d'annulation 48h avant";
+      case '72h': return "Remboursement intégral possible en cas d'annulation 72h avant";
+      case '1_week': return "Remboursement intégral possible en cas d'annulation une semaine avant";
+      default: return '';
+    }
   };
 
   return (
@@ -148,14 +167,21 @@ function ConfirmationSuccessContent({ id, serviceId }: { id: string, serviceId: 
 
               <div className="flex items-center gap-3">
                 <CreditCard className="w-5 h-5" style={{ color: colorCode }} />
-                <span>{formatPaymentMethods()}</span>
+                <span>{stripeAvailable ? 'Paiement en ligne' : formatPaymentMethods()}</span>
               </div>
+
+              {cancellationPolicy && getCancellationPolicyLabel(cancellationPolicy) && (
+                <div className="flex items-start gap-3">
+                  <CreditCard className="w-5 h-5 opacity-0" />
+                  <span className="text-sm text-gray-500 italic">{getCancellationPolicyLabel(cancellationPolicy)}</span>
+                </div>
+              )}
             </div>
           </div>
 
           {/* Bouton retour à l'accueil */}
           <div className="flex justify-center mt-8">
-            <Link href={`/if/booking-widget/${id}/${serviceId}/reservation`}>
+            <Link href={`/if/booking-widget/${id}/${serviceId}/reservation${withLayout ? '?withLayout=true' : ''}`}>
               <Button 
                 className="hover:opacity-90 text-white px-8 py-3 flex items-center gap-2"
                 style={{ backgroundColor: colorCode }}

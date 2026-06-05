@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button"
-import { Menu, Bell } from "lucide-react"
+import { Menu } from "lucide-react"
 
 interface DashboardHeaderProps {
   title: string
@@ -22,10 +22,10 @@ export default function DashboardHeader({ title, onMenuClick }: DashboardHeaderP
       </div>
 
       <div className="flex items-center space-x-4">
-        <Button variant="ghost" size="sm" className="relative">
+        {/* <Button variant="ghost" size="sm" className="relative">
           <Bell className="h-5 w-5 text-gray-600" />
           <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full"></span>
-        </Button>
+        </Button> */}
         <div className="flex items-center space-x-3 pl-4 border-l border-gray-200">
           <div
             className="w-9 h-9 rounded-full flex items-center justify-center text-white font-semibold"

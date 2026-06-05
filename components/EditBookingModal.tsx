@@ -218,7 +218,7 @@ export const EditBookingModal = ({ bookingData, isOpen, onClose, onSuccess }: Ed
 
           {/* Language */}
           <div className="space-y-2">
-            <Label htmlFor="language">Langue préférée *</Label>
+            <Label htmlFor="language">Langue *</Label>
             <Select
               value={formData.selectedLanguage || ''}
               onValueChange={(value) => handleInputChange('selectedLanguage', value)}
@@ -284,25 +284,6 @@ export const EditBookingModal = ({ bookingData, isOpen, onClose, onSuccess }: Ed
                 maxLength={20}
               />
             </div>
-          </div>
-
-          {/* Status */}
-          <div className="space-y-2">
-            <Label htmlFor="status">Statut</Label>
-            <Select
-              value={formData.bookingStatus || ''}
-              onValueChange={(value) => handleInputChange('bookingStatus', value as any)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Sélectionner un statut" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="pending">En attente</SelectItem>
-                <SelectItem value="confirmed">Confirmé</SelectItem>
-                <SelectItem value="completed">Terminé</SelectItem>
-                <SelectItem value="cancelled">Annulé</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
 
           {/* Additional Notes */}

@@ -22,6 +22,9 @@ export default function AdminSubscriptions() {
     const [loading, setLoading] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
+    const [sortOrder, setSortOrder] = useState<'newest' | 'oldest' | 'expiring_soon' | 'expiring_late'>('newest');
+    const [dateFrom, setDateFrom] = useState('');
+    const [dateTo, setDateTo] = useState('');
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
     const [selectedUser, setSelectedUser] = useState<string>('');
@@ -42,13 +45,16 @@ export default function AdminSubscriptions() {
         isActive: true
     });
 
-    const fetchSubscriptions = async (page: number = 1, limit: number = 10) => {
+    const fetchSubscriptions = async (page: number = 1, limit: number = 10, search: string = searchTerm) => {
         setLoading(true);
         try {
-            const query: any = { page, limit };
+            const query: any = { page, limit, sortBy: sortOrder };
             if (statusFilter !== 'all') {
                 query.status = statusFilter;
             }
+            if (dateFrom) query.dateFrom = dateFrom;
+            if (dateTo) query.dateTo = dateTo;
+            if (search) query.search = search;
 
             const response = await subscriptionService.getAllSubscriptions(query);
             setSubscriptions(response.data.subscriptions);
@@ -245,18 +251,17 @@ export default function AdminSubscriptions() {
         }
     };
 
-    const filteredSubscriptions = subscriptions.filter(subscription => {
-        const searchMatch = subscription.userId.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           subscription.userId.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           subscription.userId.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           subscription.userId.domainName?.toLowerCase().includes(searchTerm.toLowerCase());
-        
-        return searchMatch;
-    });
-
     useEffect(() => {
-        fetchSubscriptions();
-    }, [statusFilter]);
+        fetchSubscriptions(1, 10, '');
+    }, [statusFilter, sortOrder, dateFrom, dateTo]);
+
+    // Debounced server-side search
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            fetchSubscriptions(1, 10, searchTerm);
+        }, 400);
+        return () => clearTimeout(timer);
+    }, [searchTerm]);
 
     useEffect(() => {
         if (isCreateModalOpen) {
@@ -487,6 +492,46 @@ export default function AdminSubscriptions() {
                                     </SelectContent>
                                 </Select>
                             </div>
+                            <div className="lg:w-56">
+                                <Select value={sortOrder} onValueChange={(value: any) => setSortOrder(value)}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Trier par date" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="newest">Début : plus récent</SelectItem>
+                                        <SelectItem value="oldest">Début : plus ancien</SelectItem>
+                                        <SelectItem value="expiring_soon">Fin : expire bientôt</SelectItem>
+                                        <SelectItem value="expiring_late">Fin : expire le plus tard</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+                        <div className="flex flex-col lg:flex-row gap-4 mt-4 items-end">
+                            <div className="flex-1">
+                                <Label className="text-xs text-muted-foreground mb-1 block">Date de début (depuis)</Label>
+                                <Input
+                                    type="date"
+                                    value={dateFrom}
+                                    onChange={(e) => setDateFrom(e.target.value)}
+                                />
+                            </div>
+                            <div className="flex-1">
+                                <Label className="text-xs text-muted-foreground mb-1 block">Date de début (jusqu'à)</Label>
+                                <Input
+                                    type="date"
+                                    value={dateTo}
+                                    onChange={(e) => setDateTo(e.target.value)}
+                                />
+                            </div>
+                            {(dateFrom || dateTo) && (
+                                <Button
+                                    variant="outline"
+                                    onClick={() => { setDateFrom(''); setDateTo(''); }}
+                                    className="shrink-0"
+                                >
+                                    Réinitialiser les dates
+                                </Button>
+                            )}
                         </div>
                     </CardContent>
                 </Card>
@@ -509,13 +554,13 @@ export default function AdminSubscriptions() {
                             <div className="flex justify-center py-8">
                                 <Loader2 className="h-8 w-8 animate-spin" />
                             </div>
-                        ) : filteredSubscriptions.length === 0 ? (
+                        ) : subscriptions.length === 0 ? (
                             <div className="text-center py-8 text-muted-foreground">
                                 Aucun abonnement trouvé
                             </div>
                         ) : (
                             <div className="space-y-4">
-                                {filteredSubscriptions.map((subscription) => (
+                                {subscriptions.map((subscription) => (
                                     <div key={subscription._id} className="border rounded-lg p-4 space-y-3">
                                         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-2">
                                             <div className="flex-1">
@@ -557,9 +602,11 @@ export default function AdminSubscriptions() {
                                             <div>
                                                 <span className="font-medium">Fin:</span> {formatDate(subscription.endDate)}
                                             </div>
-                                            <div>
-                                                <span className="font-medium">Créé par:</span> {subscription.adminId.firstName} {subscription.adminId.lastName}
-                                            </div>
+                                            {subscription.adminId && (
+                                                <div>
+                                                    <span className="font-medium">Créé par:</span> {subscription.adminId.firstName} {subscription.adminId.lastName}
+                                                </div>
+                                            )}
                                             <div>
                                                 <span className="font-medium">Statut:</span> 
                                                 <span className={subscription.isActive ? 'text-green-600' : 'text-red-600'}>
@@ -596,7 +643,7 @@ export default function AdminSubscriptions() {
                                     <Button
                                         variant="outline"
                                         size="sm"
-                                        onClick={() => fetchSubscriptions(pagination.page - 1)}
+                                        onClick={() => fetchSubscriptions(pagination.page - 1, 10, searchTerm)}
                                         disabled={pagination.page <= 1 || loading}
                                     >
                                         <ChevronLeft className="h-4 w-4" />
@@ -604,7 +651,7 @@ export default function AdminSubscriptions() {
                                     <Button
                                         variant="outline"
                                         size="sm"
-                                        onClick={() => fetchSubscriptions(pagination.page + 1)}
+                                        onClick={() => fetchSubscriptions(pagination.page + 1, 10, searchTerm)}
                                         disabled={pagination.page >= pagination.totalPages || loading}
                                     >
                                         <ChevronRight className="h-4 w-4" />

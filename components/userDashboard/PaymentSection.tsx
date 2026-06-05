@@ -1,99 +1,104 @@
 'use client'
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-// import { Separator } from "@/components/ui/separator";
-import { CreditCard, Banknote, Coins, Loader2, Save } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { CreditCard, Banknote, Coins, Loader2, Save, ExternalLink, CheckCircle2, AlertTriangle, Unplug } from "lucide-react";
 import { toast } from 'react-hot-toast';
 import { 
   paymentMethodsService, 
   PAYMENT_METHOD_OPTIONS,
-  CreateOrUpdatePaymentMethodsRequest
+  CreateOrUpdatePaymentMethodsRequest,
+  StripeConnectData,
 } from "@/services/payment-methods.service";
 
 export const PaymentSection = () => {
+  const searchParams = useSearchParams();
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
-
-  // State for selected payment methods
   const [selectedMethods, setSelectedMethods] = useState<string[]>([]);
+  const [cancellationPolicy, setCancellationPolicy] = useState<string>('');
+  const [stripeStatus, setStripeStatus] = useState<StripeConnectData | null>(null);
+  const [isStripeConnecting, setIsStripeConnecting] = useState(false);
+  const [isStripeDisconnecting, setIsStripeDisconnecting] = useState(false);
 
-  // Load payment methods on component mount
+  const isStripeSelected = selectedMethods.includes(PAYMENT_METHOD_OPTIONS.STRIPE);
+
+  // Handle Stripe OAuth callback params
+  useEffect(() => {
+    const stripeSuccess = searchParams.get('stripe_success');
+    const stripeError = searchParams.get('stripe_error');
+
+    if (stripeSuccess === 'true') {
+      toast.success('Compte Stripe connecté avec succès !');
+      const url = new URL(window.location.href);
+      url.searchParams.delete('stripe_success');
+      url.searchParams.delete('account_id');
+      window.history.replaceState({}, '', url.toString());
+      loadStripeStatus();
+    } else if (stripeError) {
+      const errorMessages: Record<string, string> = {
+        'access_denied': 'Connexion Stripe annulée.',
+        'callback_failed': 'Erreur lors de la connexion Stripe. Veuillez réessayer.',
+      };
+      toast.error(errorMessages[stripeError] || 'Erreur Stripe. Veuillez réessayer.');
+      const url = new URL(window.location.href);
+      url.searchParams.delete('stripe_error');
+      window.history.replaceState({}, '', url.toString());
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
+  const loadStripeStatus = useCallback(async () => {
+    try {
+      const response = await paymentMethodsService.getStripeStatus();
+      setStripeStatus(response.success && response.data ? response.data : null);
+    } catch {
+      setStripeStatus(null);
+    }
+  }, []);
+
   useEffect(() => {
     let isMounted = true;
-    
     const loadData = async () => {
       setIsLoading(true);
       try {
-        const response = await paymentMethodsService.getPaymentMethods();
-        
+        const [paymentResponse] = await Promise.all([
+          paymentMethodsService.getPaymentMethods(),
+          loadStripeStatus(),
+        ]);
         if (isMounted) {
-          if (response.data && response.data.methods) {
-            setSelectedMethods(response.data.methods);
-            setHasChanges(false);
-          } else {
-            console.log('ℹ️ No payment methods found, using empty array');
-            setSelectedMethods([]);
-            setHasChanges(false);
-          }
+          setSelectedMethods(paymentResponse.data?.methods ?? []);
+          setCancellationPolicy(paymentResponse.data?.cancellationPolicy ?? '');
+          setHasChanges(false);
         }
-      } catch (error) {
-        if (isMounted) {
-          console.error('❌ Failed to load payment methods:', error);
-          toast.error('Erreur lors du chargement des moyens de paiement');
-        }
+      } catch {
+        if (isMounted) toast.error('Erreur lors du chargement des moyens de paiement');
       } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
+        if (isMounted) setIsLoading(false);
       }
     };
-    
     loadData();
-    
-    return () => {
-      isMounted = false;
-    };
+    return () => { isMounted = false; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  const loadPaymentMethods = async () => {
-    setIsLoading(true);
-    try {
-      const response = await paymentMethodsService.getPaymentMethods();
-      
-      if (response.data && response.data.methods) {
-        setSelectedMethods(response.data.methods);
-        setHasChanges(false);
-      } else {
-        console.log('ℹ️ No payment methods found, using empty array');
-        setSelectedMethods([]);
-        setHasChanges(false);
-      }
-    } catch (error) {
-      console.error('❌ Failed to load payment methods:', error);
-      toast.error('Erreur lors du chargement des moyens de paiement');
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const savePaymentMethods = async () => {
     setIsSaving(true);
     try {
       const methodsData: CreateOrUpdatePaymentMethodsRequest = {
-        methods: selectedMethods
+        methods: selectedMethods,
+        cancellationPolicy: cancellationPolicy || null,
       };
-      
-      const response = await paymentMethodsService.createOrUpdatePaymentMethods(methodsData);
-      
+      await paymentMethodsService.createOrUpdatePaymentMethods(methodsData);
       toast.success('Moyens de paiement sauvegardés avec succès');
       setHasChanges(false);
     } catch (error: any) {
-      console.error('❌ Failed to save payment methods:', error);
       toast.error(error?.message || 'Erreur lors de la sauvegarde');
     } finally {
       setIsSaving(false);
@@ -101,72 +106,226 @@ export const PaymentSection = () => {
   };
 
   const handleMethodToggle = (methodId: string) => {
+    // Unchecking Stripe while connected → disconnect first
+    if (methodId === PAYMENT_METHOD_OPTIONS.STRIPE && isStripeSelected && stripeStatus) {
+      handleStripeDisconnect(true);
+      return;
+    }
     setSelectedMethods(prev => {
-      const newMethods = prev.includes(methodId)
+      const updated = prev.includes(methodId)
         ? prev.filter(m => m !== methodId)
         : [...prev, methodId];
-      
       setHasChanges(true);
-      return newMethods;
+      return updated;
     });
   };
+
+  const handleStripeConnect = async () => {
+    setIsStripeConnecting(true);
+    try {
+      const response = await paymentMethodsService.getStripeAuthUrl();
+      if (response.success && response.data?.authUrl) {
+        window.location.href = response.data.authUrl;
+      } else {
+        toast.error('Impossible de générer le lien Stripe. Veuillez réessayer.');
+      }
+    } catch (error: any) {
+      toast.error(error?.message || 'Erreur lors de la connexion Stripe');
+    } finally {
+      setIsStripeConnecting(false);
+    }
+  };
+
+  // uncheckToo=true when called from checkbox toggle
+  const handleStripeDisconnect = async (uncheckToo = false) => {
+    if (!confirm('Êtes-vous sûr de vouloir déconnecter votre compte Stripe ?')) return;
+    setIsStripeDisconnecting(true);
+    try {
+      await paymentMethodsService.disconnectStripe();
+      toast.success('Compte Stripe déconnecté avec succès.');
+      setStripeStatus(null);
+      // Always remove stripe from selected methods
+      setSelectedMethods(prev => prev.filter(m => m !== PAYMENT_METHOD_OPTIONS.STRIPE));
+      setHasChanges(true);
+    } catch (error: any) {
+      toast.error(error?.message || 'Erreur lors de la déconnexion Stripe');
+    } finally {
+      setIsStripeDisconnecting(false);
+    }
+  };
+
+  const standardMethods = [
+    { id: PAYMENT_METHOD_OPTIONS.BANK_CARD, htmlId: 'card',  label: 'Carte bancaire', icon: <CreditCard className="h-5 w-5 text-[#3A7B59]" /> },
+    { id: PAYMENT_METHOD_OPTIONS.CHECKS,    htmlId: 'check', label: 'Chèques',        icon: <Banknote   className="h-5 w-5 text-[#3A7B59]" /> },
+    { id: PAYMENT_METHOD_OPTIONS.CASH,      htmlId: 'cash',  label: 'Espèces',        icon: <Coins      className="h-5 w-5 text-[#3A7B59]" /> },
+  ];
 
   return (
     <Card className="mt-5 relative shadow-sm border-0 bg-white ring-1 ring-gray-200 hover:ring-gray-300 transition-all duration-200">
       <CardHeader className="pb-4">
-        <CardTitle className="text-xl lg:text-2xl font-semibold text-gray-900">Moyens de paiement acceptés</CardTitle>
+        <CardTitle className="text-xl lg:text-2xl font-semibold text-gray-900">Moyens de paiement</CardTitle>
         <p className="text-gray-600 text-sm lg:text-base leading-relaxed mt-1">
-          Sélectionnez les moyens de paiement que vous acceptez sur place.
+          Sélectionnez les moyens de paiement que vous acceptez sur place et en ligne.
         </p>
       </CardHeader>
-      <CardContent className="pt-2 space-y-6 lg:space-y-8">        
-        <div className="space-y-4">
-          {/* Dynamic Implementation - Interactive checkboxes */}
-          <div className="flex items-center space-x-4 p-3 rounded-lg bg-white border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all">
-            <Checkbox 
-              id="card" 
-              checked={selectedMethods.includes(PAYMENT_METHOD_OPTIONS.BANK_CARD)}
-              onCheckedChange={() => handleMethodToggle(PAYMENT_METHOD_OPTIONS.BANK_CARD)}
-              disabled={isLoading}
-              className="data-[state=checked]:bg-[#3A7B59] data-[state=checked]:border-[#3A7B59]"
-            />
-            <CreditCard className="h-5 w-5 lg:h-6 lg:w-6 text-[#3A7B59]" />
-            <Label htmlFor="card" className="text-sm lg:text-base font-semibold cursor-pointer text-black">
-              Carte bancaire
-            </Label>
-          </div>
-          
-          <div className="flex items-center space-x-4 p-3 rounded-lg bg-white border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all">
-            <Checkbox 
-              id="check" 
-              checked={selectedMethods.includes(PAYMENT_METHOD_OPTIONS.CHECKS)}
-              onCheckedChange={() => handleMethodToggle(PAYMENT_METHOD_OPTIONS.CHECKS)}
-              disabled={isLoading}
-              className="data-[state=checked]:bg-[#3A7B59] data-[state=checked]:border-[#3A7B59]"
-            />
-            <Banknote className="h-5 w-5 lg:h-6 lg:w-6 text-[#3A7B59]" />
-            <Label htmlFor="check" className="text-sm lg:text-base font-semibold cursor-pointer text-black">
-              Chèques
-            </Label>
-          </div>
-          
-          <div className="flex items-center space-x-4 p-3 rounded-lg bg-white border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all">
-            <Checkbox 
-              id="cash" 
-              checked={selectedMethods.includes(PAYMENT_METHOD_OPTIONS.CASH)}
-              onCheckedChange={() => handleMethodToggle(PAYMENT_METHOD_OPTIONS.CASH)}
-              disabled={isLoading}
-              className="data-[state=checked]:bg-[#3A7B59] data-[state=checked]:border-[#3A7B59]"
-            />
-            <Coins className="h-5 w-5 lg:h-6 lg:w-6 text-[#3A7B59]" />
-            <Label htmlFor="cash" className="text-sm lg:text-base font-semibold cursor-pointer text-black">
-              Espèces
-            </Label>
+      <CardContent className="pt-2 space-y-6 lg:space-y-8">
+
+        <div className="space-y-3">
+          {/* Standard payment method checkboxes */}
+          {standardMethods.map(opt => (
+            <div key={opt.id} className="flex items-center space-x-4 p-3 rounded-lg bg-white border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all">
+              <Checkbox
+                id={opt.htmlId}
+                checked={selectedMethods.includes(opt.id)}
+                onCheckedChange={() => handleMethodToggle(opt.id)}
+                disabled={isLoading}
+                className="data-[state=checked]:bg-[#3A7B59] data-[state=checked]:border-[#3A7B59]"
+              />
+              {opt.icon}
+              <Label htmlFor={opt.htmlId} className="text-sm lg:text-base font-semibold cursor-pointer text-black">
+                {opt.label}
+              </Label>
+            </div>
+          ))}
+
+          {/* Stripe checkbox + expandable panel */}
+          <div className={`rounded-lg border transition-all duration-200 ${isStripeSelected ? 'border-[#3A7B59]/50 bg-[#3A7B59]/3' : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm'}`}>
+            {/* Checkbox row */}
+            <div className="flex items-center space-x-4 p-3">
+              <Checkbox
+                id="stripe"
+                checked={isStripeSelected}
+                onCheckedChange={() => handleMethodToggle(PAYMENT_METHOD_OPTIONS.STRIPE)}
+                disabled={isLoading || isStripeDisconnecting}
+                className="data-[state=checked]:bg-[#3A7B59] data-[state=checked]:border-[#3A7B59]"
+              />
+              <CreditCard className="h-5 w-5 text-[#3A7B59]" />
+              <Label htmlFor="stripe" className="text-sm lg:text-base font-semibold cursor-pointer text-black flex-1">
+                Stripe — Prépaiement en ligne
+              </Label>
+              {/* Status badge when connected */}
+              {isStripeSelected && stripeStatus && (
+                stripeStatus.chargesEnabled ? (
+                  <Badge className="bg-green-100 text-green-700 border-green-300 hover:bg-green-100 text-xs font-medium shrink-0">
+                    Actif
+                  </Badge>
+                ) : (
+                  <Badge className="bg-amber-100 text-amber-700 border-amber-300 hover:bg-amber-100 text-xs font-medium shrink-0">
+                    En attente
+                  </Badge>
+                )
+              )}
+            </div>
+
+            {/* Expanded panel — only visible when Stripe is checked */}
+            {isStripeSelected && (
+              <div className="px-4 pb-4 pt-0 border-t border-[#3A7B59]/20">
+                {stripeStatus ? (
+                  /* ── Connected state ── */
+                  <div className="space-y-3 pt-3">
+                    <div className="flex items-center gap-3">
+                      {stripeStatus.chargesEnabled ? (
+                        <CheckCircle2 className="h-5 w-5 text-green-600 shrink-0" />
+                      ) : (
+                        <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0" />
+                      )}
+                      <div>
+                        <p className="text-sm font-semibold text-gray-900">
+                          {stripeStatus.displayName ?? 'Compte Stripe connecté'}
+                        </p>
+                        <p className="text-xs text-gray-400 font-mono">{stripeStatus.stripeAccountId}</p>
+                      </div>
+                    </div>
+
+                    {!stripeStatus.chargesEnabled && (
+                      <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-md">
+                        <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
+                        <p className="text-xs text-amber-700">
+                          Votre compte Stripe nécessite une vérification supplémentaire.{' '}
+                          <a href="https://dashboard.stripe.com" target="_blank" rel="noopener noreferrer" className="underline font-medium hover:text-amber-900">
+                            Compléter la vérification →
+                          </a>
+                        </p>
+                      </div>
+                    )}
+
+                    {stripeStatus.connectedAt && (
+                      <p className="text-xs text-gray-400">
+                        Connecté le {new Date(stripeStatus.connectedAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                      </p>
+                    )}
+
+                    <div className="flex items-center gap-3">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleStripeDisconnect()}
+                        disabled={isStripeDisconnecting}
+                        className="border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400 flex items-center gap-2"
+                      >
+                        {isStripeDisconnecting
+                          ? <Loader2 className="h-4 w-4 animate-spin" />
+                          : <Unplug className="h-4 w-4" />
+                        }
+                        Déconnecter
+                      </Button>
+                      <Button variant="ghost" size="sm" asChild className="text-gray-400 hover:text-gray-600 flex items-center gap-1.5">
+                        <a href="https://dashboard.stripe.com" target="_blank" rel="noopener noreferrer">
+                          <ExternalLink className="h-3.5 w-3.5" />
+                          Tableau de bord Stripe
+                        </a>
+                      </Button>
+                    </div>
+
+                    {/* Cancellation policy */}
+                    <div className="pt-1">
+                      <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                        Politique de remboursement
+                      </label>
+                      <select
+                        value={cancellationPolicy}
+                        onChange={(e) => { setCancellationPolicy(e.target.value); setHasChanges(true); }}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#3A7B59]/30"
+                      >
+                        <option value="">Sélectionnez une politique</option>
+                        <option value="none">Aucun remboursement possible</option>
+                        <option value="24h">Remboursement intégral possible en cas d&apos;annulation 24h avant</option>
+                        <option value="48h">Remboursement intégral possible en cas d&apos;annulation 48h avant</option>
+                        <option value="72h">Remboursement intégral possible en cas d&apos;annulation 72h avant</option>
+                        <option value="1_week">Remboursement intégral possible en cas d&apos;annulation une semaine avant</option>
+                      </select>
+                    </div>
+                  </div>
+                ) : (
+                  /* ── Not connected state ── */
+                  <div className="space-y-3 pt-3">
+                    <p className="text-sm text-gray-500">
+                      Connectez votre compte Stripe pour accepter les prépaiements lors des réservations en ligne.
+                    </p>
+                    <Button
+                      onClick={handleStripeConnect}
+                      disabled={isStripeConnecting}
+                      className="bg-[#3A7B59] hover:bg-[#2d5a43] text-white flex items-center gap-2 font-semibold shadow-sm hover:shadow-md transition-all"
+                    >
+                      {isStripeConnecting ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Redirection vers Stripe...
+                        </>
+                      ) : (
+                        <>
+                          Connecter à Stripe
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
-        
-        {/* DYNAMIC CODE - Save Button (keeping for future use, currently commented out) */}
-        
+
+        {/* Save button */}
         <div className="flex justify-end">
           <Button
             onClick={savePaymentMethods}
@@ -186,31 +345,8 @@ export const PaymentSection = () => {
             )}
           </Button>
         </div>
-       
 
-        {/* DYNAMIC CODE - Stripe Integration Section (keeping for future use, currently commented out) */}
-        {/*
-        <Separator className="my-6 lg:my-8" />
-
-        <div className="space-y-4 lg:space-y-6">
-          <h3 className="text-lg lg:text-2xl font-semibold leading-none tracking-tight text-gray-900">Prépaiements</h3>
-          <p className="text-gray-600 text-sm lg:text-base leading-relaxed">
-            Le prépaiement permet de demander aux clients immédiatement au moment de la 
-            réservation en ligne le paiement de la prestation afin de valider la réservation du 
-            rendez-vous.
-          </p>
-          
-          <Button 
-            className="text-white hover:opacity-90 w-full sm:w-auto text-sm lg:text-base px-6 lg:px-8 py-3 lg:py-4 font-semibold shadow-md hover:shadow-lg transition-all duration-200"
-            style={{ backgroundColor: '#3A7B59' }}
-          >
-            Connecter à Stripe
-          </Button>
-        </div>
-        */}
-
-        {/* DYNAMIC CODE - Loading Overlay (keeping for future use, currently commented out) */}
-        
+        {/* Loading overlay */}
         {isLoading && (
           <div className="absolute inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center rounded-lg">
             <div className="flex items-center gap-3 text-[#3A7B59] bg-white px-6 py-3 rounded-lg shadow-lg">
@@ -219,8 +355,6 @@ export const PaymentSection = () => {
             </div>
           </div>
         )}
-       
-        
       </CardContent>
     </Card>
   );

@@ -2,19 +2,24 @@
 
 import UserDashboardLayout from "@/components/userDashboard/UserDashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar, Users, Wine, CreditCard, Loader2 } from "lucide-react";
+import { Calendar, Users, Wine, CreditCard, Loader2, CheckCircle2, Clock, XCircle, RefreshCw, AlertCircle } from "lucide-react";
 import { useState, useEffect } from "react";
 import { userService, DashboardAnalytics } from "@/services/user.service";
+import { getVendorTransactions, TransactionStatus } from "@/services/stripe-checkout.service";
 import toast from "react-hot-toast";
 
 export default function UserDashboard() {
     const [selectedPeriod, setSelectedPeriod] = useState("ce-mois");
     const [analytics, setAnalytics] = useState<DashboardAnalytics | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [transactions, setTransactions] = useState<TransactionStatus[]>([]);
+    const [txLoading, setTxLoading] = useState(true);
 
     useEffect(() => {
         loadAnalytics();
+        loadTransactions();
     }, []);
 
     const loadAnalytics = async () => {
@@ -27,6 +32,18 @@ export default function UserDashboard() {
             toast.error('Erreur lors du chargement des statistiques');
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const loadTransactions = async () => {
+        try {
+            setTxLoading(true);
+            const data = await getVendorTransactions();
+            setTransactions(data);
+        } catch (error: any) {
+            console.error('Error loading transactions:', error);
+        } finally {
+            setTxLoading(false);
         }
     };
 
@@ -46,6 +63,14 @@ export default function UserDashboard() {
             return `${total} personnes (${adults} adultes, ${children} enfants)`;
         }
         return `${adults} personnes (adultes)`;
+    };
+
+    const txStatusConfig: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline'; icon: React.ReactNode }> = {
+        completed: { label: 'Payé',     variant: 'default',     icon: <CheckCircle2 className="w-3 h-3" /> },
+        pending:   { label: 'En attente', variant: 'secondary', icon: <Clock className="w-3 h-3" /> },
+        failed:    { label: 'Échoué',   variant: 'destructive', icon: <XCircle className="w-3 h-3" /> },
+        expired:   { label: 'Expiré',   variant: 'outline',     icon: <AlertCircle className="w-3 h-3" /> },
+        refunded:  { label: 'Remboursé', variant: 'secondary',  icon: <RefreshCw className="w-3 h-3" /> },
     };
 
     // For now, we're only showing current month data from the API
@@ -96,7 +121,7 @@ export default function UserDashboard() {
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-xs sm:text-sm font-medium">{periodData.reservations.title}</CardTitle>
-                        <Calendar className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                        <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
                     </CardHeader>
                     <CardContent>
                         <div className="text-xl sm:text-2xl font-bold">
@@ -113,7 +138,7 @@ export default function UserDashboard() {
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-xs sm:text-sm font-medium">{periodData.visiteurs.title}</CardTitle>
-                        <Users className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                        <Users className="h-4 w-4 text-muted-foreground shrink-0" />
                     </CardHeader>
                     <CardContent>
                         <div className="text-xl sm:text-2xl font-bold">
@@ -130,7 +155,7 @@ export default function UserDashboard() {
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-xs sm:text-sm font-medium">Taux de conversion</CardTitle>
-                        <Wine className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                        <Wine className="h-4 w-4 text-muted-foreground shrink-0" />
                     </CardHeader>
                     <CardContent>
                         <div className="text-xl sm:text-2xl font-bold">
@@ -147,7 +172,7 @@ export default function UserDashboard() {
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-xs sm:text-sm font-medium">{periodData.chiffre.title}</CardTitle>
-                        <CreditCard className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                        <CreditCard className="h-4 w-4 text-muted-foreground shrink-0" />
                     </CardHeader>
                     <CardContent>
                         <div className="text-xl sm:text-2xl font-bold">
@@ -194,6 +219,62 @@ export default function UserDashboard() {
                             <div className="text-center py-8 text-muted-foreground">
                                 <Calendar className="h-12 w-12 mx-auto mb-2 opacity-50" />
                                 <p className="text-sm">Aucune réservation à venir</p>
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+
+                {/* Stripe Transactions */}
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="text-lg lg:text-xl flex items-center gap-2">
+                            <CreditCard className="h-5 w-5" />
+                            Transactions Stripe
+                        </CardTitle>
+                        <CardDescription className="text-sm">Paiements en ligne reçus</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        {txLoading ? (
+                            <div className="flex items-center justify-center py-8">
+                                <Loader2 className="h-6 w-6 animate-spin" />
+                            </div>
+                        ) : transactions.length > 0 ? (
+                            <div className="space-y-3">
+                                {transactions.map((tx) => {
+                                    const cfg = txStatusConfig[tx.status] ?? txStatusConfig.pending;
+                                    return (
+                                        <div key={tx._id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 bg-gray-50 rounded-lg gap-2">
+                                            <div className="flex-1 min-w-0">
+                                                {/* Cardholder name or email */}
+                                                <p className="font-medium text-sm truncate">
+                                                    {tx.cardholderName || tx.customerEmail || '—'}
+                                                </p>
+                                                {/* Service + card last 4 */}
+                                                <p className="text-xs text-muted-foreground mt-0.5">
+                                                    {tx.serviceName || 'Réservation'}
+                                                    {tx.cardLast4 && (
+                                                        <span className="ml-2 font-mono tracking-wider">•••• {tx.cardLast4}</span>
+                                                    )}
+                                                </p>
+                                                <p className="text-xs text-muted-foreground">{formatDate(tx.createdAt)}</p>
+                                            </div>
+                                            <div className="flex items-center gap-2 shrink-0">
+                                                <span className="text-sm font-semibold">
+                                                    {(tx.amount / 100).toFixed(2)} €
+                                                </span>
+                                                <Badge variant={cfg.variant} className="flex items-center gap-1 text-xs">
+                                                    {cfg.icon}
+                                                    {cfg.label}
+                                                </Badge>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        ) : (
+                            <div className="text-center py-8 text-muted-foreground">
+                                <CreditCard className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                                <p className="text-sm">Aucune transaction Stripe</p>
                             </div>
                         )}
                     </CardContent>

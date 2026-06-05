@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "react-hot-toast";
+import Script from "next/script";
+import { PostHogProvider } from "@/providers/PostHogProvider";
+import ChunkErrorRecovery from "@/components/ChunkErrorRecovery";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -14,8 +17,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Rose des Vins - La technologie au service de l’œnotourisme",
-  description: "La technologie au service de l’œnotourisme",
+  title: "Rose des Vins - La technologie au service des domaines viticoles",
+  description: "La technologie au service des domaines viticoles",
   icons: {
     icon: '/assets/logo.png',
   }
@@ -27,12 +30,47 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning={true}>
+      <head>
+        {/* Fix: Google Translate splits text nodes causing React removeChild errors */}
+        <script dangerouslySetInnerHTML={{ __html: `
+          (function() {
+            var orig = Node.prototype.removeChild;
+            Node.prototype.removeChild = function(child) {
+              if (child.parentNode !== this) { return child; }
+              return orig.apply(this, arguments);
+            };
+            var origInsert = Node.prototype.insertBefore;
+            Node.prototype.insertBefore = function(newNode, refNode) {
+              if (refNode && refNode.parentNode !== this) { return newNode; }
+              return origInsert.apply(this, arguments);
+            };
+          })();
+        ` }} />
+        {/* Google Tag Manager */}
+        <Script id="google-tag-manager" strategy="afterInteractive">
+          {`(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','GTM-5FK4PCW5');`}
+        </Script>
+        {/* End Google Tag Manager */}
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         suppressHydrationWarning={true}
       >
-        {children}
+        {/* Google Tag Manager (noscript) */}
+        <noscript>
+          <iframe src="https://www.googletagmanager.com/ns.html?id=GTM-5FK4PCW5"
+            height="0" width="0" style={{display:'none',visibility:'hidden'}}></iframe>
+        </noscript>
+        {/* End Google Tag Manager (noscript) */}
+        <ChunkErrorRecovery />
+        <PostHogProvider>
+          {children}
+        </PostHogProvider>
         <Toaster 
           position="bottom-right"
           toastOptions={{

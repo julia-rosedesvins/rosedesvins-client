@@ -1,12 +1,12 @@
 'use client';
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { DatePicker } from "@/components/DatePicker";
 import { ChevronLeft, ChevronRight, Plus, Minus, Clock, Euro, Wine, Users, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { WidgetProvider, useWidget } from "@/contexts/WidgetContext";
 import { eventsService, PublicScheduleData } from "@/services/events.service";
 import { getHolidays } from "@/services/availability.service";
@@ -14,6 +14,8 @@ import { getHolidays } from "@/services/availability.service";
 function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
     const { widgetData, loading, error, colorCode } = useWidget();
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const withLayout = searchParams.get('withLayout') === 'true';
     
     // State declarations - must come before any useEffect hooks
     const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -36,6 +38,8 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
       if (lang === 'anglais' || lang === 'english') return 'Anglais';
       if (lang === 'español' || lang === 'spanish') return 'Espagnol';
       if (lang === 'deutsch' || lang === 'german') return 'Allemand';
+      if (lang === 'italien' || lang === 'italian') return 'Italien';
+      if (lang === 'russe' || lang === 'russian') return 'Russe';
       return language; // Return original if no match
     };
     
@@ -48,6 +52,49 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
     useEffect(() => {
       console.log('Current selectedLanguage:', selectedLanguage, 'Auto-selected:', languageAutoSelected.current);
     }, [selectedLanguage]);
+
+    // Derive the required language for the selected slot (always fresh – no stale closure)
+    const slotRequiredLanguage = useMemo(() => {
+      if (!selectedDate || !selectedTime || !widgetData?.availability?.multipleBookingsSameSlot || !bookedSlots.length) return null;
+      const dateString = `${selectedDate.getFullYear()}-${(selectedDate.getMonth() + 1).toString().padStart(2, '0')}-${selectedDate.getDate().toString().padStart(2, '0')}`;
+      const serviceDuration = widgetData?.service?.timeOfServiceInMinutes || 60;
+      const [slotHours, slotMinutes] = selectedTime.split(':').map(Number);
+      const slotStartMinutes = slotHours * 60 + slotMinutes;
+      const slotEndMinutes = slotStartMinutes + serviceDuration;
+      const overlapping = bookedSlots.filter(slot => {
+        const sd = new Date(slot.eventDate);
+        const sds = `${sd.getFullYear()}-${(sd.getMonth() + 1).toString().padStart(2, '0')}-${sd.getDate().toString().padStart(2, '0')}`;
+        if (sds !== dateString) return false;
+        if (slot.eventType === 'external' || slot.eventType === 'personal' || slot.eventType === 'blocked') return false;
+        if (slot.serviceId && slot.serviceId !== serviceId) return false;
+        const [eH, eM] = slot.eventTime.split(':').map(Number);
+        const eventStart = eH * 60 + eM;
+        let eventEnd = eventStart + serviceDuration;
+        if (slot.eventEndTime) {
+          const [endH, endM] = slot.eventEndTime.split(':').map(Number);
+          eventEnd = endH * 60 + endM;
+        }
+        return slotStartMinutes < eventEnd && slotEndMinutes > eventStart;
+      });
+      const bookingWithLanguage = overlapping.find(b => b.selectedLanguage && b.selectedLanguage.trim() !== '');
+      return bookingWithLanguage?.selectedLanguage ?? null;
+    }, [selectedDate, selectedTime, bookedSlots, widgetData, serviceId]);
+
+    // Auto-select/reset language whenever the slot constraint changes
+    useEffect(() => {
+      if (slotRequiredLanguage) {
+        // Lock to the required language
+        setSelectedLanguage(slotRequiredLanguage);
+      } else {
+        // Constraint lifted — reset to the first offered language (or keep blank if none loaded yet)
+        const firstLang = widgetData?.service?.languagesOffered?.find(
+          (l: string) => l && l.trim().toLowerCase() !== 'autre'
+        );
+        if (firstLang) {
+          setSelectedLanguage(firstLang);
+        }
+      }
+    }, [slotRequiredLanguage]);
 
   // Get maximum number of participants from service configuration
   const getMaxParticipants = (): number => {
@@ -165,15 +212,21 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
         if (hasDifferentService) {
           errors.push(`Ce créneau horaire n'est pas disponible car une autre expérience est déjà réservée. Veuillez choisir un autre horaire.`);
         } else {
-          // Calculate total existing participants (only for same service)
-          const totalExistingParticipants = overlappingBookings.reduce((sum, booking) => {
-            return sum + (booking.totalParticipants || 0);
-          }, 0);
-          
-          const totalWithNewBooking = totalExistingParticipants + totalParticipants;
-          
-          if (totalWithNewBooking > maxParticipants) {
-            errors.push(`Ce créneau horaire a atteint sa capacité maximale. Participants actuels: ${totalExistingParticipants}/${maxParticipants}. Veuillez choisir un autre horaire.`);
+          // 🔒 LANGUAGE CONSTRAINT: all bookings for the same slot must share the same language
+          const bookingWithLanguage = overlappingBookings.find(b => b.selectedLanguage && b.selectedLanguage.trim() !== '');
+          if (bookingWithLanguage && selectedLanguage && selectedLanguage !== bookingWithLanguage.selectedLanguage) {
+            errors.push(`Ce créneau est déjà réservé en ${getLanguageInFrench(bookingWithLanguage.selectedLanguage!)}. Veuillez sélectionner cette langue ou choisir un autre horaire.`);
+          } else {
+            // Calculate total existing participants (only for same service)
+            const totalExistingParticipants = overlappingBookings.reduce((sum, booking) => {
+              return sum + (booking.totalParticipants || 0);
+            }, 0);
+            
+            const totalWithNewBooking = totalExistingParticipants + totalParticipants;
+            
+            if (totalWithNewBooking > maxParticipants) {
+              errors.push(`Ce créneau horaire a atteint sa capacité maximale. Participants actuels: ${totalExistingParticipants}/${maxParticipants}. Veuillez choisir un autre horaire.`);
+            }
           }
         }
       }
@@ -189,10 +242,24 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
       
       // Override with service-specific restriction if available
       if (serviceBookingRestriction) {
-        if (serviceBookingRestriction === '24h') {
+        if (serviceBookingRestriction === 'last_minute') {
+          bookingAdvanceLimit = 'last_minute';
+        } else if (serviceBookingRestriction === '1h') {
+          bookingAdvanceLimit = '1_hour';
+        } else if (serviceBookingRestriction === '2h') {
+          bookingAdvanceLimit = '2_hours';
+        } else if (serviceBookingRestriction === '4h') {
+          bookingAdvanceLimit = '4_hours';
+        } else if (serviceBookingRestriction === '24h') {
           bookingAdvanceLimit = '24_hours';
         } else if (serviceBookingRestriction === '48h') {
           bookingAdvanceLimit = '48_hours';
+        } else if (serviceBookingRestriction === '72h') {
+          bookingAdvanceLimit = '72_hours';
+        } else if (serviceBookingRestriction === '7d') {
+          bookingAdvanceLimit = '7_days';
+        } else if (serviceBookingRestriction === '10d') {
+          bookingAdvanceLimit = '10_days';
         }
       }
       
@@ -231,6 +298,10 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
               minimumAdvanceHours = 2;
               limitLabel = '2 heures';
               break;
+            case '4_hours':
+              minimumAdvanceHours = 4;
+              limitLabel = '4 heures';
+              break;
             case '24_hours':
               minimumAdvanceHours = 24;
               limitLabel = '24 heures';
@@ -238,6 +309,18 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
             case '48_hours':
               minimumAdvanceHours = 48;
               limitLabel = '48 heures';
+              break;
+            case '72_hours':
+              minimumAdvanceHours = 72;
+              limitLabel = '72 heures';
+              break;
+            case '7_days':
+              minimumAdvanceHours = 168;
+              limitLabel = 'une semaine';
+              break;
+            case '10_days':
+              minimumAdvanceHours = 240;
+              limitLabel = '10 jours';
               break;
             case 'day_before':
               minimumAdvanceHours = 24;
@@ -309,6 +392,10 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
         widgetId: id,
       });
       
+      if (withLayout) {
+        query.append('withLayout', 'true');
+      }
+      
       router.push(`/if/booking-widget/${id}/${serviceId}/booking-confirmation?${query.toString()}`);
     } catch (error) {
       // Reset loading state if something goes wrong
@@ -320,8 +407,11 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
   useEffect(() => {
     if (!loading && widgetData && !languageAutoSelected.current && selectedLanguage === "") {
       if (widgetData?.service?.languagesOffered && widgetData.service.languagesOffered.length > 0) {
-        console.log('Auto-selecting language:', widgetData.service.languagesOffered[0]);
-        setSelectedLanguage(widgetData.service.languagesOffered[0]);
+        const firstLang = widgetData.service.languagesOffered.find(
+          (l: string) => l && l.trim().toLowerCase() !== 'autre'
+        );
+        console.log('Auto-selecting language:', firstLang);
+        if (firstLang) setSelectedLanguage(firstLang);
         languageAutoSelected.current = true;
       } else {
         // Fallback to default if no languages are provided
@@ -435,10 +525,24 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
       
       // Override with service-specific restriction if available
       if (serviceBookingRestriction) {
-        if (serviceBookingRestriction === '24h') {
+        if (serviceBookingRestriction === 'last_minute') {
+          bookingAdvanceLimit = 'last_minute';
+        } else if (serviceBookingRestriction === '1h') {
+          bookingAdvanceLimit = '1_hour';
+        } else if (serviceBookingRestriction === '2h') {
+          bookingAdvanceLimit = '2_hours';
+        } else if (serviceBookingRestriction === '4h') {
+          bookingAdvanceLimit = '4_hours';
+        } else if (serviceBookingRestriction === '24h') {
           bookingAdvanceLimit = '24_hours';
         } else if (serviceBookingRestriction === '48h') {
           bookingAdvanceLimit = '48_hours';
+        } else if (serviceBookingRestriction === '72h') {
+          bookingAdvanceLimit = '72_hours';
+        } else if (serviceBookingRestriction === '7d') {
+          bookingAdvanceLimit = '7_days';
+        } else if (serviceBookingRestriction === '10d') {
+          bookingAdvanceLimit = '10_days';
         }
       }
       
@@ -457,11 +561,23 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
         case '2_hours':
           minimumAdvanceHours = 2;
           break;
+        case '4_hours':
+          minimumAdvanceHours = 4;
+          break;
         case '24_hours':
           minimumAdvanceHours = 24;
           break;
         case '48_hours':
           minimumAdvanceHours = 48;
+          break;
+        case '72_hours':
+          minimumAdvanceHours = 72;
+          break;
+        case '7_days':
+          minimumAdvanceHours = 168;
+          break;
+        case '10_days':
+          minimumAdvanceHours = 240;
           break;
         case 'day_before':
           minimumAdvanceHours = 24;
@@ -584,6 +700,42 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
   const isTimeSlotBlockedByOverride = (date: Date, time: string): boolean => {
     // This function is deprecated - we now use exclusive override mode
     return false;
+  };
+
+  /**
+   * Returns the language that is already booked for a given slot, or null if none.
+   * When multipleBookingsSameSlot is enabled and at least one booking exists for
+   * the slot, all subsequent bookings must use the same language.
+   */
+  const getSlotRequiredLanguage = (date: Date, time: string): string | null => {
+    if (!bookedSlots.length) return null;
+    if (!widgetData?.availability?.multipleBookingsSameSlot) return null;
+
+    const dateString = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
+    const serviceDuration = widgetData?.service?.timeOfServiceInMinutes || 60;
+    const [slotHours, slotMinutes] = time.split(':').map(Number);
+    const slotStartMinutes = slotHours * 60 + slotMinutes;
+    const slotEndMinutes = slotStartMinutes + serviceDuration;
+
+    const overlapping = bookedSlots.filter(slot => {
+      const slotDate = new Date(slot.eventDate);
+      const slotDateString = `${slotDate.getFullYear()}-${(slotDate.getMonth() + 1).toString().padStart(2, '0')}-${slotDate.getDate().toString().padStart(2, '0')}`;
+      if (slotDateString !== dateString) return false;
+      if (slot.eventType === 'external' || slot.eventType === 'personal' || slot.eventType === 'blocked') return false;
+      if (slot.serviceId && slot.serviceId !== serviceId) return false;
+      const [eH, eM] = slot.eventTime.split(':').map(Number);
+      const eventStart = eH * 60 + eM;
+      let eventEnd = eventStart + serviceDuration;
+      if (slot.eventEndTime) {
+        const [endH, endM] = slot.eventEndTime.split(':').map(Number);
+        eventEnd = endH * 60 + endM;
+      }
+      return slotStartMinutes < eventEnd && slotEndMinutes > eventStart;
+    });
+
+    // Find the first booking that has a language assigned
+    const bookingWithLanguage = overlapping.find(b => b.selectedLanguage && b.selectedLanguage.trim() !== '');
+    return bookingWithLanguage?.selectedLanguage ?? null;
   };
 
   // Check if a time slot is already booked by another user
@@ -712,28 +864,19 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
     return slotCompletelyFull;
   };
 
-  // Check if a date is a public holiday
-  const isHoliday = (date: Date): boolean => {
-    if (!widgetData?.availability?.publicHolidays) return false;
-    
-    // Get the list of enabled holiday names from the widget data
-    const enabledHolidayNames = widgetData.availability.publicHolidays.map((h: any) => h.name);
-    
-    // Calculate holidays for the year of the checked date
-    const year = date.getFullYear();
-    const holidaysForYear = getHolidays(year);
-    
-    const dateString = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
-    
-    // Check if the date matches any holiday that is enabled (by name)
-    return holidaysForYear.some(holiday => {
-      // Check if this holiday is enabled (its name is in the list)
-      if (!enabledHolidayNames.includes(holiday.name)) return false;
-      
-      // Check if the date matches
-      return holiday.date === dateString;
-    });
-  };
+  // DISABLED: public holidays feature — uncomment when re-enabled
+  // const isHoliday = (date: Date): boolean => {
+  //   if (!widgetData?.availability?.publicHolidays) return false;
+  //   const enabledHolidayNames = widgetData.availability.publicHolidays.map((h: any) => h.name);
+  //   const year = date.getFullYear();
+  //   const holidaysForYear = getHolidays(year);
+  //   const dateString = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
+  //   return holidaysForYear.some(holiday => {
+  //     if (!enabledHolidayNames.includes(holiday.name)) return false;
+  //     return holiday.date === dateString;
+  //   });
+  // };
+  const isHoliday = (_date: Date): boolean => false; // DISABLED: always returns false until feature re-enabled
 
   // Get available time slots for the selected date
   const getAvailableTimeSlots = (date: Date | null) => {
@@ -953,7 +1096,7 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
       <div className="container mx-auto px-3 md:px-4 py-4 md:py-8 max-w-2xl">
         {/* Header */}
         <div className="flex items-center mb-4 md:mb-6 lg:mb-8">
-          <Link href={`/if/booking-widget/${id}/${serviceId}/reservation`} className="flex items-center text-muted-foreground hover:opacity-75" style={{ color: colorCode }}>
+          <Link href={`/if/booking-widget/${id}/${serviceId}/reservation${withLayout ? '?withLayout=true' : ''}`} className="flex items-center text-muted-foreground hover:opacity-75" style={{ color: colorCode }}>
             <ChevronLeft className="w-5 h-5 mr-1" />
             <span className="text-sm md:text-base">Retour</span>
           </Link>
@@ -1157,7 +1300,7 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
             </div>
             <div className="flex items-center gap-2 justify-center">
               <Wine className="w-4 h-4 md:w-5 md:h-5 flex-shrink-0" style={{ color: colorCode }} />
-              <span className="text-xs md:text-base">{widgetData?.service?.numberOfWinesTasted ?? 5} vins</span>
+              <span className="text-xs md:text-base">{widgetData?.service?.numberOfWinesTasted ?? 5} {(widgetData?.service?.numberOfWinesTasted ?? 5) === 1 ? 'vin' : 'vins'}</span>
             </div>
             <div className="flex items-center gap-2 justify-center">
               <Users className="w-4 h-4 md:w-5 md:h-5 flex-shrink-0" style={{ color: colorCode }} />
@@ -1238,52 +1381,35 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
         {/* Langues */}
         <div className="mb-8 md:mb-12">
           <h2 className="text-xl md:text-2xl font-semibold mb-4 md:mb-6 text-center" style={{ color: colorCode }}>Langues</h2>
+          {/* When a slot already has bookings, inform the user that only one language is available */}
+          {slotRequiredLanguage && (
+            <p className="text-center text-sm md:text-base text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-4 py-2 mb-4 max-w-md mx-auto">
+              Ce créneau est déjà réservé en <strong>{getLanguageInFrench(slotRequiredLanguage)}</strong>. Vous ne pouvez réserver ce créneau qu'en <strong>{getLanguageInFrench(slotRequiredLanguage)}</strong>.
+            </p>
+          )}
           <div className="flex flex-wrap justify-center gap-3 md:gap-4 px-2">
-            {widgetData?.service?.languagesOffered?.map((language, index) => (
-              <Button
-                key={index}
-                variant={selectedLanguage === language ? "default" : "outline"}
-                onClick={() => setSelectedLanguage(language)}
-                className={cn(
-                  "px-4 md:px-8 py-2 md:py-3 text-sm md:text-base",
-                  selectedLanguage === language 
-                    ? "text-white hover:opacity-90" 
-                    : "hover:bg-gray-100"
-                )}
-                style={selectedLanguage === language ? { backgroundColor: colorCode } : {}}
-              >
-                {getLanguageInFrench(language)}
-              </Button>
-            )) || (
-              <>
+            {(widgetData?.service?.languagesOffered ?? ['Français', 'English']).filter((lang) => lang && lang.trim().toLowerCase() !== 'autre').map((language, index) => {
+              const isDisabled = slotRequiredLanguage !== null && language !== slotRequiredLanguage;
+              return (
                 <Button
-                  variant={selectedLanguage === "Français" ? "default" : "outline"}
-                  onClick={() => setSelectedLanguage("Français")}
+                  key={index}
+                  variant={selectedLanguage === language ? "default" : "outline"}
+                  onClick={() => { if (!isDisabled) setSelectedLanguage(language); }}
+                  disabled={isDisabled}
                   className={cn(
                     "px-4 md:px-8 py-2 md:py-3 text-sm md:text-base",
-                    selectedLanguage === "Français" 
-                      ? "text-white hover:opacity-90" 
-                      : "hover:bg-gray-100"
+                    selectedLanguage === language
+                      ? "text-white hover:opacity-90"
+                      : isDisabled
+                        ? "opacity-40 cursor-not-allowed"
+                        : "hover:bg-gray-100"
                   )}
-                  style={selectedLanguage === "Français" ? { backgroundColor: colorCode } : {}}
+                  style={selectedLanguage === language ? { backgroundColor: colorCode } : {}}
                 >
-                  Français
+                  {getLanguageInFrench(language)}
                 </Button>
-                <Button
-                  variant={selectedLanguage === "English" ? "default" : "outline"}
-                  onClick={() => setSelectedLanguage("English")}
-                  className={cn(
-                    "px-4 md:px-8 py-2 md:py-3 text-sm md:text-base",
-                    selectedLanguage === "English" 
-                      ? "text-white hover:opacity-90" 
-                      : "hover:bg-gray-100"
-                  )}
-                  style={selectedLanguage === "English" ? { backgroundColor: colorCode } : {}}
-                >
-                  English
-                </Button>
-              </>
-            )}
+              );
+            })}
           </div>
         </div>
 

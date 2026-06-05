@@ -91,8 +91,8 @@ export default function LegalNoticesPage() {
             </div>
             <div className="p-8">
               <div className="bg-gray-50 rounded-lg p-4">
-                <p className="text-gray-700 mb-2">Le site rosedesvins.co est hébergé par : <span className="font-semibold">SiteGround</span></p>
-                <p><span className="font-medium">Adresse :</span> Calle de Prim 19, 28004 Madrid, Espagne</p>
+                <p className="text-gray-700 mb-2">Le site rosedesvins.co est hébergé par : <span className="font-semibold">Amazon Web Services (AWS)</span></p>
+                <p><span className="font-medium">Adresse :</span> 38 Avenue John F. Kennedy, L-1855 Luxembourg</p>
               </div>
             </div>
           </div>

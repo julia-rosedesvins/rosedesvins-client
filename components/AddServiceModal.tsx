@@ -4,8 +4,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useState } from "react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useState, useEffect } from "react";
 import { X, Wine, Users, Clock, Euro, Upload, Image as ImageIcon } from "lucide-react";
+import { adminExperienceCategoriesService, ExperienceCategory } from "@/services/admin-experience-categories.service";
 
 interface AddServiceModalProps {
   isOpen: boolean;
@@ -14,6 +16,9 @@ interface AddServiceModalProps {
 }
 
 export const AddServiceModal = ({ isOpen, onClose, onSave }: AddServiceModalProps) => {
+  const [categories, setCategories] = useState<ExperienceCategory[]>([]);
+  const [loadingCategories, setLoadingCategories] = useState(false);
+  
   const [formData, setFormData] = useState({
     nom: "",
     description: "",
@@ -21,6 +26,7 @@ export const AddServiceModal = ({ isOpen, onClose, onSave }: AddServiceModalProp
     prix: "",
     temps: "",
     vinsDesgustes: "",
+    category: "",
     langues: {
       francais: true,
       anglais: false,
@@ -35,6 +41,24 @@ export const AddServiceModal = ({ isOpen, onClose, onSave }: AddServiceModalProp
   const [bannerPreview, setBannerPreview] = useState<string | null>(null);
 
   const [errors, setErrors] = useState<{[key: string]: string}>({});
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchCategories();
+    }
+  }, [isOpen]);
+
+  const fetchCategories = async () => {
+    try {
+      setLoadingCategories(true);
+      const activeCategories = await adminExperienceCategoriesService.getActiveCategories();
+      setCategories(activeCategories);
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+    } finally {
+      setLoadingCategories(false);
+    }
+  };
 
   const handleBannerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -88,9 +112,9 @@ export const AddServiceModal = ({ isOpen, onClose, onSave }: AddServiceModalProp
     const newErrors: {[key: string]: string} = {};
     
     if (!formData.nom.trim()) {
-      newErrors.nom = "Le nom de la prestation est requis";
+      newErrors.nom = "Le nom de l'expérience est requis";
     } else if (formData.nom.trim().length < 5) {
-      newErrors.nom = "Le nom de la prestation doit contenir au moins 5 caractères";
+      newErrors.nom = "Le nom de l'expérience doit contenir au moins 5 caractères";
     }
     
     if (!formData.description.trim()) {
@@ -132,7 +156,7 @@ export const AddServiceModal = ({ isOpen, onClose, onSave }: AddServiceModalProp
 
     // Transform form data to match the expected format
     const selectedLanguages = Object.entries(formData.langues)
-      .filter(([_, selected]) => selected)
+      .filter(([key, selected]) => selected && key !== 'autre')
       .map(([langue, _]) => langue === 'francais' ? 'French' : 
                            langue === 'anglais' ? 'English' :
                            langue === 'allemand' ? 'German' :
@@ -150,6 +174,7 @@ export const AddServiceModal = ({ isOpen, onClose, onSave }: AddServiceModalProp
       timeOfServiceInMinutes: parseInt(formData.temps) || 30,
       numberOfWinesTasted: parseInt(formData.vinsDesgustes) || 0,
       languagesOffered: selectedLanguages,
+      category: formData.category || undefined,
       isActive: true
     };
     
@@ -166,6 +191,7 @@ export const AddServiceModal = ({ isOpen, onClose, onSave }: AddServiceModalProp
       prix: "",
       temps: "",
       vinsDesgustes: "",
+      category: "",
       langues: {
         francais: true,
         anglais: false,
@@ -190,7 +216,7 @@ export const AddServiceModal = ({ isOpen, onClose, onSave }: AddServiceModalProp
           <div className="flex items-center justify-center gap-2 sm:gap-3">
             <Wine className="h-5 w-5 sm:h-6 sm:w-6 shrink-0" />
             <DialogTitle className="text-lg sm:text-xl font-semibold text-center">
-              Ajouter une prestation œnotouristique
+              Ajouter une expérience
             </DialogTitle>
           </div>
         </DialogHeader>
@@ -202,7 +228,7 @@ export const AddServiceModal = ({ isOpen, onClose, onSave }: AddServiceModalProp
             <div className="space-y-2 w-full">
               <Label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
                 <Wine size={14} className="sm:w-4 sm:h-4 shrink-0" />
-                Nom de la prestation *
+                Nom de l'expérience *
               </Label>
               <Input
                 value={formData.nom}
@@ -224,6 +250,32 @@ export const AddServiceModal = ({ isOpen, onClose, onSave }: AddServiceModalProp
                 className={`w-full text-sm sm:text-base border-2 focus:border-[#3A7B59] rounded-lg resize-none ${errors.description ? 'border-red-300 focus:border-red-500' : ''}`}
               />
               {errors.description && <p className="text-red-500 text-xs sm:text-sm">{errors.description}</p>}
+            </div>
+
+            {/* Category */}
+            <div className="space-y-2 w-full">
+              <Label className="text-sm font-semibold text-gray-700">Catégorie</Label>
+              <Select
+                value={formData.category}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}
+              >
+                <SelectTrigger className="w-full text-sm sm:text-base border-2 focus:border-[#3A7B59] rounded-lg h-11">
+                  <SelectValue placeholder="Sélectionner une catégorie" />
+                </SelectTrigger>
+                <SelectContent>
+                  {loadingCategories ? (
+                    <SelectItem value="loading" disabled>Chargement...</SelectItem>
+                  ) : categories.length === 0 ? (
+                    <SelectItem value="empty" disabled>Aucune catégorie disponible</SelectItem>
+                  ) : (
+                    categories.map((cat) => (
+                      <SelectItem key={cat._id} value={cat._id}>
+                        {cat.category_name}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Service Banner Upload */}

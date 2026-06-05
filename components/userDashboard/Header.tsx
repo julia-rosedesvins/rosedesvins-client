@@ -61,7 +61,7 @@ export const Header = () => {
                 <Link href="/">
                   <h1 className="text-lg sm:text-xl font-semibold cursor-pointer hover:opacity-80">Rose des Vins</h1>
                 </Link>
-                <p className="text-xs sm:text-sm opacity-90">La technologie au service de l'œnotourisme</p>
+                <p className="text-xs sm:text-sm opacity-90">La technologie au service des domaines viticoles</p>
               </div>
             </div>
             <div className="hidden lg:flex items-center space-x-4">
@@ -92,7 +92,7 @@ export const Header = () => {
               <Link href="/">
                 <h1 className="text-lg sm:text-xl font-semibold cursor-pointer hover:opacity-80">Rose des Vins</h1>
               </Link>
-              <p className="text-xs sm:text-sm opacity-90">La technologie au service de l'œnotourisme</p>
+              <p className="text-xs sm:text-sm opacity-90">La technologie au service des domaines viticoles</p>
             </div>
             <div className="sm:hidden">
               <Link href="/">

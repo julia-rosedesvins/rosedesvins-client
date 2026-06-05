@@ -12,6 +12,8 @@ export interface ContactDetails {
   codePostal: string | null;
   city: string | null;
   siteWeb: string | null;
+  domainLatitude: number | null;
+  domainLongitude: number | null;
 }
 
 export interface ContactDetailsResponse {
@@ -29,6 +31,8 @@ export interface UpdateContactDetailsRequest {
   codePostal?: string;
   city?: string;
   siteWeb?: string;
+  domainLatitude?: number | null;
+  domainLongitude?: number | null;
 }
 
 export interface ApiError {

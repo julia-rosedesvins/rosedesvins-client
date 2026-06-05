@@ -38,15 +38,15 @@ export const AvailabilitySection = () => {
     afternoonTo: string;
   }}>({});
   
-  const [selectedHolidays, setSelectedHolidays] = useState<string[]>([]);
+  // const [selectedHolidays, setSelectedHolidays] = useState<string[]>([]); // DISABLED: public holidays feature
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
   const [initialDataLoaded, setInitialDataLoaded] = useState(false);
   const [originalData, setOriginalData] = useState<{
     schedules: typeof schedules;
-    holidays: string[];
-  }>({ schedules: {}, holidays: [] });
+    // holidays: string[]; // DISABLED: public holidays feature
+  }>({ schedules: {} /*, holidays: []*/ });
 
   // Load availability data on component mount
   useEffect(() => {
@@ -60,13 +60,13 @@ export const AvailabilitySection = () => {
     // Deep compare schedules
     const schedulesChanged = JSON.stringify(schedules) !== JSON.stringify(originalData.schedules);
     
-    // Compare holidays - create copies before sorting to avoid mutation
-    const holidaysChanged = JSON.stringify([...selectedHolidays].sort()) !== JSON.stringify([...originalData.holidays].sort());
+    // DISABLED: public holidays feature
+    // const holidaysChanged = JSON.stringify([...selectedHolidays].sort()) !== JSON.stringify([...originalData.holidays].sort());
     
-    const hasDataChanges = schedulesChanged || holidaysChanged;
+    const hasDataChanges = schedulesChanged; // || holidaysChanged;
 
     setHasChanges(hasDataChanges);
-  }, [schedules, selectedHolidays, initialDataLoaded, originalData]);
+  }, [schedules, /*selectedHolidays,*/ initialDataLoaded, originalData]);
 
   const loadAvailabilityData = async () => {
     setIsLoading(true);
@@ -110,39 +110,29 @@ export const AvailabilitySection = () => {
 
         setSchedules(convertedSchedules);
         
-        // Convert public holidays to selected holidays with validation
-        const holidayIds = apiData.publicHolidays
-          .filter(holiday => holiday.isBlocked !== false && holiday.date)
-          .map(holiday => {
-            try {
-              // Safely extract date string
-              const dateStr = typeof holiday.date === 'string' 
-                ? holiday.date.split('T')[0] 
-                : new Date(holiday.date).toISOString().split('T')[0];
-              
-              // Map holiday dates to IDs
-              // Try to find by date first (exact match for current year)
-              let foundHoliday = holidays.find(h => h.date === dateStr);
-              
-              // If not found by date (might be a different year), try to find by name
-              if (!foundHoliday) {
-                foundHoliday = holidays.find(h => h.name === holiday.name);
-              }
-              
-              return foundHoliday?.id;
-            } catch (error) {
-              console.warn('Invalid holiday date format:', holiday);
-              return null;
-            }
-          })
-          .filter(Boolean) as string[];
-          
-        setSelectedHolidays(holidayIds);
+        // DISABLED: public holidays feature
+        // const holidayIds = apiData.publicHolidays
+        //   .filter(holiday => holiday.isBlocked !== false && holiday.date)
+        //   .map(holiday => {
+        //     try {
+        //       const dateStr = typeof holiday.date === 'string'
+        //         ? holiday.date.split('T')[0]
+        //         : new Date(holiday.date).toISOString().split('T')[0];
+        //       let foundHoliday = holidays.find(h => h.date === dateStr);
+        //       if (!foundHoliday) foundHoliday = holidays.find(h => h.name === holiday.name);
+        //       return foundHoliday?.id;
+        //     } catch (error) {
+        //       console.warn('Invalid holiday date format:', holiday);
+        //       return null;
+        //     }
+        //   })
+        //   .filter(Boolean) as string[];
+        // setSelectedHolidays(holidayIds);
         
         // Store original data for change detection
         setOriginalData({
           schedules: convertedSchedules,
-          holidays: holidayIds
+          // holidays: holidayIds
         });
         
         setHasChanges(false);
@@ -155,7 +145,7 @@ export const AvailabilitySection = () => {
         // Store empty original data
         setOriginalData({
           schedules: {},
-          holidays: []
+          // holidays: []
         });
         
         setHasChanges(false);
@@ -201,20 +191,20 @@ export const AvailabilitySection = () => {
         };
       });
 
-      // Convert selected holidays to public holidays format
-      const publicHolidays = selectedHolidays.map(holidayId => {
-        const holiday = holidays.find(h => h.id === holidayId);
-        return {
-          name: holiday!.name,
-          date: `${holiday!.date}T00:00:00.000Z`,
-          isBlocked: true,
-          isRecurring: true
-        };
-      });
+      // DISABLED: public holidays feature — always save empty array
+      // const publicHolidays = selectedHolidays.map(holidayId => {
+      //   const holiday = holidays.find(h => h.id === holidayId);
+      //   return {
+      //     name: holiday!.name,
+      //     date: `${holiday!.date}T00:00:00.000Z`,
+      //     isBlocked: true,
+      //     isRecurring: true
+      //   };
+      // });
 
       const availabilityData: AvailabilityData = {
         weeklyAvailability,
-        publicHolidays,
+        publicHolidays: [],
         specialDateOverrides: [],
         timezone: "Europe/Paris",
         defaultSlotDuration: 30,
@@ -229,7 +219,7 @@ export const AvailabilitySection = () => {
       // Update original data to reflect the saved state
       setOriginalData({
         schedules: { ...schedules },
-        holidays: [...selectedHolidays]
+        // holidays: [...selectedHolidays] // DISABLED: public holidays feature
       });
       
       setHasChanges(false);
@@ -288,37 +278,30 @@ export const AvailabilitySection = () => {
     });
   };
 
-  const handleHolidayToggle = (holidayId: string) => {
-    setSelectedHolidays(prev => 
-      prev.includes(holidayId) 
-        ? prev.filter(id => id !== holidayId)
-        : [...prev, holidayId]
-    );
-  };
+  // DISABLED: public holidays feature
+  // const handleHolidayToggle = (holidayId: string) => {
+  //   setSelectedHolidays(prev =>
+  //     prev.includes(holidayId)
+  //       ? prev.filter(id => id !== holidayId)
+  //       : [...prev, holidayId]
+  //   );
+  // };
 
   return (
     <Card className="mb-6 lg:mb-8 relative shadow-sm border-0 bg-white ring-1 ring-gray-200 hover:ring-gray-300 transition-all duration-200">
       <CardHeader className="pb-4">
         <CardTitle className="text-xl lg:text-2xl font-semibold text-gray-900">Disponibilités</CardTitle>
         <p className="text-gray-600 text-sm lg:text-base leading-relaxed mt-1">
-          Définissez vos créneaux de disponibilité pour recevoir des réservations.
+          Définissez vos créneaux ouverts aux réservations.
         </p>
       </CardHeader>
       <CardContent className="pt-2">
         <div className="space-y-6 lg:space-y-8">
           {/* Desktop header - hidden on mobile */}
-          <div className="hidden lg:grid lg:grid-cols-5 gap-4 mb-6 text-center">
+          <div className="hidden lg:grid lg:grid-cols-3 gap-4 mb-6 text-center">
             <div></div>
-            <div className="col-span-2 font-semibold text-gray-700 text-sm">Matin</div>
-            <div className="col-span-2 font-semibold text-gray-700 text-sm">Après-midi</div>
-          </div>
-          
-          <div className="hidden lg:grid lg:grid-cols-5 gap-2 mb-6 text-center text-xs text-gray-500">
-            <div></div>
-            <div className="font-medium">de</div>
-            <div className="font-medium">à</div>
-            <div className="font-medium">de</div>
-            <div className="font-medium">à</div>
+            <div className="font-semibold text-gray-700 text-sm text-center">Matin</div>
+            <div className="font-semibold text-gray-700 text-sm text-center">Après-midi</div>
           </div>
           
           {weekDays.map((day, index) => (
@@ -343,78 +326,70 @@ export const AvailabilitySection = () => {
                 {schedules[day.id]?.enabled ? (
                   <div className="pl-6 space-y-4">
                     <div>
-                      <div className="text-sm font-semibold mb-3 text-gray-700">Matin</div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <label className="text-xs font-medium text-gray-600 mb-2 block">de</label>
-                          <Select
-                            value={schedules[day.id]?.morningFrom || ""}
-                            onValueChange={(value) => handleTimeChange(day.id, 'morningFrom', value)}
-                          >
-                            <SelectTrigger className="h-11 text-sm border-gray-300 focus:border-[#3A7B59] focus:ring-[#3A7B59] hover:border-gray-400 transition-colors">
-                              <SelectValue placeholder="08:00" />
-                            </SelectTrigger>
-                            <SelectContent className="bg-white z-50">
-                              {timeOptions.slice(0, 11).map((time) => (
-                                <SelectItem key={time} value={time}>{time}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div>
-                          <label className="text-xs font-medium text-gray-600 mb-2 block">à</label>
-                          <Select
-                            value={schedules[day.id]?.morningTo || ""}
-                            onValueChange={(value) => handleTimeChange(day.id, 'morningTo', value)}
-                          >
-                            <SelectTrigger className="h-11 text-sm border-gray-300 focus:border-[#3A7B59] focus:ring-[#3A7B59] hover:border-gray-400 transition-colors">
-                              <SelectValue placeholder="13:00" />
-                            </SelectTrigger>
-                            <SelectContent className="bg-white z-50">
-                              {timeOptions.slice(0, 11).map((time) => (
-                                <SelectItem key={time} value={time}>{time}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
+                      <div className="text-sm font-semibold mb-3 text-gray-700 text-center">Matin</div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-medium text-gray-500 shrink-0">de</span>
+                        <Select
+                          value={schedules[day.id]?.morningFrom || ""}
+                          onValueChange={(value) => handleTimeChange(day.id, 'morningFrom', value)}
+                        >
+                          <SelectTrigger className="h-11 text-sm border-gray-300 focus:border-[#3A7B59] focus:ring-[#3A7B59] hover:border-gray-400 transition-colors">
+                            <SelectValue placeholder="08:00" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-white z-50">
+                            {timeOptions.slice(0, 11).map((time) => (
+                              <SelectItem key={time} value={time}>{time}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <span className="text-xs font-medium text-gray-500 shrink-0">à</span>
+                        <Select
+                          value={schedules[day.id]?.morningTo || ""}
+                          onValueChange={(value) => handleTimeChange(day.id, 'morningTo', value)}
+                        >
+                          <SelectTrigger className="h-11 text-sm border-gray-300 focus:border-[#3A7B59] focus:ring-[#3A7B59] hover:border-gray-400 transition-colors">
+                            <SelectValue placeholder="13:00" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-white z-50">
+                            {timeOptions.slice(0, 11).map((time) => (
+                              <SelectItem key={time} value={time}>{time}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                     </div>
                     
                     <div>
-                      <div className="text-sm font-semibold mb-3 text-gray-700">Après-midi</div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <label className="text-xs font-medium text-gray-600 mb-2 block">de</label>
-                          <Select
-                            value={schedules[day.id]?.afternoonFrom || ""}
-                            onValueChange={(value) => handleTimeChange(day.id, 'afternoonFrom', value)}
-                          >
-                            <SelectTrigger className="h-11 text-sm border-gray-300 focus:border-[#3A7B59] focus:ring-[#3A7B59] hover:border-gray-400 transition-colors">
-                              <SelectValue placeholder="14:00" />
-                            </SelectTrigger>
-                            <SelectContent className="bg-white z-50">
-                              {timeOptions.slice(10).map((time) => (
-                                <SelectItem key={time} value={time}>{time}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div>
-                          <label className="text-xs font-medium text-gray-600 mb-2 block">à</label>
-                          <Select
-                            value={schedules[day.id]?.afternoonTo || ""}
-                            onValueChange={(value) => handleTimeChange(day.id, 'afternoonTo', value)}
-                          >
-                            <SelectTrigger className="h-11 text-sm border-gray-300 focus:border-[#3A7B59] focus:ring-[#3A7B59] hover:border-gray-400 transition-colors">
-                              <SelectValue placeholder="20:00" />
-                            </SelectTrigger>
-                            <SelectContent className="bg-white z-50">
-                              {timeOptions.slice(10).map((time) => (
-                                <SelectItem key={time} value={time}>{time}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
+                      <div className="text-sm font-semibold mb-3 text-gray-700 text-center">Après-midi</div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-medium text-gray-500 shrink-0">de</span>
+                        <Select
+                          value={schedules[day.id]?.afternoonFrom || ""}
+                          onValueChange={(value) => handleTimeChange(day.id, 'afternoonFrom', value)}
+                        >
+                          <SelectTrigger className="h-11 text-sm border-gray-300 focus:border-[#3A7B59] focus:ring-[#3A7B59] hover:border-gray-400 transition-colors">
+                            <SelectValue placeholder="14:00" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-white z-50">
+                            {timeOptions.slice(10).map((time) => (
+                              <SelectItem key={time} value={time}>{time}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <span className="text-xs font-medium text-gray-500 shrink-0">à</span>
+                        <Select
+                          value={schedules[day.id]?.afternoonTo || ""}
+                          onValueChange={(value) => handleTimeChange(day.id, 'afternoonTo', value)}
+                        >
+                          <SelectTrigger className="h-11 text-sm border-gray-300 focus:border-[#3A7B59] focus:ring-[#3A7B59] hover:border-gray-400 transition-colors">
+                            <SelectValue placeholder="20:00" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-white z-50">
+                            {timeOptions.slice(10).map((time) => (
+                              <SelectItem key={time} value={time}>{time}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                     </div>
                   </div>
@@ -424,7 +399,7 @@ export const AvailabilitySection = () => {
               </div>
 
               {/* Desktop layout */}
-              <div className="hidden lg:grid lg:grid-cols-5 gap-2 items-center py-3">
+              <div className="hidden lg:grid lg:grid-cols-3 gap-2 items-center py-3">
                 <div className="flex items-center space-x-2">
                   <Checkbox 
                     id={`${day.id}-desktop`}
@@ -442,73 +417,81 @@ export const AvailabilitySection = () => {
                 
                 {schedules[day.id]?.enabled ? (
                   <>
-                    <Select
-                      value={schedules[day.id]?.morningFrom || ""}
-                      onValueChange={(value) => handleTimeChange(day.id, 'morningFrom', value)}
-                      disabled={!schedules[day.id]?.enabled}
-                    >
-                      <SelectTrigger className="h-9 text-xs border-gray-300 focus:border-[#3A7B59] focus:ring-[#3A7B59] hover:border-gray-400 transition-colors">
-                        <SelectValue placeholder="08:00" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-white z-50">
-                        {timeOptions.slice(0, 11).map((time) => (
-                          <SelectItem key={time} value={time}>{time}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    
-                    <Select
-                      value={schedules[day.id]?.morningTo || ""}
-                      onValueChange={(value) => handleTimeChange(day.id, 'morningTo', value)}
-                      disabled={!schedules[day.id]?.enabled}
-                    >
-                      <SelectTrigger className="h-9 text-xs border-gray-300 focus:border-[#3A7B59] focus:ring-[#3A7B59] hover:border-gray-400 transition-colors">
-                        <SelectValue placeholder="13:00" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-white z-50">
-                        {timeOptions.slice(0, 11).map((time) => (
-                          <SelectItem key={time} value={time}>{time}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    
-                    <Select
-                      value={schedules[day.id]?.afternoonFrom || ""}
-                      onValueChange={(value) => handleTimeChange(day.id, 'afternoonFrom', value)}
-                      disabled={!schedules[day.id]?.enabled}
-                    >
-                      <SelectTrigger className="h-9 text-xs border-gray-300 focus:border-[#3A7B59] focus:ring-[#3A7B59] hover:border-gray-400 transition-colors">
-                        <SelectValue placeholder="14:00" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-white z-50">
-                        {timeOptions.slice(10).map((time) => (
-                          <SelectItem key={time} value={time}>{time}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    
-                    <Select
-                      value={schedules[day.id]?.afternoonTo || ""}
-                      onValueChange={(value) => handleTimeChange(day.id, 'afternoonTo', value)}
-                      disabled={!schedules[day.id]?.enabled}
-                    >
-                      <SelectTrigger className="h-9 text-xs border-gray-300 focus:border-[#3A7B59] focus:ring-[#3A7B59] hover:border-gray-400 transition-colors">
-                        <SelectValue placeholder="20:00" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-white z-50">
-                        {timeOptions.slice(10).map((time) => (
-                          <SelectItem key={time} value={time}>{time}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    {/* Morning: de [select] à [select] */}
+                    <div className="flex items-center gap-2 justify-center">
+                      <span className="text-xs font-medium text-gray-500 shrink-0">de</span>
+                      <Select
+                        value={schedules[day.id]?.morningFrom || ""}
+                        onValueChange={(value) => handleTimeChange(day.id, 'morningFrom', value)}
+                        disabled={!schedules[day.id]?.enabled}
+                      >
+                        <SelectTrigger className="h-9 text-xs border-gray-300 focus:border-[#3A7B59] focus:ring-[#3A7B59] hover:border-gray-400 transition-colors">
+                          <SelectValue placeholder="08:00" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-white z-50">
+                          {timeOptions.slice(0, 11).map((time) => (
+                            <SelectItem key={time} value={time}>{time}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <span className="text-xs font-medium text-gray-500 shrink-0">à</span>
+                      <Select
+                        value={schedules[day.id]?.morningTo || ""}
+                        onValueChange={(value) => handleTimeChange(day.id, 'morningTo', value)}
+                        disabled={!schedules[day.id]?.enabled}
+                      >
+                        <SelectTrigger className="h-9 text-xs border-gray-300 focus:border-[#3A7B59] focus:ring-[#3A7B59] hover:border-gray-400 transition-colors">
+                          <SelectValue placeholder="13:00" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-white z-50">
+                          {timeOptions.slice(0, 11).map((time) => (
+                            <SelectItem key={time} value={time}>{time}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {/* Afternoon: de [select] à [select] */}
+                    <div className="flex items-center gap-2 justify-center">
+                      <span className="text-xs font-medium text-gray-500 shrink-0">de</span>
+                      <Select
+                        value={schedules[day.id]?.afternoonFrom || ""}
+                        onValueChange={(value) => handleTimeChange(day.id, 'afternoonFrom', value)}
+                        disabled={!schedules[day.id]?.enabled}
+                      >
+                        <SelectTrigger className="h-9 text-xs border-gray-300 focus:border-[#3A7B59] focus:ring-[#3A7B59] hover:border-gray-400 transition-colors">
+                          <SelectValue placeholder="14:00" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-white z-50">
+                          {timeOptions.slice(10).map((time) => (
+                            <SelectItem key={time} value={time}>{time}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <span className="text-xs font-medium text-gray-500 shrink-0">à</span>
+                      <Select
+                        value={schedules[day.id]?.afternoonTo || ""}
+                        onValueChange={(value) => handleTimeChange(day.id, 'afternoonTo', value)}
+                        disabled={!schedules[day.id]?.enabled}
+                      >
+                        <SelectTrigger className="h-9 text-xs border-gray-300 focus:border-[#3A7B59] focus:ring-[#3A7B59] hover:border-gray-400 transition-colors">
+                          <SelectValue placeholder="20:00" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-white z-50">
+                          {timeOptions.slice(10).map((time) => (
+                            <SelectItem key={time} value={time}>{time}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </>
                 ) : (
-                  <div className="col-span-4 text-left text-xs text-gray-500 font-medium">Fermé</div>
+                  <div className="col-span-2 text-left text-xs text-gray-500 font-medium">Fermé</div>
                 )}
               </div>
             </div>
           ))}
           
+          {/* DISABLED: public holidays feature — uncomment to re-enable
           <div className="mt-8 lg:mt-10 p-6 bg-gray-50 rounded-lg border border-gray-200">
             <div className="text-base lg:text-lg font-semibold mb-4 text-gray-800">Jours fériés</div>
             <Popover>
@@ -561,6 +544,7 @@ export const AvailabilitySection = () => {
               </PopoverContent>
             </Popover>
           </div>
+          */}
           
           {/* Save Button */}
           <div className="mt-8 flex justify-end">
