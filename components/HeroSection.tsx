@@ -35,7 +35,7 @@ const HeroSection = () => {
         }
 
         debounceTimer.current = setTimeout(async () => {
-            const key = searchQuery.trim().toLowerCase()
+            const key = searchQuery.trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
 
             // Serve from cache if fresh
             const cached = cacheRef.current.get(key)
