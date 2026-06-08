@@ -35,7 +35,7 @@ const HeroSection = () => {
         }
 
         debounceTimer.current = setTimeout(async () => {
-            const key = searchQuery.trim().toLowerCase()
+            const key = searchQuery.trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
 
             // Serve from cache if fresh
             const cached = cacheRef.current.get(key)
@@ -191,7 +191,17 @@ const HeroSection = () => {
             }
 
             if (result.data.suggestedRoute) {
-                router.push(result.data.suggestedRoute)
+                let route = result.data.suggestedRoute
+                // Strip any ?q=... query string from /region/ routes (safety net)
+                if (route.startsWith('/region/')) {
+                    route = route.split('?')[0]
+                }
+                // Convert legacy /regions?q=NAME → /region/NAME
+                if (route.startsWith('/regions?q=')) {
+                    const regionName = decodeURIComponent(route.replace('/regions?q=', ''))
+                    route = `/region/${encodeURIComponent(regionName)}`
+                }
+                router.push(route)
             } else {
                 router.push(`/no-results?q=${encodeURIComponent(searchQuery)}`)
             }
