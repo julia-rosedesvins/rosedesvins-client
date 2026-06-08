@@ -44,9 +44,9 @@ export const EditBookingModal = ({ bookingData, isOpen, onClose, onSuccess }: Ed
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Initialize form data when modal opens
+  // Initialize form data when bookingData changes (also covers modal re-open for a different booking)
   useEffect(() => {
-    if (bookingData && isOpen) {
+    if (bookingData) {
       setFormData({
         serviceId: bookingData.serviceId,
         bookingDate: bookingData.bookingDate,
@@ -61,13 +61,17 @@ export const EditBookingModal = ({ bookingData, isOpen, onClose, onSuccess }: Ed
         additionalNotes: bookingData.additionalNotes || '',
         bookingStatus: bookingData.bookingStatus as 'pending' | 'confirmed' | 'completed' | 'cancelled',
       });
-      
+
       // Set initial date
       if (bookingData.bookingDate) {
         setSelectedDate(new Date(bookingData.bookingDate));
       }
+    } else {
+      // Reset form when modal is closed / no booking selected
+      setFormData({});
+      setSelectedDate(undefined);
     }
-  }, [bookingData, isOpen]);
+  }, [bookingData]);
 
   const handleInputChange = (field: keyof UpdateBookingRequest, value: any) => {
     setFormData(prev => ({

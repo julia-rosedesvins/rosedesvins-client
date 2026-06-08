@@ -572,6 +572,7 @@ export const ReservationsList = () => {
       />
       
       <EditBookingModal
+        key={editingBookingData?._id ?? 'edit-booking-modal'}
         bookingData={editingBookingData}
         isOpen={isEditModalOpen}
         onClose={() => {
