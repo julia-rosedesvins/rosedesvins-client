@@ -34,6 +34,9 @@ interface Reservation {
   backgroundColor?: string;
   bookingId?: string;
   additionalNotes?: string;
+  // Unique identifiers used for exact lookup (avoids same-time collision)
+  eventId?: string;
+  bookingDocId?: string;
 }
 
 export const ReservationsList = () => {
@@ -109,11 +112,13 @@ export const ReservationsList = () => {
       people: totalPeople,
       activity: event.eventName,
       language: event.bookingId ? getLanguageDisplay(event.bookingId?.selectedLanguage) : '',
-      comments: event.bookingId ? (event.bookingId.additionalNotes || '') : (event.eventDescription || ''),
+      comments: event.bookingId
+        ? `${event.bookingId.userContactFirstname || ''} ${event.bookingId.userContactLastname || ''}`.trim()
+        : (event.eventDescription || ''),
       serviceName: event.serviceInfo?.name || null,
       date: event.eventDate,
-      customerName: event.bookingId ? 
-        `${event.bookingId.userContactFirstname} ${event.bookingId.userContactLastname}` : 
+      customerName: event.bookingId ?
+        `${event.bookingId.userContactFirstname} ${event.bookingId.userContactLastname}` :
         'Événement',
       customerPhone: event.bookingId?.phoneNo || 'Non disponible',
       customerEmail: event.bookingId?.customerEmail || 'Non disponible',
@@ -121,7 +126,10 @@ export const ReservationsList = () => {
       eventStatus: event.eventStatus,
       additionalNotes: event.bookingId?.additionalNotes || undefined,
       participantsAdults: event.bookingId?.participantsAdults,
-      participantsChildren: event.bookingId?.participantsEnfants
+      participantsChildren: event.bookingId?.participantsEnfants,
+      // Store exact IDs for unambiguous lookup
+      eventId: event._id,
+      bookingDocId: event.bookingId?._id,
     };
   };
 
@@ -164,14 +172,16 @@ export const ReservationsList = () => {
 
   const handleReservationClick = (reservation: any) => {
     setSelectedReservation(reservation);
-    
-    // Find the corresponding event data
-    const eventData = events.find(event => {
-      const eventDate = new Date(event.eventDate).toDateString();
-      const reservationDate = currentDate.toDateString();
-      return eventDate === reservationDate && event.eventTime === reservation.time;
-    });
-    
+
+    // Use exact eventId if available, fall back to date+time
+    const eventData = reservation.eventId
+      ? events.find(event => event._id === reservation.eventId)
+      : events.find(event => {
+          const eventDate = new Date(event.eventDate).toDateString();
+          const reservationDate = currentDate.toDateString();
+          return eventDate === reservationDate && event.eventTime === reservation.time;
+        });
+
     setSelectedEventData(eventData || null);
     setIsModalOpen(true);
   };
@@ -183,14 +193,16 @@ export const ReservationsList = () => {
   };
 
   const handleEditReservation = (reservation: Reservation) => {
-    // Find the corresponding event with booking data
-    const eventData = events.find(event => {
-      const eventDate = new Date(event.eventDate).toDateString();
-      const reservationDate = currentDate.toDateString();
-      return eventDate === reservationDate && 
-             event.eventTime === reservation.time &&
-             event.bookingId;
-    });
+    // Use exact eventId for unambiguous lookup (avoids same-time collision)
+    const eventData = reservation.eventId
+      ? events.find(event => event._id === reservation.eventId)
+      : events.find(event => {
+          const eventDate = new Date(event.eventDate).toDateString();
+          const reservationDate = currentDate.toDateString();
+          return eventDate === reservationDate &&
+                 event.eventTime === reservation.time &&
+                 event.bookingId;
+        });
 
     if (eventData?.bookingId) {
       setEditingBookingData(eventData.bookingId);
@@ -225,15 +237,17 @@ export const ReservationsList = () => {
 
   // Helper function to check if a reservation can be edited/deleted
   const getBookingData = (reservation: any) => {
-    const eventData = events.find(event => {
-      const eventDate = new Date(event.eventDate).toDateString();
-      const reservationDate = currentDate.toDateString();
-      return eventDate === reservationDate && 
-             event.eventTime === reservation.time &&
-             event.eventType === 'booking' &&
-             event.bookingId;
-    });
-    return eventData;
+    // Use exact eventId for unambiguous lookup (avoids same-time collision)
+    return reservation.eventId
+      ? events.find(event => event._id === reservation.eventId && event.bookingId)
+      : events.find(event => {
+          const eventDate = new Date(event.eventDate).toDateString();
+          const reservationDate = currentDate.toDateString();
+          return eventDate === reservationDate &&
+                 event.eventTime === reservation.time &&
+                 event.eventType === 'booking' &&
+                 event.bookingId;
+        });
   };
 
   // Quick edit handler

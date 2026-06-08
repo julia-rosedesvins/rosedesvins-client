@@ -39,6 +39,36 @@ interface EditBookingModalProps {
   onSuccess?: () => void;
 }
 
+// Map any stored language variant to the canonical dropdown value
+const LANGUAGE_CANONICAL: Record<string, string> = {
+  // French
+  french: 'French', français: 'French', francais: 'French', fr: 'French',
+  // English
+  english: 'English', anglais: 'English', en: 'English',
+  // German
+  german: 'German', deutsch: 'German', allemand: 'German', de: 'German',
+  // Spanish
+  spanish: 'Spanish', español: 'Spanish', espagnol: 'Spanish', es: 'Spanish',
+  // Italian
+  italian: 'Italian', italien: 'Italian', italiano: 'Italian', it: 'Italian',
+  // Russian
+  russian: 'Russian', russe: 'Russian', ru: 'Russian',
+};
+
+const LANGUAGE_LABELS: Record<string, string> = {
+  French: 'Français',
+  English: 'English',
+  German: 'Allemand',
+  Spanish: 'Espagnol',
+  Italian: 'Italien',
+  Russian: 'Russe',
+};
+
+const normalizeLanguage = (lang: string | undefined): string => {
+  if (!lang) return '';
+  return LANGUAGE_CANONICAL[lang.toLowerCase().trim()] ?? lang;
+};
+
 export const EditBookingModal = ({ bookingData, isOpen, onClose, onSuccess }: EditBookingModalProps) => {
   const [formData, setFormData] = useState<UpdateBookingRequest>({});
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
@@ -53,7 +83,7 @@ export const EditBookingModal = ({ bookingData, isOpen, onClose, onSuccess }: Ed
         bookingTime: bookingData.bookingTime,
         participantsAdults: bookingData.participantsAdults,
         participantsEnfants: bookingData.participantsEnfants,
-        selectedLanguage: bookingData.selectedLanguage,
+        selectedLanguage: normalizeLanguage(bookingData.selectedLanguage),
         userContactFirstname: bookingData.userContactFirstname,
         userContactLastname: bookingData.userContactLastname,
         phoneNo: bookingData.phoneNo,
@@ -231,10 +261,17 @@ export const EditBookingModal = ({ bookingData, isOpen, onClose, onSuccess }: Ed
                 <SelectValue placeholder="Sélectionner une langue" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="French">Français</SelectItem>
-                <SelectItem value="English">English</SelectItem>
-                <SelectItem value="German">Allemand</SelectItem>
-                <SelectItem value="Spanish">Espagnol</SelectItem>
+                {/* Standard languages */}
+                {Object.entries(LANGUAGE_LABELS).map(([value, label]) => (
+                  <SelectItem key={value} value={value}>{label}</SelectItem>
+                ))}
+                {/* Fallback: show the raw stored value if it doesn't match any known canonical */}
+                {formData.selectedLanguage &&
+                  !LANGUAGE_LABELS[formData.selectedLanguage] && (
+                  <SelectItem value={formData.selectedLanguage}>
+                    {formData.selectedLanguage}
+                  </SelectItem>
+                )}
               </SelectContent>
             </Select>
           </div>
