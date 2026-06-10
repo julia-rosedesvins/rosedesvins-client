@@ -172,8 +172,8 @@ const ExperienceDomain = ({ params }: { params: Promise<{ name: string; domain: 
                         {domainProfile.domainName}
                     </h1>
                     <p className="text-lg text-gray-600">
-                        {decodeURIComponent(unwrappedParams.name)}
-                        {location?.city && ` > ${location.city}`}
+                        {/* {decodeURIComponent(unwrappedParams.name)} */}
+                        {location?.city && `${location.city}`}
                     </p>
                 </div>
 
