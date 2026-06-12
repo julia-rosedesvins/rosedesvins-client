@@ -172,8 +172,8 @@ const ExperienceDomain = ({ params }: { params: Promise<{ name: string; domain: 
                         {domainProfile.domainName}
                     </h1>
                     <p className="text-lg text-gray-600">
-                        {decodeURIComponent(unwrappedParams.name)}
-                        {location?.city && ` > ${location.city}`}
+                        {/* {decodeURIComponent(unwrappedParams.name)} */}
+                        {location?.city && `${location.city}`}
                     </p>
                 </div>
 
@@ -360,7 +360,7 @@ const ExperienceDomain = ({ params }: { params: Promise<{ name: string; domain: 
                                             </p>
 
                                             <Button 
-                                                onClick={() => router.push(`/reservation/${domainProfile.userId}/${service._id}`)}
+                                                onClick={() => router.push(`/if/booking-widget/${domainProfile.userId}/${service._id}/booking?withLayout=true`)}
                                                 className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
                                             >
                                                 Réserver

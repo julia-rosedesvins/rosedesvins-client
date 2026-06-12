@@ -90,7 +90,10 @@ export interface UnifiedSearchResult {
         domainName: string | null;
         domainDescription: string;
         colorCode: string;
+        region?: string | null;
+        city?: string | null;
       };
+      experienceRoute?: string;
     }>;
     domains?: Array<{
       domainId: string;
@@ -107,6 +110,7 @@ export interface UnifiedSearchResult {
         city: string | null;
         region: string | null;
       };
+      experienceRoute?: string;
     }>;
     regions?: Array<{
       denom: string;
@@ -118,10 +122,12 @@ export interface UnifiedSearchResult {
       isParent: boolean;
     }>;
     staticExperiences?: Array<{
+      domainId?: string;
       name: string;
       category: string | null;
       address: string | null;
       city: string | null;
+      region?: string | null;
       latitude: number | null;
       longitude: number | null;
       rating: number | null;
@@ -129,6 +135,7 @@ export interface UnifiedSearchResult {
       mainImage: string | null;
       about: string | null;
       type: 'static-experience';
+      experienceRoute?: string;
     }>;
     suggestedRoute?: string;
   };
