@@ -95,10 +95,10 @@ const HeroSection = () => {
                 // Add domains
                 if (backendResult.data.domains && backendResult.data.domains.length > 0) {
                     backendResult.data.domains.slice(0, 2).forEach(domain => {
-                        const regionName = domain.location?.region || domain.domainName || 'domaine'
-                        const route = domain.domainId
+                        const regionName = domain.location?.region || domain.location?.city || domain.domainName || 'domaine'
+                        const route = (domain as any).experienceRoute || (domain.domainId
                             ? `/experience/${encodeURIComponent(regionName)}/${domain.domainId}`
-                            : '/regions'
+                            : '/regions')
                         allSuggestions.push({
                             type: 'domain',
                             name: domain.domainName,
@@ -113,9 +113,10 @@ const HeroSection = () => {
                 // Add services
                 if (backendResult.data.services && backendResult.data.services.length > 0) {
                     backendResult.data.services.slice(0, 2).forEach(service => {
-                        const route = service.domain?.domainId 
-                            ? `/experience/${service.domain.domainId}`
-                            : '/experiences'
+                        const regionName = service.domain?.region || service.domain?.city || service.domain?.domainName || 'domaine'
+                        const route = (service as any).experienceRoute || (service.domain?.domainId
+                            ? `/experience/${encodeURIComponent(regionName)}/${service.domain.domainId}`
+                            : '/experiences')
                         allSuggestions.push({
                             type: 'service',
                             name: service.serviceName,
@@ -129,7 +130,10 @@ const HeroSection = () => {
                 // Add static experiences
                 if (backendResult.data.staticExperiences && backendResult.data.staticExperiences.length > 0) {
                     backendResult.data.staticExperiences.slice(0, 1).forEach(exp => {
-                        const route = exp.website || '#'
+                        const regionName = exp.region || exp.city || 'domaine'
+                        const route = (exp as any).experienceRoute || ((exp as any).domainId
+                            ? `/experience/${encodeURIComponent(regionName)}/${(exp as any).domainId}`
+                            : (exp.website || '#'))
                         allSuggestions.push({
                             type: 'experience',
                             name: exp.name,
@@ -217,8 +221,8 @@ const HeroSection = () => {
         setSearchQuery(suggestion.name)
         setShowSuggestions(false)
 
-        // For domain suggestions, navigate directly to the experience page
-        if (suggestion.type === 'domain' && suggestion.route) {
+        // Navigate directly when the suggestion already has an experience route
+        if (suggestion.route && ['domain', 'service', 'experience'].includes(suggestion.type)) {
             setIsSearching(true)
             await new Promise(resolve => setTimeout(resolve, 400))
             router.push(suggestion.route)
