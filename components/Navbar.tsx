@@ -416,7 +416,7 @@ export default function Navbar() {
             <img
               src="/assets/logo.png"
               alt="Rose des Vins Logo"
-              className="h-10 w-10 rounded-full cursor-pointer"
+              className="h-10 w-10 rounded-full object-cover cursor-pointer"
             />
           </Link>
           <div className="sm:block">
