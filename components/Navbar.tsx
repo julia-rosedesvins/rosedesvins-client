@@ -74,7 +74,7 @@ export default function Navbar() {
     }
 
     debounceTimer.current = setTimeout(async () => {
-      const key = searchQuery.trim().toLowerCase()
+      const key = `v2:${searchQuery.trim().toLowerCase()}`
 
       // Serve from cache if fresh
       const cached = cacheRef.current.get(key)
@@ -99,14 +99,28 @@ export default function Navbar() {
 
         if (signal.aborted) return
         
+        const normalizeLocationName = (value: string) =>
+          value
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[\u200B-\u200D\uFEFF]/g, '')
+            .replace(/['\u2019\u2018]/g, ' ')
+            .toLowerCase()
+            .replace(/\b(le|la|les|des|de|du|au|aux|en|et|un|une)\b/g, ' ')
+            .replace(/[^a-z0-9]+/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim()
+
         const allSuggestions: any[] = []
-        const seenCities = new Set<string>()
+        const seenLocationNames = new Set<string>()
         
         // Process cities from our backend
         if (citiesResult.success && citiesResult.data && citiesResult.data.length > 0) {
           citiesResult.data.slice(0, 3).forEach((city: any) => {
-            if (!seenCities.has(city.nom_standard.toLowerCase())) {
-              seenCities.add(city.nom_standard.toLowerCase())
+            const cityKey = normalizeLocationName(city.nom_standard || '')
+            if (!cityKey || seenLocationNames.has(cityKey)) return
+
+            seenLocationNames.add(cityKey)
               allSuggestions.push({
                 type: 'city',
                 name: city.nom_standard,
@@ -114,13 +128,16 @@ export default function Navbar() {
                 icon: MapPin,
                 route: `/region/${encodeURIComponent(city.nom_standard)}`
               })
-            }
           })
         }
         
         // Add regions
         if (backendResult.data.regions && backendResult.data.regions.length > 0) {
           backendResult.data.regions.slice(0, 2).forEach(region => {
+            const regionKey = normalizeLocationName(region.denom || '')
+            if (!regionKey || seenLocationNames.has(regionKey)) return
+
+            seenLocationNames.add(regionKey)
             allSuggestions.push({
               type: 'region',
               name: region.denom,
@@ -182,7 +199,22 @@ export default function Navbar() {
           })
         }
         
-        const finalSuggestions = allSuggestions.slice(0, 8)
+        const seenFinalLocations = new Set<string>()
+        const finalSuggestions = allSuggestions
+          .filter((suggestion: any) => {
+            if (suggestion.type !== 'city' && suggestion.type !== 'region') {
+              return true
+            }
+
+            const normalized = normalizeLocationName(suggestion.name || '')
+            if (!normalized || seenFinalLocations.has(normalized)) {
+              return false
+            }
+
+            seenFinalLocations.add(normalized)
+            return true
+          })
+          .slice(0, 8)
         // Store in cache
         cacheRef.current.set(key, { data: finalSuggestions, ts: Date.now() })
         setSuggestions(finalSuggestions)
