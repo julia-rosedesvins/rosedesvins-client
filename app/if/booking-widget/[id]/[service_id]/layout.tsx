@@ -23,9 +23,5 @@ export default function BookingWidgetLayout({
     );
   }
 
-  return (
-    <div className="m-0 w-full overflow-x-hidden bg-white p-0">
-      {children}
-    </div>
-  );
+  return <>{children}</>;
 }
