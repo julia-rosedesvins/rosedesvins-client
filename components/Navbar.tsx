@@ -443,15 +443,17 @@ export default function Navbar() {
 
       <header className="sticky top-0 z-50 text-white px-4 py-3" style={{ backgroundColor: "#318160" }}>
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Link href="/">
+        <div className="flex items-center gap-3 min-w-0">
+          <Link href="/" className="block shrink-0">
             <img
               src="/assets/logo.png"
               alt="Rose des Vins Logo"
-              className="h-10 w-10 rounded-full object-cover cursor-pointer"
+              width={40}
+              height={40}
+              className="h-10 w-10 shrink-0 rounded-full object-contain cursor-pointer"
             />
           </Link>
-          <div className="sm:block">
+          <div className="min-w-0 sm:block">
             <Link href="/">
               <h1 className="text-white font-serif text-2xl tracking-wider font-medium">
                 ROSE DES VINS
