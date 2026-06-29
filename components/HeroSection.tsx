@@ -253,8 +253,8 @@ const HeroSection = () => {
         setSearchQuery(suggestion.name)
         setShowSuggestions(false)
 
-        // Navigate directly when the suggestion already has an experience route
-        if (suggestion.route && ['domain', 'service', 'experience'].includes(suggestion.type)) {
+        // Navigate directly using the pre-built route (region, city, domain, service, etc.)
+        if (suggestion.route) {
             setIsSearching(true)
             await new Promise(resolve => setTimeout(resolve, 400))
             router.push(suggestion.route)
