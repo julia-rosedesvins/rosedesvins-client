@@ -118,9 +118,8 @@ function ConfirmationSuccessContent({ id, serviceId }: { id: string, serviceId: 
   };
 
   return (
-    <div className="min-h-screen bg-white">
-      <div className="container mx-auto px-4 py-8 max-w-2xl">
-        <div className="rounded-lg p-8">
+    <div className="w-full bg-white">
+      <div className="p-4 md:p-6">
           <h1 className="text-3xl font-bold text-center mb-8" style={{ color: colorCode }}>
             Confirmation de réservation
           </h1>
@@ -192,7 +191,6 @@ function ConfirmationSuccessContent({ id, serviceId }: { id: string, serviceId: 
               </Button>
             </Link>
           </div>
-        </div>
       </div>
     </div>
   );

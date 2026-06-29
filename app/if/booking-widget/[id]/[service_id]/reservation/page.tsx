@@ -42,17 +42,9 @@ function ReservationContent({ id, serviceId }: { id: string, serviceId: string }
     // Don't show error screen - continue with normal flow but calendar will be disabled
 
     return (
-        <div className="min-h-screen bg-white">
-            <div className="container mx-auto px-3 md:px-4 py-4 md:py-8 max-w-4xl">
-                {/* Header */}
-                <div className="text-center mb-4 md:mb-8">
-                    <h1 className="text-2xl md:text-4xl font-bold mb-2" style={{ color: colorCode }}>
-                        Réserver son expérience
-                    </h1>
-                </div>
-
-                {/* Main Content Card */}
-                <Card className="overflow-hidden shadow-lg bg-card">
+        <div className="w-full bg-white">
+            {/* Main Content Card */}
+            <Card className="overflow-hidden shadow-none rounded-none border-0 bg-card">
                     {/* Hero Image */}
                     {widgetData?.domainProfile?.domainProfilePictureUrl && (
                         <div className="relative h-48 md:h-80 overflow-hidden">
@@ -165,7 +157,6 @@ function ReservationContent({ id, serviceId }: { id: string, serviceId: string }
                         </div>
                     </div>
                 </Card>
-            </div>
         </div>
     );
 }

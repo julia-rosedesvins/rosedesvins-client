@@ -440,9 +440,8 @@ function CheckoutContent({ id, serviceId }: { id: string; serviceId: string }) {
   };
 
   return (
-    <div className="min-h-screen bg-white">
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
-        <div className="rounded-lg p-6">
+    <div className="w-full bg-white">
+      <div className="p-4 md:p-6">
           <h1 className="text-2xl font-bold text-center mb-8" style={{ color: colorCode }}>
             Confirmation de votre réservation
           </h1>
@@ -632,7 +631,6 @@ function CheckoutContent({ id, serviceId }: { id: string; serviceId: string }) {
               </Button>
             )}
           </div>
-        </div>
       </div>
     </div>
   );
