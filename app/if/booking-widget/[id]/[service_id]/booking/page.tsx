@@ -1094,8 +1094,8 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
   return (
     <div className="min-h-screen bg-white">
       <div className="container mx-auto px-3 md:px-4 py-4 md:py-8 max-w-2xl">
-        {/* Header */}
-        <div className="flex items-center mb-4 md:mb-6 lg:mb-8">
+      {/* Header */}
+      <div className="flex items-center mb-4 md:mb-6 lg:mb-8">
           <Link href={`/if/booking-widget/${id}/${serviceId}/reservation${withLayout ? '?withLayout=true' : ''}`} className="flex items-center text-muted-foreground hover:opacity-75" style={{ color: colorCode }}>
             <ChevronLeft className="w-5 h-5 mr-1" />
             <span className="text-sm md:text-base">Retour</span>
