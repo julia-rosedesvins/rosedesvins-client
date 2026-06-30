@@ -200,7 +200,7 @@ class RegionService {
         params.append('categories', filters.categories.join(','));
       }
       
-      const response = await apiClient.get<RegionByNameResponse>(`/regions/${name}?${params.toString()}`);
+      const response = await apiClient.get<RegionByNameResponse>(`/regions/${encodeURIComponent(name)}?${params.toString()}`);
       return response.data;
     } catch (error) {
       if (axios.isAxiosError(error) && error.response) {
