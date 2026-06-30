@@ -23,11 +23,29 @@ const RegionMap = dynamic(() => import('@/components/RegionMap'), {
     loading: () => <div className="w-full h-full bg-gray-200 flex items-center justify-center">Chargement de la carte...</div>
 });
 
+function decodeRouteParam(value: string): string {
+    let decoded = value.replace(/\+/g, ' ');
+    for (let i = 0; i < 3; i++) {
+        try {
+            const next = decodeURIComponent(decoded);
+            if (next === decoded) break;
+            decoded = next;
+        } catch {
+            break;
+        }
+    }
+    return decoded;
+}
+
 const LoireValley = ({ params }: { params: Promise<{ name: string }> }) => {
     const router = useRouter();
     const searchParams = useSearchParams();
-    const searchQuery = searchParams.get('q');
     const resolvedParams = use(params);
+    const regionName = decodeRouteParam(resolvedParams.name);
+    const searchQuery = (() => {
+        const raw = searchParams.get('q');
+        return raw ? decodeRouteParam(raw) : null;
+    })();
     const [region, setRegion] = useState<Region | null>(null);
     const [domains, setDomains] = useState<Domain[]>([]); // Paginated domains for list view
     const [allMapDomains, setAllMapDomains] = useState<Domain[]>([]); // All domains for map view
@@ -93,7 +111,7 @@ const LoireValley = ({ params }: { params: Promise<{ name: string }> }) => {
                 
                 // Fetch all domains for map with high limit
                 const mapResponse = await regionService.getRegionByName(
-                    resolvedParams.name, 
+                    regionName, 
                     1, 
                     1000, // High limit to get all domains
                     searchQuery || undefined,
@@ -106,7 +124,7 @@ const LoireValley = ({ params }: { params: Promise<{ name: string }> }) => {
         };
 
         fetchAllMapDomains();
-    }, [resolvedParams.name, searchQuery, selectedDate, priceRange, selectedLanguages, selectedExperiences]);
+    }, [regionName, searchQuery, selectedDate, priceRange, selectedLanguages, selectedExperiences]);
 
     // Fetch paginated domains for list view
     useEffect(() => {
@@ -137,7 +155,7 @@ const LoireValley = ({ params }: { params: Promise<{ name: string }> }) => {
                 }
                 
                 const response = await regionService.getRegionByName(
-                    resolvedParams.name, 
+                    regionName, 
                     currentPage, 
                     limit,
                     searchQuery || undefined,
@@ -155,7 +173,7 @@ const LoireValley = ({ params }: { params: Promise<{ name: string }> }) => {
         };
 
         fetchRegionData();
-    }, [resolvedParams.name, currentPage, searchQuery, selectedDate, priceRange, selectedLanguages, selectedExperiences]);
+    }, [regionName, currentPage, searchQuery, selectedDate, priceRange, selectedLanguages, selectedExperiences]);
 
     const toggleFilter = (filterName: string) => {
         setExpandedFilter(expandedFilter === filterName ? null : filterName);
@@ -328,7 +346,7 @@ const LoireValley = ({ params }: { params: Promise<{ name: string }> }) => {
                         </Link>
                         <span className="mx-2">&gt;</span>
                         <MapPin className="w-4 h-4 mr-2" />
-                        <span>{region?.denom || resolvedParams.name}</span>
+                        <span>{region?.denom || regionName}</span>
                     </div>
                 </div>
 
@@ -343,14 +361,14 @@ const LoireValley = ({ params }: { params: Promise<{ name: string }> }) => {
                     )}
                     
                     <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6">
-                        {region?.denom || resolvedParams.name} : sur la route des vins<br />
+                        {region?.denom || regionName} : sur la route des vins<br />
                         et des châteaux
                     </h1>
                     <p className="text-lg md:text-xl max-w-4xl leading-relaxed">
                         Au cœur d'un patrimoine exceptionnel, découvrez la diversité des terroirs
-                        de {region?.denom || resolvedParams.name} et échangez avec des vignerons passionnés. Entre caves
+                        de {region?.denom || regionName} et échangez avec des vignerons passionnés. Entre caves
                         troglodytiques, châteaux et paysages inscrits à l'UNESCO, vivez des expériences
-                        œnotouristiques inoubliables dans la région de {region?.denom || resolvedParams.name}.
+                        œnotouristiques inoubliables dans la région de {region?.denom || regionName}.
                     </p>
                 </div>
             </section>
@@ -591,7 +609,7 @@ const LoireValley = ({ params }: { params: Promise<{ name: string }> }) => {
                                                     {domain.domainName}
                                                 </h3>
                                                 {domain.domainId && (
-                                                    <Link href={`/experience/${region?.denom}/${domain.domainId}`}>
+                                                    <Link href={`/experience/${encodeURIComponent(region?.denom || regionName)}/${domain.domainId}`}>
                                                         <Button
                                                             size="sm"
                                                             className="bg-primary hover:bg-primary/90 text-white shrink-0"
