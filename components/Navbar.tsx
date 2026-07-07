@@ -126,7 +126,7 @@ export default function Navbar() {
                 name: city.nom_standard,
                 description: 'France',
                 icon: MapPin,
-                route: `/region/${encodeURIComponent(city.nom_standard)}`
+                route: `/region/${encodeURIComponent(city.nom_standard)}${city.latitude_centre != null && city.longitude_centre != null ? `?lat=${city.latitude_centre}&lon=${city.longitude_centre}` : ''}`
               })
           })
         }

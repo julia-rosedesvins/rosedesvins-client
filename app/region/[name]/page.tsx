@@ -46,6 +46,12 @@ const LoireValley = ({ params }: { params: Promise<{ name: string }> }) => {
         const raw = searchParams.get('q');
         return raw ? decodeRouteParam(raw) : null;
     })();
+    const cityLat = (() => { const v = searchParams.get('lat'); return v ? parseFloat(v) : null; })();
+    const cityLon = (() => { const v = searchParams.get('lon'); return v ? parseFloat(v) : null; })();
+    const cityCoords = cityLat !== null && cityLon !== null ? { lat: cityLat, lon: cityLon } : undefined;
+
+    const [effectiveRegionName] = useState<string>(regionName);
+
     const [region, setRegion] = useState<Region | null>(null);
     const [domains, setDomains] = useState<Domain[]>([]); // Paginated domains for list view
     const [allMapDomains, setAllMapDomains] = useState<Domain[]>([]); // All domains for map view
@@ -88,6 +94,7 @@ const LoireValley = ({ params }: { params: Promise<{ name: string }> }) => {
 
     // Fetch all domains for map (with filters)
     useEffect(() => {
+        if (!effectiveRegionName) return; // wait for init resolution
         const fetchAllMapDomains = async () => {
             try {
                 // Build filter params
@@ -111,11 +118,12 @@ const LoireValley = ({ params }: { params: Promise<{ name: string }> }) => {
                 
                 // Fetch all domains for map with high limit
                 const mapResponse = await regionService.getRegionByName(
-                    regionName, 
+                    effectiveRegionName, 
                     1, 
                     1000, // High limit to get all domains
                     searchQuery || undefined,
-                    Object.keys(filters).length > 0 ? filters : undefined
+                    Object.keys(filters).length > 0 ? filters : undefined,
+                    cityCoords
                 );
                 setAllMapDomains(mapResponse.domains);
             } catch (error: any) {
@@ -124,10 +132,11 @@ const LoireValley = ({ params }: { params: Promise<{ name: string }> }) => {
         };
 
         fetchAllMapDomains();
-    }, [regionName, searchQuery, selectedDate, priceRange, selectedLanguages, selectedExperiences]);
+    }, [effectiveRegionName, searchQuery, selectedDate, priceRange, selectedLanguages, selectedExperiences]);
 
     // Fetch paginated domains for list view
     useEffect(() => {
+        if (!effectiveRegionName) return; // wait for init resolution
         const fetchRegionData = async () => {
             try {
                 setIsLoading(true);
@@ -155,12 +164,14 @@ const LoireValley = ({ params }: { params: Promise<{ name: string }> }) => {
                 }
                 
                 const response = await regionService.getRegionByName(
-                    regionName, 
+                    effectiveRegionName, 
                     currentPage, 
                     limit,
                     searchQuery || undefined,
-                    Object.keys(filters).length > 0 ? filters : undefined
+                    Object.keys(filters).length > 0 ? filters : undefined,
+                    cityCoords
                 );
+
                 setRegion(response.region);
                 setDomains(response.domains);
                 setTotalPages(response.totalPages);
@@ -173,7 +184,7 @@ const LoireValley = ({ params }: { params: Promise<{ name: string }> }) => {
         };
 
         fetchRegionData();
-    }, [regionName, currentPage, searchQuery, selectedDate, priceRange, selectedLanguages, selectedExperiences]);
+    }, [effectiveRegionName, currentPage, searchQuery, selectedDate, priceRange, selectedLanguages, selectedExperiences]);
 
     const toggleFilter = (filterName: string) => {
         setExpandedFilter(expandedFilter === filterName ? null : filterName);

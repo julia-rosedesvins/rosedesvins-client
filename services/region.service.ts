@@ -173,7 +173,7 @@ class RegionService {
    * @param filters - Filter parameters
    * @returns Promise with region and domains data
    */
-  async getRegionByName(name: string, page: number = 1, limit: number = 20, searchQuery?: string, filters?: FilterParams): Promise<RegionByNameResponse> {
+  async getRegionByName(name: string, page: number = 1, limit: number = 20, searchQuery?: string, filters?: FilterParams, coords?: { lat: number; lon: number }): Promise<RegionByNameResponse> {
     try {
       const params = new URLSearchParams();
       params.append('page', page.toString());
@@ -199,6 +199,10 @@ class RegionService {
       if (filters?.categories && filters.categories.length > 0) {
         params.append('categories', filters.categories.join(','));
       }
+      if (coords) {
+        params.append('lat', coords.lat.toString());
+        params.append('lon', coords.lon.toString());
+      }
       
       const response = await apiClient.get<RegionByNameResponse>(`/regions/${encodeURIComponent(name)}?${params.toString()}`);
       return response.data;
@@ -219,6 +223,24 @@ class RegionService {
     try {
       const response = await apiClient.get<Region[]>(`/regions/search?q=${encodeURIComponent(query)}`);
       return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response) {
+        throw error.response.data as ApiError;
+      }
+      throw new Error('Network error occurred');
+    }
+  }
+
+  /**
+   * Find the best-matching region for a coordinate point.
+   * Returns the region whose bounding box contains the point, or the closest one.
+   */
+  async getRegionByCoords(lat: number, lon: number): Promise<Region | null> {
+    try {
+      const response = await apiClient.get<{ region: Region | null }>(
+        `/regions/by-coords?lat=${lat}&lon=${lon}`
+      );
+      return response.data.region;
     } catch (error) {
       if (axios.isAxiosError(error) && error.response) {
         throw error.response.data as ApiError;
