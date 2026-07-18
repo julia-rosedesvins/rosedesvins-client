@@ -17,6 +17,8 @@ const Footer = () => {
               <Instagram className="h-5 w-5" />
             </a>
             {/* <Link href="/blog" className="hover:opacity-80 transition-opacity text-center">Blog</Link> */}
+            <Link href="/regions" className="hover:opacity-80 transition-opacity text-center">Régions</Link>
+            <Link href="/experiences" className="hover:opacity-80 transition-opacity text-center">Expériences</Link>
             <Link href="/faqs" className="hover:opacity-80 transition-opacity text-center">FAQ</Link>
             <Link href="/contact" className="hover:opacity-80 transition-opacity text-center">Contact</Link>
             <Link href="/legal-notices" className="hover:opacity-80 transition-opacity text-center sm:whitespace-nowrap">Mentions légales</Link>

@@ -1,26 +1,20 @@
-"use client"
+import { buildPageMetadata } from '@/lib/seo/site';
+import { JsonLdScript, organizationJsonLd, websiteJsonLd } from '@/lib/seo/json-ld';
+import HomePageClient from '@/components/HomePageClient';
 
-import BlogSection from "@/components/BlogSection"
-import ExperiencesSection from "@/components/ExperiencesSection"
-import GiftCardSection from "@/components/GiftCardSection"
-import HeroSection from "@/components/HeroSection"
-import LandingPageLayout from "@/components/LandingPageLayout"
-import NewsletterSection from "@/components/NewsletterSection"
-import RegionSection from "@/components/RegionSection"
-
-
+export const metadata = buildPageMetadata({
+  title: 'Rose des Vins : découverte et réservation de domaines viticoles',
+  description:
+    'Découvrez les vignobles français avec Rose des Vins : visitez caves et domaines viticoles, participez à des dégustations et réservez vos expériences oenotouristiques en ligne. Découvrez caves et domaines viticoles avec Rose des Vins, participez à des dégustations et réservez vos expériences oenotouristiques en quelques clics.',
+  path: '/',
+  absolute: true,
+});
 
 export default function HomePage() {
-
-
   return (
-    <LandingPageLayout>
-      <HeroSection />
-      <RegionSection />
-      <ExperiencesSection />
-      {/* <GiftCardSection /> */}
-      {/* <BlogSection /> */}
-      <NewsletterSection />
-    </LandingPageLayout>
-  )
+    <>
+      <JsonLdScript data={[organizationJsonLd(), websiteJsonLd()]} />
+      <HomePageClient />
+    </>
+  );
 }

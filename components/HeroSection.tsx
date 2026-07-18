@@ -328,7 +328,7 @@ const HeroSection = () => {
             <div className="absolute inset-0 overflow-hidden">
                 <Image
                     src="/assets/hero.webp"
-                    alt=""
+                    alt="Vignoble et domaine viticole en France"
                     fill
                     priority
                     quality={85}

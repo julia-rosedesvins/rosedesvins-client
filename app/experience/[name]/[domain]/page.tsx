@@ -1,407 +1,120 @@
-"use client";
+import type { Metadata } from 'next';
+import ExperienceDomainClient from './ExperienceDomainClient';
+import { fetchExperienceProfile } from '@/lib/seo/fetch-public';
+import { buildPageMetadata, decodeRouteParam } from '@/lib/seo/site';
+import { JsonLdScript, breadcrumbJsonLd, wineryJsonLd } from '@/lib/seo/json-ld';
+import type { DomainLocation, DomainProfile } from '@/services/domain-profile.service';
 
-import React, { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { ArrowLeft, MapPin, Home, Euro, Clock, Users, Languages } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
-import LandingPageLayout from "@/components/LandingPageLayout";
-import { domainProfileService, DomainProfile, DomainLocation } from "@/services/domain-profile.service";
-import dynamic from "next/dynamic";
-
-// Dynamically import the map component to avoid SSR issues
-const DomainMap = dynamic(() => import('@/components/DomainMap'), {
-    ssr: false,
-    loading: () => <div className="w-full h-96 bg-gray-200 flex items-center justify-center rounded-lg">Chargement de la carte...</div>
-});
-
-const DAY_FR: Record<string, string> = {
-  Monday: 'Lundi',
-  Tuesday: 'Mardi',
-  Wednesday: 'Mercredi',
-  Thursday: 'Jeudi',
-  Friday: 'Vendredi',
-  Saturday: 'Samedi',
-  Sunday: 'Dimanche',
+type PageProps = {
+  params: Promise<{ name: string; domain: string }>;
 };
 
-function parseTimeTo24h(timeStr: string, fallbackPeriod?: 'AM' | 'PM'): string {
-  const m = timeStr.trim().match(/^(\d{1,2})(?::(\d{2}))?\s*(AM|PM)?$/i);
-  if (!m) return timeStr;
-  let h = parseInt(m[1]);
-  const min = m[2] ?? '00';
-  const period = (m[3]?.toUpperCase() ?? fallbackPeriod) as 'AM' | 'PM' | undefined;
-  if (period === 'PM' && h < 12) h += 12;
-  if (period === 'AM' && h === 12) h = 0;
-  return `${h}h${min}`;
+function mapProfileResponse(
+  data: NonNullable<Awaited<ReturnType<typeof fetchExperienceProfile>>>['data'],
+): { profile: DomainProfile; location: DomainLocation } {
+  const rawProfile = data.domainProfile as DomainProfile & {
+    userId?: string;
+    domainLogoUrl?: string | null;
+    mainImage?: string | null;
+    siteWeb?: string | null;
+    phone?: string | null;
+    openingHours?: DomainProfile['openingHours'];
+    producer?: string;
+  };
+
+  return {
+    profile: {
+      _id: rawProfile._id,
+      userId: rawProfile.userId || '',
+      domainDescription: rawProfile.domainDescription,
+      domainProfilePictureUrl: rawProfile.domainProfilePictureUrl,
+      domainLogoUrl: rawProfile.domainLogoUrl || null,
+      mainImage: rawProfile.mainImage || null,
+      colorCode: rawProfile.colorCode || '#3A7B59',
+      services: rawProfile.services || [],
+      domainName: rawProfile.domainName,
+      siteWeb: rawProfile.siteWeb || null,
+      phone: rawProfile.phone || null,
+      openingHours: rawProfile.openingHours || null,
+      createdAt: rawProfile.createdAt || '',
+      updatedAt: rawProfile.updatedAt || '',
+      producer: rawProfile.producer,
+    },
+    location: {
+      domainLatitude: data.location.domainLatitude ?? null,
+      domainLongitude: data.location.domainLongitude ?? null,
+      address: data.location.address,
+      city: data.location.city,
+      codePostal: data.location.codePostal ?? null,
+    },
+  };
 }
 
-const HOURS_FR: Record<string, string> = {
-  'open 24 hours': 'Ouvert 24h/24',
-  'closed': 'Fermé',
-};
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { name, domain } = await params;
+  const regionName = decodeRouteParam(name);
+  const response = await fetchExperienceProfile(domain);
+  const profile = response?.data.domainProfile;
+  const displayName = profile?.domainName || 'Domaine viticole';
+  const description =
+    profile?.domainDescription?.slice(0, 155) ||
+    `Découvrez ${displayName} en ${regionName} et réservez une expérience œnotouristique.`;
 
-function convertTimeRange(range: string): string {
-  const lower = range.trim().toLowerCase();
-  if (HOURS_FR[lower]) return HOURS_FR[lower];
-  const parts = range.split('–');
-  if (parts.length === 2) {
-    const endPeriodMatch = parts[1].match(/(AM|PM)$/i);
-    const endPeriod = endPeriodMatch ? endPeriodMatch[1].toUpperCase() as 'AM' | 'PM' : undefined;
-    const start = parseTimeTo24h(parts[0].trim(), endPeriod);
-    const end = parseTimeTo24h(parts[1].trim(), endPeriod);
-    return `${start}–${end}`;
+  return buildPageMetadata({
+    title: `${displayName} - ${regionName}`,
+    description,
+    path: `/experience/${encodeURIComponent(regionName)}/${domain}`,
+    ogImage: profile?.domainProfilePictureUrl || undefined,
+  });
+}
+
+export default async function ExperienceDomainPage({ params }: PageProps) {
+  const { name, domain } = await params;
+  const regionName = decodeRouteParam(name);
+  const response = await fetchExperienceProfile(domain);
+
+  let initialDomainProfile: DomainProfile | null = null;
+  let initialLocation: DomainLocation | null = null;
+
+  if (response?.data) {
+    const mapped = mapProfileResponse(response.data);
+    initialDomainProfile = mapped.profile;
+    initialLocation = mapped.location;
   }
-  return parseTimeTo24h(range.trim());
+
+  const displayName = initialDomainProfile?.domainName || 'Domaine viticole';
+
+  return (
+    <>
+      {initialDomainProfile && (
+        <JsonLdScript
+          data={[
+            breadcrumbJsonLd([
+              { name: 'France', path: '/regions' },
+              { name: regionName, path: `/region/${encodeURIComponent(regionName)}` },
+              {
+                name: displayName,
+                path: `/experience/${encodeURIComponent(regionName)}/${domain}`,
+              },
+            ]),
+            wineryJsonLd({
+              name: displayName,
+              description: initialDomainProfile.domainDescription,
+              regionName,
+              domainId: domain,
+              image: initialDomainProfile.domainProfilePictureUrl,
+              address: initialLocation?.address,
+              city: initialLocation?.city,
+            }),
+          ]}
+        />
+      )}
+      <ExperienceDomainClient
+        regionName={regionName}
+        domainId={domain}
+        initialDomainProfile={initialDomainProfile}
+        initialLocation={initialLocation}
+      />
+    </>
+  );
 }
-
-const ExperienceDomain = ({ params }: { params: Promise<{ name: string; domain: string }> }) => {
-    const router = useRouter();
-    const unwrappedParams = React.use(params);
-    const [domainProfile, setDomainProfile] = useState<DomainProfile | null>(null);
-    const [location, setLocation] = useState<DomainLocation | null>(null);
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        const fetchDomainProfile = async () => {
-            try {
-                setLoading(true);
-                try {
-                    const response = await domainProfileService.getPublicDomainProfile(unwrappedParams.domain);
-                    setDomainProfile(response.data.domainProfile);
-                    setLocation(response.data.location);
-                } catch {
-                    const staticResponse = await domainProfileService.getPublicStaticExperience(unwrappedParams.domain);
-                    setDomainProfile(staticResponse.data.domainProfile);
-                    setLocation(staticResponse.data.location);
-                }
-            } catch (error: any) {
-                console.error('Error fetching domain profile:', error);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        if (unwrappedParams.domain) {
-            fetchDomainProfile();
-        }
-    }, [unwrappedParams.domain]);
-
-    if (loading) {
-        return (
-            <LandingPageLayout>
-                <div className="max-w-6xl mx-auto px-4 py-8">
-                    <Skeleton className="h-12 w-3/4 mb-4" />
-                    <Skeleton className="h-6 w-1/2 mb-8" />
-                    <Skeleton className="h-64 w-full mb-8" />
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {[1, 2, 3].map((i) => (
-                            <Skeleton key={i} className="h-96 w-full" />
-                        ))}
-                    </div>
-                </div>
-            </LandingPageLayout>
-        );
-    }
-
-    if (!domainProfile) {
-        return (
-            <LandingPageLayout>
-                <div className="max-w-6xl mx-auto px-4 py-8 text-center">
-                    <h1 className="text-2xl font-bold text-gray-800 mb-4">Domaine non trouvé</h1>
-                    <Button onClick={() => router.back()}>Retour</Button>
-                </div>
-            </LandingPageLayout>
-        );
-    }
-
-    return (
-        <LandingPageLayout>
-            {/* Hero Section */}
-            <section
-                className="relative bg-cover bg-center text-white min-h-100"
-                style={{
-                    backgroundImage: domainProfile.domainProfilePictureUrl 
-                        ? `linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.3)), url(${domainProfile.domainProfilePictureUrl})`
-                        : `linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.3)), url(/assets/bourillon-orleans-entrance.webp)`,
-                    backgroundSize: 'cover',
-                    backgroundPosition: 'center center',
-                    backgroundRepeat: 'no-repeat'
-                }}
-            >
-                {/* Navigation Controls */}
-                <div className="max-w-6xl mx-auto px-4 pt-4">
-                    <Button
-                        onClick={() => router.back()}
-                        variant="outline"
-                        className="bg-white/10 border-white/30 text-white hover:bg-white/20 hover:text-white"
-                    >
-                        <ArrowLeft className="w-4 h-4 mr-2" />
-                        Retour
-                    </Button>
-                </div>
-
-                {/* Breadcrumb */}
-                <div className="max-w-6xl mx-auto px-4 pt-6">
-                    <div className="flex items-center text-white/80 text-sm mb-6">
-                        <Home className="w-4 h-4 mr-2" />
-                        <Link href="/regions" className="hover:text-white transition-colors">
-                            <span>France</span>
-                        </Link>
-                        <span className="mx-2">&gt;</span>
-                        <Link href={`/region/${unwrappedParams.name}`} className="hover:text-white transition-colors">
-                            <span>{decodeURIComponent(unwrappedParams.name)}</span>
-                        </Link>
-                        {location?.city && (
-                            <>
-                                <span className="mx-2">&gt;</span>
-                                <MapPin className="w-4 h-4 mr-2" />
-                                <span>{location.city}</span>
-                            </>
-                        )}
-                    </div>
-                </div>
-            </section>
-
-            {/* Main Content */}
-            <div className="max-w-6xl mx-auto px-4 py-8">
-                {/* Title Section */}
-                <div className="mb-8">
-                    <h1 className="text-3xl md:text-4xl font-bold text-primary mb-2">
-                        {domainProfile.domainName}
-                    </h1>
-                    <p className="text-lg text-gray-600">
-                        {/* {decodeURIComponent(unwrappedParams.name)} */}
-                        {location?.city && `${location.city}`}
-                    </p>
-                </div>
-
-                {/* About Section - Only for client profiles */}
-                {domainProfile.producer !== 'non-client' && (
-                    <section className="mb-12">
-                        <h2 className="text-2xl font-bold text-gray-800 mb-4">À propos du domaine</h2>
-                        {domainProfile.domainDescription ? (
-                            <p className="text-gray-700 leading-relaxed">
-                                {domainProfile.domainDescription}
-                            </p>
-                        ) : (
-                            <p className="text-gray-500 italic">
-                                Aucune description disponible pour ce domaine.
-                            </p>
-                        )}
-                    </section>
-                )}
-
-                {/* Static Experience Card - Shows when it's a non-client domain */}
-                {domainProfile.producer === 'non-client' && (
-                    <section className="mb-12">
-                        <h2 className="text-2xl font-bold text-gray-800 mb-8">Visiter le domaine</h2>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {domainProfile.siteWeb ? (
-                                <a 
-                                    href={domainProfile.siteWeb}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="bg-white rounded-lg shadow-sm border overflow-hidden flex flex-col hover:shadow-lg transition-shadow"
-                                >
-                                    {domainProfile.mainImage && (
-                                        <img
-                                            src={domainProfile.mainImage}
-                                            alt={domainProfile.domainName || 'Domaine'}
-                                            className="w-full h-48 object-cover"
-                                        />
-                                    )}
-                                    <div className="p-5 flex flex-col flex-1">
-                                        {domainProfile.domainName && (
-                                            <h3 className="text-lg font-bold text-primary mb-3">
-                                                {domainProfile.domainName}
-                                            </h3>
-                                        )}
-
-                                        {location?.city && (
-                                            <div className="flex items-center text-sm text-gray-600 mb-3">
-                                                <MapPin className="w-4 h-4 mr-1 text-primary" />
-                                                <span>{location.city}</span>
-                                            </div>
-                                        )}
-
-                                        {domainProfile.domainDescription && (
-                                            <p className="text-gray-700 text-sm leading-relaxed mb-4 flex-1">
-                                                {domainProfile.domainDescription}
-                                            </p>
-                                        )}
-
-                                        {domainProfile.openingHours && Object.keys(domainProfile.openingHours).length > 0 && (
-                                            <div className="mb-4">
-                                                <h4 className="text-sm font-semibold text-gray-800 mb-2">Horaires d'ouverture</h4>
-                                                <div className="space-y-1 text-xs text-gray-600">
-                                                    {Object.entries(domainProfile.openingHours).map(([day, hours]) => (
-                                                        <div key={day} className="flex justify-between">
-                                                            <span className="font-medium">{DAY_FR[day] ?? day}</span>
-                                                            <span>{Array.isArray(hours) ? hours.map(convertTimeRange).join(', ') : convertTimeRange(hours as string)}</span>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        <Button 
-                                            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
-                                            asChild
-                                        >
-                                            <span>Visiter le site web</span>
-                                        </Button>
-                                    </div>
-                                </a>
-                            ) : (
-                                <div className="bg-white rounded-lg shadow-sm border overflow-hidden flex flex-col">
-                                    {domainProfile.mainImage && (
-                                        <img
-                                            src={domainProfile.mainImage}
-                                            alt={domainProfile.domainName || 'Domaine'}
-                                            className="w-full h-48 object-cover"
-                                        />
-                                    )}
-                                    <div className="p-5 flex flex-col flex-1">
-                                        {domainProfile.domainName && (
-                                            <h3 className="text-lg font-bold text-primary mb-3">
-                                                {domainProfile.domainName}
-                                            </h3>
-                                        )}
-
-                                        {location?.city && (
-                                            <div className="flex items-center text-sm text-gray-600 mb-3">
-                                                <MapPin className="w-4 h-4 mr-1 text-primary" />
-                                                <span>{location.city}</span>
-                                            </div>
-                                        )}
-
-                                        {domainProfile.domainDescription && (
-                                            <p className="text-gray-700 text-sm leading-relaxed mb-4 flex-1">
-                                                {domainProfile.domainDescription}
-                                            </p>
-                                        )}
-
-                                        {domainProfile.openingHours && Object.keys(domainProfile.openingHours).length > 0 && (
-                                            <div className="mb-4">
-                                                <h4 className="text-sm font-semibold text-gray-800 mb-2">Horaires d'ouverture</h4>
-                                                <div className="space-y-1 text-xs text-gray-600">
-                                                    {Object.entries(domainProfile.openingHours).map(([day, hours]) => (
-                                                        <div key={day} className="flex justify-between">
-                                                            <span className="font-medium">{DAY_FR[day] ?? day}</span>
-                                                            <span>{Array.isArray(hours) ? hours.map(convertTimeRange).join(', ') : convertTimeRange(hours as string)}</span>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    </section>
-                )}
-
-                {/* Experiences Section */}
-                {domainProfile.services && domainProfile.services.length > 0 && (
-                    <section className="mb-12">
-                        <h2 className="text-2xl font-bold text-gray-800 mb-8">Les expériences à découvrir</h2>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {domainProfile.services
-                                .filter(service => service.isActive)
-                                .map((service) => (
-                                    <div key={service._id} className="bg-white rounded-lg shadow-sm border overflow-hidden flex flex-col">
-                                        {service.serviceBannerUrl && (
-                                            <img
-                                                src={service.serviceBannerUrl}
-                                                alt={service.name}
-                                                className="w-full h-48 object-cover"
-                                            />
-                                        )}
-                                        <div className="p-5 flex flex-col flex-1">
-                                            <h3 className="text-lg font-bold text-primary mb-3">
-                                                {service.name}
-                                            </h3>
-
-                                            <div className="grid grid-cols-2 gap-2 mb-3 text-sm text-gray-600">
-                                                <div className="flex items-center">
-                                                    <Euro className="w-4 h-4 mr-1 text-primary" />
-                                                    <span>{service.pricePerPerson} €</span>
-                                                </div>
-                                                <div className="flex items-center">
-                                                    <span className="w-4 h-4 mr-1 text-primary">🍷</span>
-                                                    <span>{service.numberOfWinesTasted} vins</span>
-                                                </div>
-                                                <div className="flex items-center">
-                                                    <Clock className="w-4 h-4 mr-1 text-primary" />
-                                                    <span>{service.timeOfServiceInMinutes} minutes</span>
-                                                </div>
-                                                <div className="flex items-center">
-                                                    <Users className="w-4 h-4 mr-1 text-primary" />
-                                                    <span>{service.numberOfPeople}</span>
-                                                </div>
-                                            </div>
-
-                                            {service.languagesOffered && service.languagesOffered.length > 0 && (
-                                                <div className="flex items-center gap-3 mb-3 flex-wrap">
-                                                    {service.languagesOffered.map((lang, idx) => (
-                                                        <div key={idx} className="flex items-center text-xs text-gray-600">
-                                                            <Languages className="w-3 h-3 mr-1" />
-                                                            <span>{lang}</span>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            )}
-
-                                            <p className="text-gray-700 text-sm leading-relaxed mb-4 flex-1">
-                                                {service.description}
-                                            </p>
-
-                                            <Button 
-                                                onClick={() => router.push(`/if/booking-widget/${domainProfile.userId}/${service._id}/booking?withLayout=true`)}
-                                                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
-                                            >
-                                                Réserver
-                                            </Button>
-                                        </div>
-                                    </div>
-                                ))}
-                        </div>
-                    </section>
-                )}
-
-                {/* Location Section */}
-                {location && location.domainLatitude && location.domainLongitude && (
-                    <section className="mb-12">
-                        <h2 className="text-2xl font-bold text-gray-800 mb-6">Localisation</h2>
-                        <div className="bg-white rounded-lg shadow-sm overflow-hidden relative z-0">
-                            <DomainMap
-                                latitude={location.domainLatitude}
-                                longitude={location.domainLongitude}
-                                domainName={domainProfile.domainName}
-                                address={location.address || undefined}
-                                city={location.city || undefined}
-                                codePostal={location.codePostal || undefined}
-                                domainImage={domainProfile.domainProfilePictureUrl || undefined}
-                            />
-                        </div>
-                    </section>
-                )}
-
-                {/* Return Button */}
-                <div className="flex justify-center">
-                    <Button
-                        onClick={() => router.push(`/region/${unwrappedParams.name}`)}
-                        className="bg-primary hover:bg-primary-dark text-white px-8 py-3 text-lg"
-                    >
-                        Retour aux domaines
-                    </Button>
-                </div>
-            </div>
-        </LandingPageLayout>
-    );
-};
-
-export default ExperienceDomain;

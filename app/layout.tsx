@@ -5,6 +5,13 @@ import { Toaster } from "react-hot-toast";
 import Script from "next/script";
 import { PostHogProvider } from "@/providers/PostHogProvider";
 import ChunkErrorRecovery from "@/components/ChunkErrorRecovery";
+import {
+  DEFAULT_DESCRIPTION,
+  DEFAULT_OG_IMAGE,
+  SITE_NAME,
+  SITE_URL,
+  buildCanonical,
+} from "@/lib/seo/site";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -17,11 +24,37 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Rose des Vins - La technologie au service des domaines viticoles",
-  description: "La technologie au service des domaines viticoles",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: `${SITE_NAME} - La technologie au service des domaines viticoles`,
+    template: `%s | ${SITE_NAME}`,
+  },
+  description: DEFAULT_DESCRIPTION,
+  alternates: {
+    canonical: buildCanonical('/'),
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+  openGraph: {
+    type: 'website',
+    locale: 'fr_FR',
+    url: SITE_URL,
+    siteName: SITE_NAME,
+    title: `${SITE_NAME} - La technologie au service des domaines viticoles`,
+    description: DEFAULT_DESCRIPTION,
+    images: [{ url: DEFAULT_OG_IMAGE, alt: SITE_NAME }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: `${SITE_NAME} - La technologie au service des domaines viticoles`,
+    description: DEFAULT_DESCRIPTION,
+    images: [DEFAULT_OG_IMAGE],
+  },
   icons: {
     icon: '/assets/logo.png',
-  }
+  },
 };
 
 export default function RootLayout({
@@ -30,7 +63,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning={true}>
+    <html lang="fr" suppressHydrationWarning={true}>
       <head>
         {/* Fix: Google Translate splits text nodes causing React removeChild errors */}
         <script dangerouslySetInnerHTML={{ __html: `
