@@ -44,10 +44,11 @@ const RegionMap = forwardRef<RegionMapRef, RegionMapProps>(({ centerLat, centerL
 
   // ─── Build popup HTML for an individual domain ────────────────────────────
   const buildPopupHTML = useCallback((domain: Domain): string => {
-    const experienceHref = domain.domainId
+    const domainSlugOrId = domain.slug || domain.domainId;
+    const experienceHref = domainSlugOrId
       ? (regionName
-          ? `/experience/${encodeURIComponent(regionName)}/${domain.domainId}`
-          : `/experience/${domain.domainId}`)
+          ? `/experience/${regionName}/${domainSlugOrId}`
+          : `/experience/${domainSlugOrId}`)
       : (domain.siteUrl || '#');
     const buttonLabel = domain.producer === 'client' ? 'Réserver maintenant' : 'Voir le profil';
 

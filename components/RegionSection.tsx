@@ -116,7 +116,7 @@ const RegionsSection = () => {
                   <RegionCard 
                     title={region.denom}
                     image={region.thumbnailUrl || "/assets/loire-valley-new.jpg"}
-                    href={`/region/${encodeURIComponent(region.denom)}`}
+                    href={`/region/${region.slug || encodeURIComponent(region.denom)}`}
                     priority={index < 3}
                   />
                 </CarouselItem>

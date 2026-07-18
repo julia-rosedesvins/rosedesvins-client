@@ -5,6 +5,7 @@ import { apiClient } from "./admin.service";
 export interface Region {
   _id: string;
   denom: string;
+  slug?: string;
   min_lat: number;
   min_lon: number;
   max_lat: number;
@@ -27,6 +28,7 @@ export interface Domain {
   location: string | null;
   category: string | null;
   domainId: string | null;
+  slug?: string | null;
   latitude: number | null;
   longitude: number | null;
 }
@@ -86,6 +88,7 @@ export interface UnifiedSearchResult {
       serviceBannerUrl: string | null;
       domain: {
         domainId: string;
+        slug?: string | null;
         userId: string | null;
         domainName: string | null;
         domainDescription: string;
@@ -97,6 +100,7 @@ export interface UnifiedSearchResult {
     }>;
     domains?: Array<{
       domainId: string;
+      slug?: string | null;
       userId: string | null;
       domainName: string | null;
       domainDescription: string;
@@ -114,6 +118,7 @@ export interface UnifiedSearchResult {
     }>;
     regions?: Array<{
       denom: string;
+      slug?: string;
       min_lat: number;
       min_lon: number;
       max_lat: number;
@@ -123,6 +128,7 @@ export interface UnifiedSearchResult {
     }>;
     staticExperiences?: Array<{
       domainId?: string;
+      slug?: string | null;
       name: string;
       category: string | null;
       address: string | null;

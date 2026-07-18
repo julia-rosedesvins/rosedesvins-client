@@ -151,7 +151,7 @@ function RegionsContent({ initialRegions, initialTotal }: RegionsPageClientProps
                                 {regions.map((region) => (
                                     <div key={region._id} className="flex flex-col items-center text-center">
                                         <Link 
-                                            href={`/region/${encodeURIComponent(region.denom)}`} 
+                                            href={`/region/${region.slug || encodeURIComponent(region.denom)}`} 
                                             className="flex flex-col items-center text-center hover:transform hover:scale-105 transition-transform"
                                         >
                                             <div className="relative w-32 h-32 md:w-40 md:h-40 rounded-full overflow-hidden mb-4 shadow-lg">

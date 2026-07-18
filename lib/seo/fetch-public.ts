@@ -21,6 +21,7 @@ async function publicFetch<T>(path: string, options: FetchOptions = {}): Promise
 export interface RegionRecord {
   _id: string;
   denom: string;
+  slug?: string;
   thumbnailUrl?: string;
   isParent?: boolean;
 }
@@ -37,6 +38,7 @@ export interface RegionDomain {
   domainName: string;
   domainDescription: string;
   domainId: string | null;
+  slug?: string | null;
   location: string | null;
 }
 
@@ -54,6 +56,7 @@ export interface PublicServiceRecord {
   serviceName: string;
   domain: {
     domainId: string;
+    slug?: string | null;
     domainName: string | null;
     location?: {
       city?: string | null;
@@ -80,6 +83,7 @@ export interface PublicDomainProfileResponse {
   data: {
     domainProfile: {
       _id: string;
+      slug?: string | null;
       domainName: string;
       domainDescription: string;
       domainProfilePictureUrl: string | null;
@@ -193,6 +197,15 @@ export async function fetchExperienceProfile(
   return fetchPublicStaticExperience(domainId);
 }
 
-export function experiencePath(regionName: string, domainId: string): string {
-  return `/experience/${encodeURIComponent(regionName)}/${domainId}`;
+/** Resolve a domain/experience profile by its clean SEO slug (dual DomainProfile/StaticExperience lookup). */
+export async function fetchExperienceProfileBySlug(
+  slug: string,
+): Promise<PublicDomainProfileResponse | null> {
+  return publicFetch<PublicDomainProfileResponse>(
+    `/domain-profile/public/by-slug/${encodeURIComponent(slug)}`,
+  );
+}
+
+export function experiencePath(regionSlug: string, domainSlug: string): string {
+  return `/experience/${regionSlug}/${domainSlug}`;
 }

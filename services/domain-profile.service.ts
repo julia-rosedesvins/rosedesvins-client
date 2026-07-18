@@ -22,6 +22,7 @@ export interface Service {
 
 export interface DomainProfile {
   _id: string;
+  slug?: string | null;
   userId: string;
   domainDescription: string;
   domainProfilePictureUrl: string | null;
@@ -134,6 +135,25 @@ class DomainProfileService {
     try {
       const response = await apiClient.get<PublicDomainProfileResponse>(
         `/static-experiences/public/${domainId}`
+      );
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response) {
+        throw error.response.data as ApiError;
+      }
+      throw new Error('Network error occurred');
+    }
+  }
+
+  /**
+   * Get public domain/experience profile by its SEO slug (dual DomainProfile/StaticExperience lookup)
+   * @param slug - Domain profile slug
+   * @returns Promise with domain profile and location data
+   */
+  async getPublicDomainProfileBySlug(slug: string): Promise<PublicDomainProfileResponse> {
+    try {
+      const response = await apiClient.get<PublicDomainProfileResponse>(
+        `/domain-profile/public/by-slug/${slug}`
       );
       return response.data;
     } catch (error) {

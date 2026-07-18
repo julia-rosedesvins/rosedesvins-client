@@ -17,6 +17,22 @@ export function buildCanonical(path: string): string {
   return `${SITE_URL}${normalized}`;
 }
 
+/**
+ * Mirrors the backend's slugify (server/src/common/utils/slug.util.ts):
+ * NFD-normalize, strip diacritics, lowercase, replace non-alphanumerics with
+ * `-`, collapse/trim hyphens. Used client-side for sitemap generation and to
+ * detect non-canonical (legacy) URL params that should redirect to a slug.
+ */
+export function slugify(text: string): string {
+  return text
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
 export function decodeRouteParam(value: string): string {
   let decoded = value.replace(/\+/g, ' ');
   for (let i = 0; i < 3; i++) {

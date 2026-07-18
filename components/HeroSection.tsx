@@ -104,7 +104,7 @@ const HeroSection = () => {
                             type: 'region',
                             name: region.denom,
                             icon: MapPin,
-                            route: `/region/${encodeURIComponent(region.denom)}`
+                            route: `/region/${(region as any).slug || encodeURIComponent(region.denom)}`
                         })
                     })
                 }
@@ -114,7 +114,7 @@ const HeroSection = () => {
                     backendResult.data.domains.slice(0, 2).forEach(domain => {
                         const regionName = domain.location?.region || domain.location?.city || domain.domainName || 'domaine'
                         const route = (domain as any).experienceRoute || (domain.domainId
-                            ? `/experience/${encodeURIComponent(regionName)}/${domain.domainId}`
+                            ? `/experience/${encodeURIComponent(regionName)}/${(domain as any).slug || domain.domainId}`
                             : '/regions')
                         allSuggestions.push({
                             type: 'domain',
@@ -132,7 +132,7 @@ const HeroSection = () => {
                     backendResult.data.services.slice(0, 2).forEach(service => {
                         const regionName = service.domain?.region || service.domain?.city || service.domain?.domainName || 'domaine'
                         const route = (service as any).experienceRoute || (service.domain?.domainId
-                            ? `/experience/${encodeURIComponent(regionName)}/${service.domain.domainId}`
+                            ? `/experience/${encodeURIComponent(regionName)}/${(service.domain as any).slug || service.domain.domainId}`
                             : '/experiences')
                         allSuggestions.push({
                             type: 'service',
@@ -149,7 +149,7 @@ const HeroSection = () => {
                     backendResult.data.staticExperiences.slice(0, 1).forEach(exp => {
                         const regionName = exp.region || exp.city || 'domaine'
                         const route = (exp as any).experienceRoute || ((exp as any).domainId
-                            ? `/experience/${encodeURIComponent(regionName)}/${(exp as any).domainId}`
+                            ? `/experience/${encodeURIComponent(regionName)}/${(exp as any).slug || (exp as any).domainId}`
                             : (exp.website || '#'))
                         allSuggestions.push({
                             type: 'experience',

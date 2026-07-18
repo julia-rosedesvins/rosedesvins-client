@@ -4,7 +4,7 @@ import {
   fetchAllParentRegions,
   fetchAllPublicServices,
 } from '@/lib/seo/fetch-public';
-import { SITE_URL, decodeRouteParam } from '@/lib/seo/site';
+import { SITE_URL, decodeRouteParam, slugify } from '@/lib/seo/site';
 
 const STATIC_ROUTES = [
   '/',
@@ -35,7 +35,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ]);
 
   const regionEntries: MetadataRoute.Sitemap = regions.map((region) => ({
-    url: `${SITE_URL}/region/${encodeURIComponent(region.denom)}`,
+    url: `${SITE_URL}/region/${region.slug || slugify(region.denom)}`,
     lastModified: now,
     changeFrequency: 'weekly',
     priority: 0.9,
@@ -46,14 +46,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   for (const service of services) {
     const domainId = service.domain?.domainId;
-    if (!domainId) continue;
+    const domainSlug = service.domain?.slug;
+    if (!domainId && !domainSlug) continue;
 
     const regionName =
       service.domain.location?.region ||
       service.domain.location?.city ||
       decodeRouteParam(service.domain.domainName || 'domaine');
 
-    const path = experiencePath(regionName, domainId);
+    const path = experiencePath(slugify(regionName), domainSlug || domainId);
     if (seenExperienceUrls.has(path)) continue;
     seenExperienceUrls.add(path);
 

@@ -55,21 +55,22 @@ export function breadcrumbJsonLd(items: Array<{ name: string; path: string }>) {
 
 export function regionItemListJsonLd(
   regionName: string,
-  domains: Array<{ domainName: string; domainId: string | null; regionName?: string }>,
+  regionSlug: string,
+  domains: Array<{ domainName: string; domainId: string | null; domainSlug?: string | null }>,
 ) {
   return {
     '@context': 'https://schema.org',
     '@type': 'ItemList',
     name: `Domaines viticoles en ${regionName}`,
     itemListElement: domains
-      .filter((d) => d.domainId)
+      .filter((d) => d.domainSlug || d.domainId)
       .slice(0, 20)
       .map((domain, index) => ({
         '@type': 'ListItem',
         position: index + 1,
         name: domain.domainName,
         url: buildCanonical(
-          `/experience/${encodeURIComponent(domain.regionName || regionName)}/${domain.domainId}`,
+          `/experience/${regionSlug}/${domain.domainSlug || domain.domainId}`,
         ),
       })),
   };
@@ -78,14 +79,14 @@ export function regionItemListJsonLd(
 export function wineryJsonLd(params: {
   name: string;
   description: string;
-  regionName: string;
-  domainId: string;
+  regionSlug: string;
+  domainSlug: string;
   image?: string | null;
   address?: string | null;
   city?: string | null;
 }) {
   const url = buildCanonical(
-    `/experience/${encodeURIComponent(params.regionName)}/${params.domainId}`,
+    `/experience/${params.regionSlug}/${params.domainSlug}`,
   );
 
   return {

@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import LandingPageLayout from "@/components/LandingPageLayout";
 import { domainProfileService, DomainProfile, DomainLocation } from "@/services/domain-profile.service";
-import { decodeRouteParam } from "@/lib/seo/site";
+import { decodeRouteParam, slugify } from "@/lib/seo/site";
 import dynamic from "next/dynamic";
 
 // Dynamically import the map component to avoid SSR issues
@@ -72,9 +72,12 @@ export default function ExperienceDomainClient({
 }: ExperienceDomainClientProps) {
     const router = useRouter();
     const displayRegionName = decodeRouteParam(regionName);
+    const regionSlug = slugify(displayRegionName) || regionName;
     const [domainProfile, setDomainProfile] = useState<DomainProfile | null>(initialDomainProfile);
     const [location, setLocation] = useState<DomainLocation | null>(initialLocation);
     const [loading, setLoading] = useState(!initialDomainProfile);
+
+    const isLegacyObjectId = /^[0-9a-fA-F]{24}$/.test(domainId);
 
     useEffect(() => {
         if (initialDomainProfile) return;
@@ -83,13 +86,20 @@ export default function ExperienceDomainClient({
             try {
                 setLoading(true);
                 try {
-                    const response = await domainProfileService.getPublicDomainProfile(domainId);
+                    if (isLegacyObjectId) throw new Error('legacy id, skip slug lookup');
+                    const response = await domainProfileService.getPublicDomainProfileBySlug(domainId);
                     setDomainProfile(response.data.domainProfile);
                     setLocation(response.data.location);
                 } catch {
-                    const staticResponse = await domainProfileService.getPublicStaticExperience(domainId);
-                    setDomainProfile(staticResponse.data.domainProfile);
-                    setLocation(staticResponse.data.location);
+                    try {
+                        const response = await domainProfileService.getPublicDomainProfile(domainId);
+                        setDomainProfile(response.data.domainProfile);
+                        setLocation(response.data.location);
+                    } catch {
+                        const staticResponse = await domainProfileService.getPublicStaticExperience(domainId);
+                        setDomainProfile(staticResponse.data.domainProfile);
+                        setLocation(staticResponse.data.location);
+                    }
                 }
             } catch (error: any) {
                 console.error('Error fetching domain profile:', error);
@@ -101,7 +111,7 @@ export default function ExperienceDomainClient({
         if (domainId) {
             fetchDomainProfile();
         }
-    }, [domainId, initialDomainProfile]);
+    }, [domainId, initialDomainProfile, isLegacyObjectId]);
 
     if (loading) {
         return (
@@ -165,7 +175,7 @@ export default function ExperienceDomainClient({
                             <span>France</span>
                         </Link>
                         <span className="mx-2">&gt;</span>
-                        <Link href={`/region/${encodeURIComponent(displayRegionName)}`} className="hover:text-white transition-colors">
+                        <Link href={`/region/${regionSlug}`} className="hover:text-white transition-colors">
                             <span>{displayRegionName}</span>
                         </Link>
                         {location?.city && (
@@ -408,7 +418,7 @@ export default function ExperienceDomainClient({
                 {/* Return Button */}
                 <div className="flex justify-center">
                     <Button
-                        onClick={() => router.push(`/region/${encodeURIComponent(displayRegionName)}`)}
+                        onClick={() => router.push(`/region/${regionSlug}`)}
                         className="bg-primary hover:bg-primary-dark text-white px-8 py-3 text-lg"
                     >
                         Retour aux domaines

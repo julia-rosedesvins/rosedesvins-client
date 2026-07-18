@@ -565,7 +565,7 @@ export default function RegionPageClient({
                             centerLat={userLocation?.lat || (region.min_lat + region.max_lat) / 2}
                             centerLon={userLocation?.lon || (region.min_lon + region.max_lon) / 2}
                             domains={isAroundMeActive ? filteredMapDomains : allMapDomains}
-                            regionName={region.denom}
+                            regionName={region.slug || region.denom}
                             onMapLoad={() => setIsMapLoaded(true)}
                             userLocation={userLocation}
                         />
@@ -617,7 +617,7 @@ export default function RegionPageClient({
                                                     {domain.domainName}
                                                 </h3>
                                                 {domain.domainId && (
-                                                    <Link href={`/experience/${encodeURIComponent(region?.denom || regionName)}/${domain.domainId}`}>
+                                                    <Link href={`/experience/${region?.slug || encodeURIComponent(region?.denom || regionName)}/${domain.slug || domain.domainId}`}>
                                                         <Button
                                                             size="sm"
                                                             className="bg-primary hover:bg-primary/90 text-white shrink-0"
