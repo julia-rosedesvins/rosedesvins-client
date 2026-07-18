@@ -455,9 +455,9 @@ export default function Navbar() {
           </Link>
           <div className="min-w-0 sm:block">
             <Link href="/">
-              <h1 className="text-white font-serif text-2xl tracking-wider font-medium">
+              <p className="text-white font-serif text-2xl tracking-wider font-medium">
                 ROSE DES VINS
-              </h1>
+              </p>
             </Link>
             {mounted && (
               <p className="text-sm" style={{ color: "#8BB5A3" }}>
