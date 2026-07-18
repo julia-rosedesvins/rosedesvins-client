@@ -52,6 +52,24 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
+        // Apply security headers to every route, including HSTS to force HTTPS on all future visits
+        source: '/(.*)',
+        headers: [
+          {
+            key: 'Strict-Transport-Security',
+            value: 'max-age=63072000; includeSubDomains; preload',
+          },
+          {
+            key: 'X-Content-Type-Options',
+            value: 'nosniff',
+          },
+          {
+            key: 'Referrer-Policy',
+            value: 'strict-origin-when-cross-origin',
+          },
+        ],
+      },
+      {
         // Never cache HTML pages — ensures users always get fresh chunk references after deploy
         source: '/((?!_next/static|_next/image|assets|favicon.ico).*)',
         headers: [

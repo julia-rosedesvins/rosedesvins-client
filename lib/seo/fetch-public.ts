@@ -209,3 +209,26 @@ export async function fetchExperienceProfileBySlug(
 export function experiencePath(regionSlug: string, domainSlug: string): string {
   return `/experience/${regionSlug}/${domainSlug}`;
 }
+
+export interface SitemapPathEntry {
+  path: string;
+  updatedAt?: string;
+}
+
+export interface SitemapPathsResponse {
+  regions: SitemapPathEntry[];
+  experiences: SitemapPathEntry[];
+}
+
+/**
+ * All currently reachable `/region/{slug}` and `/experience/{regionSlug}/{domainSlug}`
+ * paths, straight from the backend (covers every Region, DomainProfile and
+ * StaticExperience with a slug — including domains with no active services,
+ * which `fetchAllPublicServices` alone would miss). Used by `app/sitemap.ts`.
+ */
+export async function fetchAllSitemapPaths(): Promise<SitemapPathsResponse> {
+  const data = await publicFetch<SitemapPathsResponse>('/regions/sitemap-paths', {
+    revalidate: SITEMAP_REVALIDATE_SECONDS,
+  });
+  return data ?? { regions: [], experiences: [] };
+}

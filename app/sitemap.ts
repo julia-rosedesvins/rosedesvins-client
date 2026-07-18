@@ -1,10 +1,6 @@
 import type { MetadataRoute } from 'next';
-import {
-  experiencePath,
-  fetchAllParentRegions,
-  fetchAllPublicServices,
-} from '@/lib/seo/fetch-public';
-import { SITE_URL, decodeRouteParam, slugify } from '@/lib/seo/site';
+import { fetchAllSitemapPaths } from '@/lib/seo/fetch-public';
+import { SITE_URL } from '@/lib/seo/site';
 
 const STATIC_ROUTES = [
   '/',
@@ -29,42 +25,21 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: path === '/' ? 1 : 0.8,
   }));
 
-  const [regions, services] = await Promise.all([
-    fetchAllParentRegions(),
-    fetchAllPublicServices(),
-  ]);
+  const { regions, experiences } = await fetchAllSitemapPaths();
 
-  const regionEntries: MetadataRoute.Sitemap = regions.map((region) => ({
-    url: `${SITE_URL}/region/${region.slug || slugify(region.denom)}`,
-    lastModified: now,
+  const regionEntries: MetadataRoute.Sitemap = regions.map((entry) => ({
+    url: `${SITE_URL}${entry.path}`,
+    lastModified: entry.updatedAt ? new Date(entry.updatedAt) : now,
     changeFrequency: 'weekly',
     priority: 0.9,
   }));
 
-  const seenExperienceUrls = new Set<string>();
-  const experienceEntries: MetadataRoute.Sitemap = [];
-
-  for (const service of services) {
-    const domainId = service.domain?.domainId;
-    const domainSlug = service.domain?.slug;
-    if (!domainId && !domainSlug) continue;
-
-    const regionName =
-      service.domain.location?.region ||
-      service.domain.location?.city ||
-      decodeRouteParam(service.domain.domainName || 'domaine');
-
-    const path = experiencePath(slugify(regionName), domainSlug || domainId);
-    if (seenExperienceUrls.has(path)) continue;
-    seenExperienceUrls.add(path);
-
-    experienceEntries.push({
-      url: `${SITE_URL}${path}`,
-      lastModified: now,
-      changeFrequency: 'weekly',
-      priority: 0.85,
-    });
-  }
+  const experienceEntries: MetadataRoute.Sitemap = experiences.map((entry) => ({
+    url: `${SITE_URL}${entry.path}`,
+    lastModified: entry.updatedAt ? new Date(entry.updatedAt) : now,
+    changeFrequency: 'weekly',
+    priority: 0.85,
+  }));
 
   return [...staticEntries, ...regionEntries, ...experienceEntries];
 }

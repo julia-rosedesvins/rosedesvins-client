@@ -26,7 +26,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: `${SITE_NAME} - La technologie au service des domaines viticoles`,
+    default: `${SITE_NAME} : réservez vos domaines viticoles`,
     template: `%s | ${SITE_NAME}`,
   },
   description: DEFAULT_DESCRIPTION,
@@ -42,13 +42,13 @@ export const metadata: Metadata = {
     locale: 'fr_FR',
     url: SITE_URL,
     siteName: SITE_NAME,
-    title: `${SITE_NAME} - La technologie au service des domaines viticoles`,
+    title: `${SITE_NAME} : réservez vos domaines viticoles`,
     description: DEFAULT_DESCRIPTION,
     images: [{ url: DEFAULT_OG_IMAGE, alt: SITE_NAME }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: `${SITE_NAME} - La technologie au service des domaines viticoles`,
+    title: `${SITE_NAME} : réservez vos domaines viticoles`,
     description: DEFAULT_DESCRIPTION,
     images: [DEFAULT_OG_IMAGE],
   },
