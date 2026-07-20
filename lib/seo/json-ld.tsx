@@ -76,6 +76,28 @@ export function regionItemListJsonLd(
   };
 }
 
+export function collectionPageJsonLd(params: {
+  name: string;
+  path: string;
+  items: Array<{ name: string; url: string }>;
+}) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    name: params.name,
+    url: buildCanonical(params.path),
+    mainEntity: {
+      '@type': 'ItemList',
+      itemListElement: params.items.map((item, index) => ({
+        '@type': 'ListItem',
+        position: index + 1,
+        name: item.name,
+        url: item.url,
+      })),
+    },
+  };
+}
+
 export function wineryJsonLd(params: {
   name: string;
   description: string;

@@ -70,6 +70,7 @@ export interface PublicService {
   isActive: boolean;
   domain: {
     domainId: string;
+    slug?: string | null;
     userId: string;
     domainName: string | null;
     domainDescription: string;
