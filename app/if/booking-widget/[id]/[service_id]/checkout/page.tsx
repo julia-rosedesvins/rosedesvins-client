@@ -318,6 +318,7 @@ function CheckoutContent({ id, serviceId }: { id: string; serviceId: string }) {
       phoneNo: bookingData.phone || "",
       additionalNotes: bookingData.additionalInfo || "",
       paymentMethod: { method: "stripe" as const },
+      bookingSource: withLayout ? ("platform" as const) : ("widget" as const),
     };
 
     const bookingResult = await bookingService.createBooking(bookingPayload);
@@ -367,6 +368,7 @@ function CheckoutContent({ id, serviceId }: { id: string; serviceId: string }) {
         phoneNo: bookingData.phone || "",
         additionalNotes: bookingData.additionalInfo || "",
         paymentMethod: { method: "cash_on_onsite" as const },
+        bookingSource: withLayout ? ("platform" as const) : ("widget" as const),
       };
 
       const result = await bookingService.createBooking(bookingPayload);

@@ -279,7 +279,8 @@ export const AddBookingModal = ({ isOpen, onClose, onBookingCreated }: AddBookin
         additionalNotes: formData.additionalNotes || undefined,
         paymentMethod: {
           method: 'cash_on_onsite'
-        }
+        },
+        bookingSource: 'manual',
       };
 
       await bookingService.createBooking(bookingData);

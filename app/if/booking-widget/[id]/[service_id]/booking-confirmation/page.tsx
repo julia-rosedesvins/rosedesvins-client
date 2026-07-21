@@ -291,6 +291,7 @@ function BookingConfirmationContent({ id, serviceId }: { id: string; serviceId: 
     phoneNo: phone,
     additionalNotes: additionalInfo,
     paymentMethod: { method },
+    bookingSource: withLayout ? ("platform" as const) : ("widget" as const),
   });
 
   const navigateToSuccess = (bookingId: string) => {

@@ -29,6 +29,7 @@ export interface CreateBookingRequest {
   phoneNo: string;
   additionalNotes?: string;
   paymentMethod: PaymentMethodDetails;
+  bookingSource?: 'manual' | 'widget' | 'platform';
 }
 
 export interface BookingResponse {

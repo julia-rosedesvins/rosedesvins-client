@@ -34,6 +34,7 @@ interface Reservation {
   backgroundColor?: string;
   bookingId?: string;
   additionalNotes?: string;
+  bookingSource?: 'manual' | 'widget' | 'platform' | string;
   // Unique identifiers used for exact lookup (avoids same-time collision)
   eventId?: string;
   bookingDocId?: string;
@@ -125,6 +126,7 @@ export const ReservationsList = () => {
       eventType: event.eventType,
       eventStatus: event.eventStatus,
       additionalNotes: event.bookingId?.additionalNotes || undefined,
+      bookingSource: event.bookingId?.bookingSource,
       participantsAdults: event.bookingId?.participantsAdults,
       participantsChildren: event.bookingId?.participantsEnfants,
       // Store exact IDs for unambiguous lookup

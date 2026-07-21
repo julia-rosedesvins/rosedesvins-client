@@ -24,6 +24,7 @@ interface Reservation {
   backgroundColor?: string;
   bookingId?: string;
   additionalNotes?: string;
+  bookingSource?: 'manual' | 'widget' | 'platform' | string;
 }
 
 interface ReservationDetailsModalProps {
@@ -105,6 +106,21 @@ export const ReservationDetailsModal = ({
   const [isDeleting, setIsDeleting] = useState(false);
   
   if (!reservation) return null;
+
+  const bookingSource =
+    reservation.bookingSource ??
+    (eventData?.bookingId as { bookingSource?: string } | undefined)?.bookingSource;
+
+  const bookingTypeLabel =
+    reservation.eventType === 'booking'
+      ? (bookingSource === 'manual' ? 'Réservation manuelle'
+        : bookingSource === 'widget' ? 'Réservation widget'
+        : bookingSource === 'platform' ? 'Réservation plateforme'
+        : 'Réservation')
+      : reservation.eventType === 'personal' ? 'Événement personnel'
+      : reservation.eventType === 'external' ? 'Événement externe'
+      : reservation.eventType === 'blocked' ? 'Temps bloqué'
+      : reservation.eventType;
 
   const handleDelete = async () => {
     if (!eventData?.bookingId?._id) {
@@ -192,11 +208,7 @@ export const ReservationDetailsModal = ({
                     style={{ backgroundColor: reservation.backgroundColor || '#3A7B59' }}
                   ></div>
                   <span className="text-sm lg:text-base">
-                    {reservation.eventType === 'booking' ? 'Réservation' : 
-                     reservation.eventType === 'personal' ? 'Événement personnel' :
-                     reservation.eventType === 'external' ? 'Événement externe' :
-                     reservation.eventType === 'blocked' ? 'Temps bloqué' :
-                     reservation.eventType}
+                    {bookingTypeLabel}
                   </span>
                 </div>
               )}
