@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, MapPin, Home, Euro, Clock, Users, Languages } from "lucide-react";
+import { MapPin, Home, Euro, Clock, Users, Languages } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import LandingPageLayout from "@/components/LandingPageLayout";
@@ -145,86 +145,63 @@ export default function ExperienceDomainClient({
         <LandingPageLayout>
             {/* Hero Section */}
             <section
-                className="relative bg-cover bg-center text-white min-h-100"
+                className="relative flex min-h-[280px] items-start bg-cover bg-center text-white"
                 style={{
-                    backgroundImage: domainProfile.domainProfilePictureUrl 
-                        ? `linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.3)), url(${domainProfile.domainProfilePictureUrl})`
-                        : `linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.3)), url(/assets/bourillon-orleans-entrance.webp)`,
+                    backgroundImage: domainProfile.domainProfilePictureUrl
+                        ? `linear-gradient(rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0.45)), url(${domainProfile.domainProfilePictureUrl})`
+                        : `linear-gradient(rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0.45)), url(/assets/bourillon-orleans-entrance.webp)`,
                     backgroundSize: 'cover',
                     backgroundPosition: 'center center',
-                    backgroundRepeat: 'no-repeat'
+                    backgroundRepeat: 'no-repeat',
                 }}
             >
-                {/* Navigation Controls */}
-                <div className="max-w-6xl mx-auto px-4 pt-4">
-                    <Button
-                        onClick={() => router.back()}
-                        variant="outline"
-                        className="bg-white/10 border-white/30 text-white hover:bg-white/20 hover:text-white"
-                    >
-                        <ArrowLeft className="w-4 h-4 mr-2" />
-                        Retour
-                    </Button>
-                </div>
-
-                {/* Breadcrumb */}
-                <div className="max-w-6xl mx-auto px-4 pt-6">
-                    <div className="flex items-center text-white/80 text-sm mb-6">
-                        <Home className="w-4 h-4 mr-2" />
-                        <Link href="/regions" className="hover:text-white transition-colors">
+                <div className="relative z-10 w-full max-w-6xl mx-auto px-4 pt-6 pb-12">
+                    {/* Breadcrumb */}
+                    <div className="flex flex-wrap items-center text-white text-sm mb-6">
+                        <Home className="w-4 h-4 mr-2 shrink-0" />
+                        <Link href="/regions" className="hover:text-white/90 transition-colors">
                             <span>France</span>
                         </Link>
                         <span className="mx-2">&gt;</span>
-                        <Link href={`/region/${regionSlug}`} className="hover:text-white transition-colors">
+                        <Link href={`/region/${regionSlug}`} className="hover:text-white/90 transition-colors">
                             <span>{displayRegionName}</span>
                         </Link>
                         {location?.city && (
                             <>
                                 <span className="mx-2">&gt;</span>
-                                <MapPin className="w-4 h-4 mr-2" />
+                                <MapPin className="w-4 h-4 mr-1.5 shrink-0" />
                                 <span>{location.city}</span>
                             </>
                         )}
                     </div>
+
+                    {/* Title */}
+                    <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4 max-w-3xl">
+                        {domainProfile.domainName}
+                    </h1>
+
+                    {/* Description */}
+                    {domainProfile.domainDescription ? (
+                        <p className="text-white text-base md:text-lg leading-relaxed max-w-2xl">
+                            {domainProfile.domainDescription}
+                        </p>
+                    ) : (
+                        <p className="text-white/80 text-base md:text-lg italic max-w-2xl">
+                            Aucune description disponible pour ce domaine.
+                        </p>
+                    )}
                 </div>
             </section>
 
             {/* Main Content */}
             <div className="max-w-6xl mx-auto px-4 py-8">
-                {/* Title Section */}
-                <div className="mb-8">
-                    <h1 className="text-3xl md:text-4xl font-bold text-primary mb-2">
-                        {domainProfile.domainName}
-                    </h1>
-                    <p className="text-lg text-gray-600">
-                        {/* {decodeURIComponent(unwrappedParams.name)} */}
-                        {location?.city && `${location.city}`}
-                    </p>
-                </div>
-
-                {/* About Section - Only for client profiles */}
-                {domainProfile.producer !== 'non-client' && (
-                    <section className="mb-12">
-                        <h2 className="text-2xl font-bold text-gray-800 mb-4">À propos du domaine</h2>
-                        {domainProfile.domainDescription ? (
-                            <p className="text-gray-700 leading-relaxed">
-                                {domainProfile.domainDescription}
-                            </p>
-                        ) : (
-                            <p className="text-gray-500 italic">
-                                Aucune description disponible pour ce domaine.
-                            </p>
-                        )}
-                    </section>
-                )}
-
                 {/* Static Experience Card - Shows when it's a non-client domain */}
                 {domainProfile.producer === 'non-client' && (
                     <section className="mb-12">
                         <h2 className="text-2xl font-bold text-gray-800 mb-8">Visiter le domaine</h2>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             {domainProfile.siteWeb ? (
-                                <a 
+                                <a
                                     href={domainProfile.siteWeb}
                                     target="_blank"
                                     rel="noopener noreferrer"
@@ -251,12 +228,6 @@ export default function ExperienceDomainClient({
                                             </div>
                                         )}
 
-                                        {domainProfile.domainDescription && (
-                                            <p className="text-gray-700 text-sm leading-relaxed mb-4 flex-1">
-                                                {domainProfile.domainDescription}
-                                            </p>
-                                        )}
-
                                         {domainProfile.openingHours && Object.keys(domainProfile.openingHours).length > 0 && (
                                             <div className="mb-4">
                                                 <h4 className="text-sm font-semibold text-gray-800 mb-2">Horaires d'ouverture</h4>
@@ -271,8 +242,8 @@ export default function ExperienceDomainClient({
                                             </div>
                                         )}
 
-                                        <Button 
-                                            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
+                                        <Button
+                                            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground mt-auto"
                                             asChild
                                         >
                                             <span>Visiter le site web</span>
@@ -300,12 +271,6 @@ export default function ExperienceDomainClient({
                                                 <MapPin className="w-4 h-4 mr-1 text-primary" />
                                                 <span>{location.city}</span>
                                             </div>
-                                        )}
-
-                                        {domainProfile.domainDescription && (
-                                            <p className="text-gray-700 text-sm leading-relaxed mb-4 flex-1">
-                                                {domainProfile.domainDescription}
-                                            </p>
                                         )}
 
                                         {domainProfile.openingHours && Object.keys(domainProfile.openingHours).length > 0 && (
@@ -384,7 +349,7 @@ export default function ExperienceDomainClient({
                                                 {service.description}
                                             </p>
 
-                                            <Button 
+                                            <Button
                                                 onClick={() => router.push(`/if/booking-widget/${domainProfile.userId}/${service._id}/booking?withLayout=true`)}
                                                 className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
                                             >
