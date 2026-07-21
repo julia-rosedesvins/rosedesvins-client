@@ -35,6 +35,7 @@
     "react-day-picker": "^9.10.0",
     "react-dom": "19.1.0",
     "react-hot-toast": "^2.6.0",
+    "recharts": "2.15.4",
     "supercluster": "^8.0.1",
     "tailwind-merge": "^3.3.1"
   },

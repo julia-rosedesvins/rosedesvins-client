@@ -1,61 +1,81 @@
 "use client"
 
 import UserDashboardLayout from "@/components/userDashboard/UserDashboardLayout";
+import BookingsByMonthChart from "@/components/userDashboard/BookingsByMonthChart";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar, Users, Wine, CreditCard, Loader2, CheckCircle2, Clock, XCircle, RefreshCw, AlertCircle } from "lucide-react";
-import { useState, useEffect } from "react";
-import { userService, DashboardAnalytics } from "@/services/user.service";
+import { Calendar, Users, Wine, CreditCard, Loader2, CheckCircle2, Clock, XCircle, RefreshCw, AlertCircle, Phone, Mail } from "lucide-react";
+import Link from "next/link";
+import { useState, useEffect, useCallback } from "react";
+import { Button } from "@/components/ui/button";
+import { userService, DashboardAnalytics, DashboardPeriod } from "@/services/user.service";
 import { getVendorTransactions, TransactionStatus } from "@/services/stripe-checkout.service";
 import toast from "react-hot-toast";
 
+type UiPeriod = "cette-semaine" | "ce-mois" | "cette-annee";
+
+const UI_TO_API_PERIOD: Record<UiPeriod, DashboardPeriod> = {
+    "cette-semaine": "week",
+    "ce-mois": "month",
+    "cette-annee": "year",
+};
+
+const PERIOD_LABELS: Record<UiPeriod, { reservationsTitle: string; periodLabel: string }> = {
+    "cette-semaine": {
+        reservationsTitle: "Réservations cette semaine",
+        periodLabel: "Cette semaine",
+    },
+    "ce-mois": {
+        reservationsTitle: "Réservations ce mois",
+        periodLabel: "Ce mois-ci",
+    },
+    "cette-annee": {
+        reservationsTitle: "Réservations cette année",
+        periodLabel: "Cette année",
+    },
+};
+
 export default function UserDashboard() {
-    const [selectedPeriod, setSelectedPeriod] = useState("ce-mois");
+    const [selectedPeriod, setSelectedPeriod] = useState<UiPeriod>("ce-mois");
     const [analytics, setAnalytics] = useState<DashboardAnalytics | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [transactions, setTransactions] = useState<TransactionStatus[]>([]);
     const [txLoading, setTxLoading] = useState(true);
 
-    useEffect(() => {
-        loadAnalytics();
-        loadTransactions();
-    }, []);
-
-    const loadAnalytics = async () => {
+    const loadAnalytics = useCallback(async (uiPeriod: UiPeriod) => {
+        const apiPeriod = UI_TO_API_PERIOD[uiPeriod];
         try {
             setIsLoading(true);
-            const response = await userService.getDashboardAnalytics();
+            const response = await userService.getDashboardAnalytics(apiPeriod);
             setAnalytics(response.data);
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('Error loading analytics:', error);
             toast.error('Erreur lors du chargement des statistiques');
         } finally {
             setIsLoading(false);
         }
-    };
+    }, []);
 
     const loadTransactions = async () => {
         try {
             setTxLoading(true);
             const data = await getVendorTransactions();
             setTransactions(data);
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('Error loading transactions:', error);
         } finally {
             setTxLoading(false);
         }
     };
 
-    const formatDate = (dateString: string) => {
-        const date = new Date(dateString);
-        return date.toLocaleDateString('fr-FR', {
-            day: 'numeric',
-            month: 'short',
-            hour: '2-digit',
-            minute: '2-digit'
-        });
-    };
+    useEffect(() => {
+        loadAnalytics(selectedPeriod);
+    }, [selectedPeriod, loadAnalytics]);
+
+    useEffect(() => {
+        loadTransactions();
+    }, []);
 
     const formatParticipants = (adults: number, children: number) => {
         const total = adults + children;
@@ -73,25 +93,9 @@ export default function UserDashboard() {
         refunded:  { label: 'Remboursé', variant: 'secondary',  icon: <RefreshCw className="w-3 h-3" /> },
     };
 
-    // For now, we're only showing current month data from the API
-    // The period selector is kept for UI consistency but currently only shows "ce-mois" data
-    const periodData = {
-        reservations: { 
-            title: "Réservations ce mois", 
-            value: analytics?.reservationsThisMonth?.toString() || "0", 
-            change: "Ce mois-ci" 
-        },
-        visiteurs: { 
-            title: "Nombre de visiteurs", 
-            value: analytics?.visitors?.toString() || "0", 
-            period: "Ce mois-ci" 
-        },
-        chiffre: { 
-            title: "Chiffre d'affaires", 
-            value: analytics ? `${analytics.turnover.toFixed(2)}€` : "0€", 
-            period: "Ce mois-ci" 
-        }
-    };
+    const periodLabels = PERIOD_LABELS[selectedPeriod];
+    const reservationsCount = analytics?.reservations ?? analytics?.reservationsThisMonth ?? 0;
+
     return (
         <UserDashboardLayout title="Tableau de bord">
             <div className="mb-6 lg:mb-8">
@@ -103,7 +107,7 @@ export default function UserDashboard() {
 
                     <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
                         <span className="text-sm text-gray-600">Période :</span>
-                        <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
+                        <Select value={selectedPeriod} onValueChange={(value) => setSelectedPeriod(value as UiPeriod)}>
                             <SelectTrigger className="w-full sm:w-40">
                                 <SelectValue />
                             </SelectTrigger>
@@ -120,7 +124,7 @@ export default function UserDashboard() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-6 lg:mb-8">
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-xs sm:text-sm font-medium">{periodData.reservations.title}</CardTitle>
+                        <CardTitle className="text-xs sm:text-sm font-medium">{periodLabels.reservationsTitle}</CardTitle>
                         <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
                     </CardHeader>
                     <CardContent>
@@ -128,16 +132,16 @@ export default function UserDashboard() {
                             {isLoading ? (
                                 <Loader2 className="h-6 w-6 animate-spin" />
                             ) : (
-                                periodData.reservations.value
+                                reservationsCount.toString()
                             )}
                         </div>
-                        <p className="text-xs text-muted-foreground mt-1">{periodData.reservations.change}</p>
+                        <p className="text-xs text-muted-foreground mt-1">{periodLabels.periodLabel}</p>
                     </CardContent>
                 </Card>
 
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-xs sm:text-sm font-medium">{periodData.visiteurs.title}</CardTitle>
+                        <CardTitle className="text-xs sm:text-sm font-medium">Nombre de visiteurs</CardTitle>
                         <Users className="h-4 w-4 text-muted-foreground shrink-0" />
                     </CardHeader>
                     <CardContent>
@@ -145,10 +149,10 @@ export default function UserDashboard() {
                             {isLoading ? (
                                 <Loader2 className="h-6 w-6 animate-spin" />
                             ) : (
-                                periodData.visiteurs.value
+                                analytics?.visitors?.toString() || "0"
                             )}
                         </div>
-                        <p className="text-xs text-muted-foreground mt-1">{periodData.visiteurs.period}</p>
+                        <p className="text-xs text-muted-foreground mt-1">{periodLabels.periodLabel}</p>
                     </CardContent>
                 </Card>
 
@@ -171,7 +175,7 @@ export default function UserDashboard() {
 
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-xs sm:text-sm font-medium">{periodData.chiffre.title}</CardTitle>
+                        <CardTitle className="text-xs sm:text-sm font-medium">Chiffre d'affaires</CardTitle>
                         <CreditCard className="h-4 w-4 text-muted-foreground shrink-0" />
                     </CardHeader>
                     <CardContent>
@@ -179,87 +183,182 @@ export default function UserDashboard() {
                             {isLoading ? (
                                 <Loader2 className="h-6 w-6 animate-spin" />
                             ) : (
-                                periodData.chiffre.value
+                                analytics ? `${analytics.turnover.toFixed(2)}€` : "0€"
                             )}
                         </div>
-                        <p className="text-xs text-muted-foreground mt-1">{periodData.chiffre.period}</p>
+                        <p className="text-xs text-muted-foreground mt-1">{periodLabels.periodLabel}</p>
                     </CardContent>
                 </Card>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="text-lg lg:text-xl">Prochaines réservations</CardTitle>
-                        <CardDescription className="text-sm">Vos prochains visiteurs</CardDescription>
+            <BookingsByMonthChart
+                data={analytics?.bookingChart ?? analytics?.bookingsByMonth ?? []}
+                period={UI_TO_API_PERIOD[selectedPeriod]}
+                isLoading={isLoading}
+            />
+
+            <div className="flex flex-col gap-4 lg:gap-6">
+                {/* Upcoming bookings — full width */}
+                <Card className="w-full overflow-hidden">
+                    <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b bg-[#318160]/[0.04]">
+                        <div className="flex items-start gap-3">
+                            <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#318160]/10 text-[#318160]">
+                                <Calendar className="h-5 w-5" />
+                            </div>
+                            <div>
+                                <CardTitle className="text-lg lg:text-xl">Prochaines réservations</CardTitle>
+                                <CardDescription className="text-sm">
+                                    Vos prochains visiteurs
+                                    {!isLoading && analytics?.nextReservations?.length
+                                        ? ` · ${analytics.nextReservations.length} à venir`
+                                        : ''}
+                                </CardDescription>
+                            </div>
+                        </div>
+                        <Link href="/dashboard/reservations">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                className="border-[#318160] text-[#318160] hover:bg-[#318160] hover:text-white"
+                            >
+                                Voir le calendrier
+                            </Button>
+                        </Link>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="p-0">
                         {isLoading ? (
-                            <div className="flex items-center justify-center py-8">
-                                <Loader2 className="h-6 w-6 animate-spin" />
+                            <div className="flex items-center justify-center py-12">
+                                <Loader2 className="h-6 w-6 animate-spin text-[#318160]" />
                             </div>
                         ) : analytics?.nextReservations && analytics.nextReservations.length > 0 ? (
-                            <div className="space-y-3 lg:space-y-4">
+                            <ul className="divide-y divide-gray-100">
                                 {analytics.nextReservations.map((reservation, index) => (
-                                    <div key={index} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 bg-gray-50 rounded-lg gap-2">
-                                        <div className="flex-1">
-                                            <p className="font-medium text-sm lg:text-base">{reservation.customerEmail}</p>
-                                            <p className="text-xs lg:text-sm text-muted-foreground">
-                                                {reservation.eventName} - {formatParticipants(reservation.participantsAdults, reservation.participantsEnfants)}
-                                            </p>
-                                            <p className="text-xs text-muted-foreground">{reservation.phoneNo}</p>
+                                    <li
+                                        key={`${reservation.bookingDate}-${reservation.bookingTime}-${index}`}
+                                        className="flex flex-col gap-3 px-4 py-4 transition-colors hover:bg-gray-50/80 sm:flex-row sm:items-center sm:justify-between sm:gap-6 sm:px-6"
+                                    >
+                                        <div className="flex min-w-0 flex-1 items-start gap-3">
+                                            <div className="flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-lg bg-[#318160] text-white">
+                                                <span className="text-[10px] font-medium uppercase leading-none opacity-90">
+                                                    {new Date(reservation.bookingDate).toLocaleDateString('fr-FR', { month: 'short' })}
+                                                </span>
+                                                <span className="text-lg font-bold leading-none">
+                                                    {new Date(reservation.bookingDate).getDate()}
+                                                </span>
+                                            </div>
+                                            <div className="min-w-0 flex-1">
+                                                <p className="truncate font-semibold text-gray-900">
+                                                    {reservation.eventName}
+                                                </p>
+                                                <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground sm:text-sm">
+                                                    <span className="inline-flex items-center gap-1">
+                                                        <Users className="h-3.5 w-3.5" />
+                                                        {formatParticipants(reservation.participantsAdults, reservation.participantsEnfants)}
+                                                    </span>
+                                                    <span className="inline-flex items-center gap-1 truncate">
+                                                        <Mail className="h-3.5 w-3.5 shrink-0" />
+                                                        {reservation.customerEmail}
+                                                    </span>
+                                                    {reservation.phoneNo && (
+                                                        <span className="inline-flex items-center gap-1">
+                                                            <Phone className="h-3.5 w-3.5" />
+                                                            {reservation.phoneNo}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
                                         </div>
-                                        <p className="text-xs lg:text-sm font-medium text-right sm:text-left">
-                                            {formatDate(`${reservation.bookingDate}T${reservation.bookingTime}`)}
-                                        </p>
-                                    </div>
+                                        <div className="flex shrink-0 items-center gap-2 sm:flex-col sm:items-end">
+                                            <Badge className="bg-[#318160]/10 text-[#318160] hover:bg-[#318160]/15 border-0">
+                                                <Clock className="mr-1 h-3 w-3" />
+                                                {reservation.bookingTime}
+                                            </Badge>
+                                            <span className="text-xs text-muted-foreground sm:text-right">
+                                                {new Date(reservation.bookingDate).toLocaleDateString('fr-FR', {
+                                                    weekday: 'long',
+                                                    day: 'numeric',
+                                                    month: 'long',
+                                                })}
+                                            </span>
+                                        </div>
+                                    </li>
                                 ))}
-                            </div>
+                            </ul>
                         ) : (
-                            <div className="text-center py-8 text-muted-foreground">
-                                <Calendar className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                                <p className="text-sm">Aucune réservation à venir</p>
+                            <div className="flex flex-col items-center justify-center px-4 py-12 text-center text-muted-foreground">
+                                <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-gray-100">
+                                    <Calendar className="h-7 w-7 opacity-50" />
+                                </div>
+                                <p className="font-medium text-gray-700">Aucune réservation à venir</p>
+                                <p className="mt-1 max-w-sm text-sm">
+                                    Les prochaines réservations de vos visiteurs apparaîtront ici.
+                                </p>
                             </div>
                         )}
                     </CardContent>
                 </Card>
 
-                {/* Stripe Transactions */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="text-lg lg:text-xl flex items-center gap-2">
-                            <CreditCard className="h-5 w-5" />
-                            Transactions Stripe
-                        </CardTitle>
-                        <CardDescription className="text-sm">Paiements en ligne reçus</CardDescription>
+                {/* Stripe transactions — full width, below upcoming */}
+                <Card className="w-full overflow-hidden">
+                    <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b bg-[#318160]/[0.04]">
+                        <div className="flex items-start gap-3">
+                            <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#318160]/10 text-[#318160]">
+                                <CreditCard className="h-5 w-5" />
+                            </div>
+                            <div>
+                                <CardTitle className="text-lg lg:text-xl">Transactions Stripe</CardTitle>
+                                <CardDescription className="text-sm">
+                                    Paiements en ligne reçus
+                                    {!txLoading && transactions.length
+                                        ? ` · ${transactions.length} transaction${transactions.length > 1 ? 's' : ''}`
+                                        : ''}
+                                </CardDescription>
+                            </div>
+                        </div>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="p-0">
                         {txLoading ? (
-                            <div className="flex items-center justify-center py-8">
-                                <Loader2 className="h-6 w-6 animate-spin" />
+                            <div className="flex items-center justify-center py-12">
+                                <Loader2 className="h-6 w-6 animate-spin text-[#318160]" />
                             </div>
                         ) : transactions.length > 0 ? (
-                            <div className="space-y-3">
+                            <ul className="divide-y divide-gray-100">
                                 {transactions.map((tx) => {
                                     const cfg = txStatusConfig[tx.status] ?? txStatusConfig.pending;
                                     return (
-                                        <div key={tx._id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 bg-gray-50 rounded-lg gap-2">
-                                            <div className="flex-1 min-w-0">
-                                                {/* Cardholder name or email */}
-                                                <p className="font-medium text-sm truncate">
-                                                    {tx.cardholderName || tx.customerEmail || '—'}
-                                                </p>
-                                                {/* Service + card last 4 */}
-                                                <p className="text-xs text-muted-foreground mt-0.5">
-                                                    {tx.serviceName || 'Réservation'}
-                                                    {tx.cardLast4 && (
-                                                        <span className="ml-2 font-mono tracking-wider">•••• {tx.cardLast4}</span>
-                                                    )}
-                                                </p>
-                                                <p className="text-xs text-muted-foreground">{formatDate(tx.createdAt)}</p>
+                                        <li
+                                            key={tx._id}
+                                            className="flex flex-col gap-3 px-4 py-4 transition-colors hover:bg-gray-50/80 sm:flex-row sm:items-center sm:justify-between sm:gap-6 sm:px-6"
+                                        >
+                                            <div className="flex min-w-0 flex-1 items-start gap-3">
+                                                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-gray-200 bg-white text-[#318160]">
+                                                    <CreditCard className="h-5 w-5" />
+                                                </div>
+                                                <div className="min-w-0 flex-1">
+                                                    <p className="truncate font-semibold text-gray-900">
+                                                        {tx.cardholderName || tx.customerEmail || 'Client'}
+                                                    </p>
+                                                    <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground sm:text-sm">
+                                                        <span>{tx.serviceName || 'Réservation'}</span>
+                                                        {tx.cardLast4 && (
+                                                            <span className="font-mono tracking-wider">
+                                                                •••• {tx.cardLast4}
+                                                            </span>
+                                                        )}
+                                                        <span>
+                                                            {new Date(tx.createdAt).toLocaleDateString('fr-FR', {
+                                                                day: 'numeric',
+                                                                month: 'short',
+                                                                year: 'numeric',
+                                                                hour: '2-digit',
+                                                                minute: '2-digit',
+                                                            })}
+                                                        </span>
+                                                    </div>
+                                                </div>
                                             </div>
-                                            <div className="flex items-center gap-2 shrink-0">
-                                                <span className="text-sm font-semibold">
+                                            <div className="flex shrink-0 items-center gap-3 sm:flex-col sm:items-end sm:gap-1.5">
+                                                <span className="text-base font-bold text-gray-900 tabular-nums">
                                                     {(tx.amount / 100).toFixed(2)} €
                                                 </span>
                                                 <Badge variant={cfg.variant} className="flex items-center gap-1 text-xs">
@@ -267,19 +366,23 @@ export default function UserDashboard() {
                                                     {cfg.label}
                                                 </Badge>
                                             </div>
-                                        </div>
+                                        </li>
                                     );
                                 })}
-                            </div>
+                            </ul>
                         ) : (
-                            <div className="text-center py-8 text-muted-foreground">
-                                <CreditCard className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                                <p className="text-sm">Aucune transaction Stripe</p>
+                            <div className="flex flex-col items-center justify-center px-4 py-12 text-center text-muted-foreground">
+                                <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-gray-100">
+                                    <CreditCard className="h-7 w-7 opacity-50" />
+                                </div>
+                                <p className="font-medium text-gray-700">Aucune transaction Stripe</p>
+                                <p className="mt-1 max-w-sm text-sm">
+                                    Les paiements en ligne de vos visiteurs apparaîtront ici.
+                                </p>
                             </div>
                         )}
                     </CardContent>
                 </Card>
-
             </div>
         </UserDashboardLayout>
     );
