@@ -17,10 +17,15 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const data = await fetchRegionByName(regionName, 1, 5);
   const displayName = data?.region?.denom || regionName;
   const canonicalSlug = data?.region?.slug || slugify(displayName);
+  const subtitle =
+    data?.region?.subtitle?.trim() || 'sur la route des vins';
+  const metaDescription =
+    data?.region?.description?.trim()?.slice(0, 155) ||
+    `Découvrez les domaines viticoles et expériences œnotouristiques en ${displayName}. Réservez une visite ou une dégustation près de chez vous.`;
 
   return buildPageMetadata({
-    title: `${displayName} : sur la route des vins`,
-    description: `Découvrez les domaines viticoles et expériences œnotouristiques en ${displayName}. Réservez une visite ou une dégustation près de chez vous.`,
+    title: `${displayName} : ${subtitle}`.slice(0, 70),
+    description: metaDescription,
     path: `/region/${canonicalSlug}`,
   });
 }

@@ -23,6 +23,8 @@ export interface RegionRecord {
   denom: string;
   slug?: string;
   thumbnailUrl?: string;
+  subtitle?: string;
+  description?: string;
   isParent?: boolean;
 }
 

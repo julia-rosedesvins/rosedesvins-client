@@ -313,6 +313,14 @@ export default function RegionPageClient({
             .sort((a, b) => a.distance - b.distance)
         : domains;
 
+    const titleName = region?.denom || regionName;
+    const bannerSubtitle =
+        region?.subtitle?.trim() ||
+        'sur la route des vins et des châteaux';
+    const bannerDescription =
+        region?.description?.trim() ||
+        `Au cœur d'un patrimoine exceptionnel, découvrez la diversité des terroirs de ${titleName} et échangez avec des vignerons passionnés. Entre caves troglodytiques, châteaux et paysages inscrits à l'UNESCO, vivez des expériences œnotouristiques inoubliables dans la région de ${titleName}.`;
+
     return (
         <LandingPageLayout>
 
@@ -369,14 +377,10 @@ export default function RegionPageClient({
                     )}
                     
                     <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6">
-                        {region?.denom || regionName} : sur la route des vins<br />
-                        et des châteaux
+                        {titleName} : {bannerSubtitle}
                     </h1>
                     <p className="text-lg md:text-xl max-w-4xl leading-relaxed">
-                        Au cœur d'un patrimoine exceptionnel, découvrez la diversité des terroirs
-                        de {region?.denom || regionName} et échangez avec des vignerons passionnés. Entre caves
-                        troglodytiques, châteaux et paysages inscrits à l'UNESCO, vivez des expériences
-                        œnotouristiques inoubliables dans la région de {region?.denom || regionName}.
+                        {bannerDescription}
                     </p>
                 </div>
             </section>

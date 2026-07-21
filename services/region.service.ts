@@ -11,6 +11,8 @@ export interface Region {
   max_lat: number;
   max_lon: number;
   thumbnailUrl?: string;
+  subtitle?: string;
+  description?: string;
   isParent: boolean;
   parent: string | null;
   createdAt?: string;
