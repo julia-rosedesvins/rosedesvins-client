@@ -98,6 +98,45 @@ export function collectionPageJsonLd(params: {
   };
 }
 
+export function blogPostingJsonLd(params: {
+  title: string;
+  description: string;
+  slug: string;
+  image?: string;
+  datePublished: string;
+  dateModified: string;
+  authorName: string;
+}) {
+  const url = buildCanonical(`/blog/${params.slug}`);
+
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'BlogPosting',
+    headline: params.title,
+    description: params.description,
+    image: params.image || undefined,
+    datePublished: params.datePublished,
+    dateModified: params.dateModified,
+    author: {
+      '@type': 'Person',
+      name: params.authorName,
+    },
+    publisher: {
+      '@type': 'Organization',
+      name: SITE_NAME,
+      logo: {
+        '@type': 'ImageObject',
+        url: `${SITE_URL}/assets/logo.png`,
+      },
+    },
+    mainEntityOfPage: {
+      '@type': 'WebPage',
+      '@id': url,
+    },
+    url,
+  };
+}
+
 export function wineryJsonLd(params: {
   name: string;
   description: string;

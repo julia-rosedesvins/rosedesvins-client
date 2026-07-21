@@ -1,5 +1,6 @@
 import type { MetadataRoute } from 'next';
 import { fetchAllSitemapPaths } from '@/lib/seo/fetch-public';
+import { fetchBlogSitemapData } from '@/lib/wordpress/fetch-posts';
 import { SITE_URL } from '@/lib/seo/site';
 
 const STATIC_ROUTES = [
@@ -25,7 +26,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: path === '/' ? 1 : 0.8,
   }));
 
-  const { regions, experiences } = await fetchAllSitemapPaths();
+  const [{ regions, experiences }, blogSitemap] = await Promise.all([
+    fetchAllSitemapPaths(),
+    fetchBlogSitemapData(),
+  ]);
 
   const regionEntries: MetadataRoute.Sitemap = regions.map((entry) => ({
     url: `${SITE_URL}${entry.path}`,
@@ -41,5 +45,40 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.85,
   }));
 
-  return [...staticEntries, ...regionEntries, ...experienceEntries];
+  const blogLastModified = blogSitemap.latestModified
+    ? new Date(blogSitemap.latestModified)
+    : now;
+
+  const blogIndexEntry: MetadataRoute.Sitemap[number] = {
+    url: `${SITE_URL}/blog`,
+    lastModified: blogLastModified,
+    changeFrequency: 'weekly',
+    priority: 0.8,
+  };
+
+  const blogPaginationEntries: MetadataRoute.Sitemap = Array.from(
+    { length: Math.max(0, blogSitemap.totalPages - 1) },
+    (_, index) => ({
+      url: `${SITE_URL}/blog?page=${index + 2}`,
+      lastModified: blogLastModified,
+      changeFrequency: 'weekly' as const,
+      priority: 0.65,
+    }),
+  );
+
+  const blogPostEntries: MetadataRoute.Sitemap = blogSitemap.posts.map((entry) => ({
+    url: `${SITE_URL}/blog/${entry.slug}`,
+    lastModified: entry.modified ? new Date(entry.modified) : blogLastModified,
+    changeFrequency: 'weekly',
+    priority: 0.75,
+  }));
+
+  return [
+    ...staticEntries,
+    blogIndexEntry,
+    ...blogPaginationEntries,
+    ...regionEntries,
+    ...experienceEntries,
+    ...blogPostEntries,
+  ];
 }

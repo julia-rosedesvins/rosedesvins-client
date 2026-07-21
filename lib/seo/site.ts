@@ -57,6 +57,12 @@ export interface PageMetadataOptions {
   absolute?: boolean;
 }
 
+export interface ArticleMetadataOptions extends PageMetadataOptions {
+  publishedTime: string;
+  modifiedTime: string;
+  authorName?: string;
+}
+
 export function buildPageMetadata({
   title,
   description = DEFAULT_DESCRIPTION,
@@ -83,6 +89,47 @@ export function buildPageMetadata({
       title: fullTitle,
       description,
       images: [{ url: ogImage, alt: SITE_NAME }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: fullTitle,
+      description,
+      images: [ogImage],
+    },
+  };
+}
+
+export function buildArticleMetadata({
+  title,
+  description = DEFAULT_DESCRIPTION,
+  path,
+  ogImage = DEFAULT_OG_IMAGE,
+  noIndex = false,
+  publishedTime,
+  modifiedTime,
+  authorName,
+}: ArticleMetadataOptions): Metadata {
+  const canonical = buildCanonical(path);
+  const fullTitle = title.includes(SITE_NAME) ? title : `${title} | ${SITE_NAME}`;
+
+  return {
+    title,
+    description,
+    alternates: { canonical },
+    robots: noIndex
+      ? { index: false, follow: false }
+      : { index: true, follow: true },
+    openGraph: {
+      type: 'article',
+      locale: LOCALE,
+      url: canonical,
+      siteName: SITE_NAME,
+      title: fullTitle,
+      description,
+      images: [{ url: ogImage, alt: title }],
+      publishedTime,
+      modifiedTime,
+      authors: authorName ? [authorName] : undefined,
     },
     twitter: {
       card: 'summary_large_image',

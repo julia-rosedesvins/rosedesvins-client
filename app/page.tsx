@@ -1,6 +1,9 @@
 import { buildPageMetadata } from '@/lib/seo/site';
 import { JsonLdScript, organizationJsonLd, websiteJsonLd } from '@/lib/seo/json-ld';
+import { fetchLatestPosts } from '@/lib/wordpress/fetch-posts';
 import HomePageClient from '@/components/HomePageClient';
+
+export const revalidate = 60;
 
 export const metadata = buildPageMetadata({
   title: 'Rose des Vins : réservez vos domaines viticoles',
@@ -10,11 +13,13 @@ export const metadata = buildPageMetadata({
   absolute: true,
 });
 
-export default function HomePage() {
+export default async function HomePage() {
+  const blogPosts = await fetchLatestPosts(6);
+
   return (
     <>
       <JsonLdScript data={[organizationJsonLd(), websiteJsonLd()]} />
-      <HomePageClient />
+      <HomePageClient blogPosts={blogPosts} />
     </>
   );
 }

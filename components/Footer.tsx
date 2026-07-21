@@ -16,7 +16,7 @@ const Footer = () => {
             <a href="https://www.instagram.com/rose_des_vins/" className="hover:opacity-80 transition-opacity flex justify-center">
               <Instagram className="h-5 w-5" />
             </a>
-            {/* <Link href="/blog" className="hover:opacity-80 transition-opacity text-center">Blog</Link> */}
+            <Link href="/blog" className="hover:opacity-80 transition-opacity text-center">Blog</Link>
             <Link href="/regions" className="hover:opacity-80 transition-opacity text-center">Régions</Link>
             <Link href="/experiences" className="hover:opacity-80 transition-opacity text-center">Expériences</Link>
             <Link href="/faqs" className="hover:opacity-80 transition-opacity text-center">FAQ</Link>

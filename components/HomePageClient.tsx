@@ -7,15 +7,20 @@ import HeroSection from "@/components/HeroSection"
 import LandingPageLayout from "@/components/LandingPageLayout"
 import NewsletterSection from "@/components/NewsletterSection"
 import RegionSection from "@/components/RegionSection"
+import type { BlogPostSummary } from "@/lib/wordpress/types"
 
-export default function HomePageClient() {
+interface HomePageClientProps {
+  blogPosts: BlogPostSummary[]
+}
+
+export default function HomePageClient({ blogPosts }: HomePageClientProps) {
   return (
     <LandingPageLayout>
       <HeroSection />
       <RegionSection />
       <ExperiencesSection />
       {/* <GiftCardSection /> */}
-      {/* <BlogSection /> */}
+      <BlogSection posts={blogPosts} />
       <NewsletterSection />
     </LandingPageLayout>
   )

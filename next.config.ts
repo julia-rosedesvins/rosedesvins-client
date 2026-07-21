@@ -47,6 +47,12 @@ const nextConfig: NextConfig = {
         hostname: '*.googleapis.com',
         pathname: '/**',
       },
+      // WordPress CMS media
+      {
+        protocol: 'https',
+        hostname: 'cms.rosedesvins.co',
+        pathname: '/wp-content/**',
+      },
     ],
   },
   async headers() {
