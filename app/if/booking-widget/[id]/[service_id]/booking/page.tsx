@@ -758,6 +758,24 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
       currentParticipants: `${adults} adults + ${children} children = ${adults + children}`,
       bookedSlotsCount: bookedSlots.length
     });
+
+    // Full-day external/blocked/personal busy (synced holidays, etc.) → block every slot
+    const hasAllDayBlock = bookedSlots.some((slot) => {
+      const slotDate = new Date(slot.eventDate);
+      const slotDateString = `${slotDate.getFullYear()}-${(slotDate.getMonth() + 1).toString().padStart(2, '0')}-${slotDate.getDate().toString().padStart(2, '0')}`;
+      if (slotDateString !== dateString) return false;
+      if (slot.eventType !== 'external' && slot.eventType !== 'personal' && slot.eventType !== 'blocked') {
+        return false;
+      }
+      if (slot.isAllDay === true) return true;
+      // Fallback: day-spanning times used by sync expansion (00:00–23:59)
+      return slot.eventTime === '00:00' && (slot.eventEndTime === '23:59' || slot.eventEndTime === '23:59:59');
+    });
+
+    if (hasAllDayBlock) {
+      console.log('🚫 Slot blocked due to all-day calendar event:', { date: dateString, time });
+      return true;
+    }
     
     // Parse the time slot start time
     const [slotHours, slotMinutes] = time.split(':').map(Number);

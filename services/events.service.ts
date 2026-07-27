@@ -70,6 +70,7 @@ export interface PublicScheduleData {
   eventTime: string;
   eventEndTime?: string; // Optional end time for blocking time ranges
   eventType?: 'booking' | 'personal' | 'external' | 'blocked'; // Event type to differentiate external events
+  isAllDay?: boolean; // Full-day busy (e.g. synced holiday) — blocks all slots that day
   totalParticipants?: number; // Total participants for booking events
   serviceId?: string; // Service ID for booking events - used to check if multiple bookings are for same service
   selectedLanguage?: string; // Language of the booking - used to enforce same-language constraint for multi-bookings
