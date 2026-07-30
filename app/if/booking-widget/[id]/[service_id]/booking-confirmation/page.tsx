@@ -307,7 +307,7 @@ function BookingConfirmationContent({ id, serviceId }: { id: string; serviceId: 
       phone,
       bookingId,
     });
-    if (cancellationPolicy) params.set("cancellationPolicy", cancellationPolicy);
+    if (stripeAvailable && cancellationPolicy) params.set("cancellationPolicy", cancellationPolicy);
     if (withLayout) params.set("withLayout", "true");
     router.push(`/if/booking-widget/${id}/${serviceId}/confirmation-success?${params.toString()}`);
   };

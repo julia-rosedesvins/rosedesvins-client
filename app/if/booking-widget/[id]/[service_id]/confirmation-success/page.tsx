@@ -170,7 +170,7 @@ function ConfirmationSuccessContent({ id, serviceId }: { id: string, serviceId: 
                 <span>{stripeAvailable ? 'Paiement en ligne' : formatPaymentMethods()}</span>
               </div>
 
-              {cancellationPolicy && getCancellationPolicyLabel(cancellationPolicy) && (
+              {stripeAvailable && cancellationPolicy && getCancellationPolicyLabel(cancellationPolicy) && (
                 <div className="flex items-start gap-3">
                   <CreditCard className="w-5 h-5 opacity-0" />
                   <span className="text-sm text-gray-500 italic">{getCancellationPolicyLabel(cancellationPolicy)}</span>
