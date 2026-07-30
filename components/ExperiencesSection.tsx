@@ -66,7 +66,7 @@ const ExperiencesSection = () => {
             <div className="flex gap-6 overflow-hidden justify-center">
               {[1, 2, 3].map((i) => (
                 <div key={i} className="flex-shrink-0 flex flex-col items-center gap-4">
-                  <Skeleton className="w-64 h-64 rounded-full" />
+                  <Skeleton className="w-64 h-64 rounded-2xl" />
                   <Skeleton className="h-6 w-40" />
                 </div>
               ))}
@@ -95,7 +95,7 @@ const ExperiencesSection = () => {
                       href={`/experiences?category=${category._id}`}
                       className="flex flex-col items-center group cursor-pointer"
                     >
-                      <div className="relative w-64 h-64 md:w-72 md:h-72 rounded-full overflow-hidden mb-4 shadow-[0_8px_30px_rgba(0,0,0,0.25)]">
+                      <div className="relative w-64 h-64 md:w-72 md:h-72 rounded-2xl overflow-hidden mb-4 shadow-sm">
                         <Image
                           src={CATEGORY_IMAGES[index % CATEGORY_IMAGES.length]}
                           alt={category.category_name}
