@@ -661,11 +661,16 @@ class UserService {
    * Get user dashboard analytics
    * @returns Promise with dashboard analytics data
    */
-  async getDashboardAnalytics(period: DashboardPeriod = 'month'): Promise<DashboardAnalyticsResponse> {
+  async getDashboardAnalytics(
+    period: DashboardPeriod = 'month',
+    bookingSources?: string[],
+  ): Promise<DashboardAnalyticsResponse> {
     try {
-      const response = await apiClient.get<DashboardAnalyticsResponse>(
-        `/dashboard-analytics/user?period=${encodeURIComponent(period)}`,
-      );
+      let url = `/dashboard-analytics/user?period=${encodeURIComponent(period)}`;
+      if (bookingSources) {
+        url += `&bookingSources=${encodeURIComponent(bookingSources.join(','))}`;
+      }
+      const response = await apiClient.get<DashboardAnalyticsResponse>(url);
       return response.data;
     } catch (error) {
       console.error('UserService: Get dashboard analytics error:', error);

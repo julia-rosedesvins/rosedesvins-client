@@ -11,6 +11,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { userService, DashboardAnalytics, DashboardPeriod } from "@/services/user.service";
 import { getVendorTransactions, TransactionStatus } from "@/services/stripe-checkout.service";
+import { BookingSourceFilterProvider, useBookingSourceFilter } from "@/components/userDashboard/BookingSourceFilterContext";
 import toast from "react-hot-toast";
 
 type UiPeriod = "cette-semaine" | "ce-mois" | "cette-annee";
@@ -37,17 +38,26 @@ const PERIOD_LABELS: Record<UiPeriod, { reservationsTitle: string; periodLabel: 
 };
 
 export default function UserDashboard() {
+    return (
+        <BookingSourceFilterProvider>
+            <UserDashboardContent />
+        </BookingSourceFilterProvider>
+    );
+}
+
+function UserDashboardContent() {
     const [selectedPeriod, setSelectedPeriod] = useState<UiPeriod>("ce-mois");
     const [analytics, setAnalytics] = useState<DashboardAnalytics | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [transactions, setTransactions] = useState<TransactionStatus[]>([]);
     const [txLoading, setTxLoading] = useState(true);
+    const { selectedSources } = useBookingSourceFilter();
 
-    const loadAnalytics = useCallback(async (uiPeriod: UiPeriod) => {
+    const loadAnalytics = useCallback(async (uiPeriod: UiPeriod, bookingSources: string[]) => {
         const apiPeriod = UI_TO_API_PERIOD[uiPeriod];
         try {
             setIsLoading(true);
-            const response = await userService.getDashboardAnalytics(apiPeriod);
+            const response = await userService.getDashboardAnalytics(apiPeriod, bookingSources);
             setAnalytics(response.data);
         } catch (error: unknown) {
             console.error('Error loading analytics:', error);
@@ -70,8 +80,8 @@ export default function UserDashboard() {
     };
 
     useEffect(() => {
-        loadAnalytics(selectedPeriod);
-    }, [selectedPeriod, loadAnalytics]);
+        loadAnalytics(selectedPeriod, selectedSources);
+    }, [selectedPeriod, selectedSources, loadAnalytics]);
 
     useEffect(() => {
         loadTransactions();

@@ -1,11 +1,13 @@
 "use client"
 
 import { ReactNode, useEffect, useState } from "react"
+import { usePathname } from "next/navigation"
 import { Header } from "./Header"
 import { Navigation } from "./Navigation"
 import { useUser } from "@/contexts/UserContext"
 import { AlertTriangle } from "lucide-react"
 import Link from "next/link"
+import { BookingSourceFilterDropdown } from "./BookingSourceFilterDropdown"
 
 interface UserDashboardLayoutProps {
   children: ReactNode
@@ -14,7 +16,9 @@ interface UserDashboardLayoutProps {
 
 export default function UserDashboardLayout({ children, title }: UserDashboardLayoutProps) {
   const { user } = useUser();
+  const pathname = usePathname();
   const [mounted, setMounted] = useState(false);
+  const showBookingSourceFilter = pathname === "/dashboard";
 
   useEffect(() => {
     setMounted(true);
@@ -105,6 +109,14 @@ export default function UserDashboardLayout({ children, title }: UserDashboardLa
 
       {/* Main Content */}
       <main className="container mx-auto px-4 sm:px-6 py-4 sm:py-6 lg:py-8">
+        {/* Note: the booking source filter is provided by the page itself (e.g. dashboard/page.tsx)
+            so that both this dropdown and the page's own data-fetching hook share the same
+            context instance — a provider nested here could not reach back up to the page. */}
+        {showBookingSourceFilter && (
+          <div className="mb-4 flex justify-end">
+            <BookingSourceFilterDropdown />
+          </div>
+        )}
         {children}
       </main>
     </div>
