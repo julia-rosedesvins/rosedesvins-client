@@ -1,10 +1,11 @@
 import { buildPageMetadata } from '@/lib/seo/site';
 
 export const metadata = buildPageMetadata({
-  title: 'Blog œnotourisme et viticulture',
+  title: 'Guide oenotouristique, actu et conseils de dégustation',
   description:
-    'Articles, conseils et actualités sur l\'œnotourisme, les domaines viticoles et les expériences autour du vin en France.',
+    "Retrouvez sur le blog Rose des Vins des articles sur l'oenotourisme, les dernières actualités du vin, conseils et les tendances des vignobles français.",
   path: '/blog',
+  absolute: true,
 });
 
 export default function BlogLayout({ children }: { children: React.ReactNode }) {

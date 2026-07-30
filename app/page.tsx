@@ -6,9 +6,9 @@ import HomePageClient from '@/components/HomePageClient';
 export const revalidate = 60;
 
 export const metadata = buildPageMetadata({
-  title: 'Rose des Vins : réservez vos domaines viticoles',
+  title: 'Rose des Vins : Dégustation et visite de domaines',
   description:
-    "Découvrez les plus beaux domaines viticoles de France avec Rose des Vins : visites de caves, dégustations et réservation d'expériences œnotouristiques en ligne.",
+    'Découvrez les domaines viticoles avec Rose des Vins : réservez dégustations de vin, visites de caves et autres expériences oenotouristiques.',
   path: '/',
   absolute: true,
 });
