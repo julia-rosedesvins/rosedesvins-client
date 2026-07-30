@@ -119,7 +119,7 @@ export default function ExperienceDomainClient({
                 <div className="max-w-6xl mx-auto px-4 py-8">
                     <Skeleton className="h-12 w-3/4 mb-4" />
                     <Skeleton className="h-6 w-1/2 mb-8" />
-                    <Skeleton className="h-64 w-full mb-8" />
+                    <Skeleton className="h-[400px] w-full mb-8" />
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {[1, 2, 3].map((i) => (
                             <Skeleton key={i} className="h-96 w-full" />
@@ -145,7 +145,7 @@ export default function ExperienceDomainClient({
         <LandingPageLayout>
             {/* Hero Section */}
             <section
-                className="relative flex min-h-[280px] items-start bg-cover bg-center text-white"
+                className="relative flex h-[400px] items-center bg-cover bg-center text-white"
                 style={{
                     backgroundImage: domainProfile.domainProfilePictureUrl
                         ? `linear-gradient(rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0.45)), url(${domainProfile.domainProfilePictureUrl})`
@@ -155,7 +155,7 @@ export default function ExperienceDomainClient({
                     backgroundRepeat: 'no-repeat',
                 }}
             >
-                <div className="relative z-10 w-full max-w-6xl mx-auto px-4 pt-6 pb-12">
+                <div className="relative z-10 w-full max-w-6xl mx-auto px-4 py-6">
                     {/* Breadcrumb */}
                     <div className="flex flex-wrap items-center text-white text-sm mb-6">
                         <Home className="w-4 h-4 mr-2 shrink-0" />
