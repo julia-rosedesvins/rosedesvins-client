@@ -6,6 +6,7 @@ import { fr } from 'date-fns/locale';
 import type { Metadata } from 'next';
 import BlogPostContent from '@/components/BlogPostContent';
 import LandingPageLayout from '@/components/LandingPageLayout';
+import NewsletterSection from '@/components/NewsletterSection';
 import { fetchPostBySlug } from '@/lib/wordpress/fetch-posts';
 import { truncateText } from '@/lib/wordpress/utils';
 import { JsonLdScript, breadcrumbJsonLd, blogPostingJsonLd } from '@/lib/seo/json-ld';
@@ -130,6 +131,7 @@ export default async function BlogPostPage({ params }: PageProps) {
           <BlogPostContent html={post.content} />
         </article>
       </main>
+      <NewsletterSection />
     </LandingPageLayout>
   );
 }
