@@ -144,6 +144,7 @@
   min-width: 0;
   overflow-wrap: anywhere;
   word-break: break-word;
+  font-size: 1.25rem;
 }
 
 .blog-content > * + * {
@@ -169,7 +170,6 @@
 }
 
 .blog-content p {
-  font-size: 1.0625rem;
   line-height: 1.75;
 }
 

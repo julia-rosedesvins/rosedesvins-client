@@ -94,8 +94,18 @@ export default async function BlogPostPage({ params }: PageProps) {
             </h1>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-gray-600 text-sm">
               <time dateTime={post.date}>{formatDate(post.date)}</time>
-              <span aria-hidden="true">•</span>
-              <span>{post.authorName}</span>
+              {post.categories.length > 0 && (
+                <div className="flex flex-wrap items-center gap-2">
+                  {post.categories.map((category) => (
+                    <span
+                      key={category}
+                      className="inline-flex items-center rounded-full bg-[#318160]/10 px-3 py-1 text-xs font-medium text-[#318160]"
+                    >
+                      {category}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
           </header>
 

@@ -42,7 +42,7 @@ export default async function BlogPage({ searchParams }: PageProps) {
       <main className="max-w-6xl mx-auto px-4 py-16 min-w-0 overflow-x-hidden">
         <div className="mb-12 text-center">
           <h1 className="text-3xl md:text-4xl font-bold text-[#318160] mb-4">Blog</h1>
-          <p className="text-gray-600 text-lg max-w-3xl mx-auto">
+          <p className="text-gray-600 text-base sm:text-lg max-w-2xl md:max-w-none mx-auto md:whitespace-nowrap">
             Actualités, conseils et inspirations autour de l&apos;œnotourisme et des domaines viticoles de France.
           </p>
           {total > 0 && (
@@ -76,6 +76,18 @@ export default async function BlogPage({ searchParams }: PageProps) {
                     >
                       {formatDate(post.date)}
                     </time>
+                    {post.categories.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        {post.categories.map((category) => (
+                          <span
+                            key={category}
+                            className="inline-flex items-center rounded-full bg-[#318160]/10 px-3 py-1 text-xs font-medium text-[#318160]"
+                          >
+                            {category}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                     <h2 className="text-xl font-semibold text-[#264035] group-hover:text-[#1D6346] transition-colors mb-2">
                       {post.title}
                     </h2>
