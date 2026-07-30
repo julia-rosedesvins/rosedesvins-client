@@ -109,16 +109,23 @@ export default async function BlogPostPage({ params }: PageProps) {
             </div>
           </header>
 
-          <div className="relative aspect-[16/9] overflow-hidden rounded-2xl mb-10">
-            <Image
-              src={post.featuredImageUrl}
-              alt={post.title}
-              fill
-              className="object-cover"
-              sizes="(max-width: 768px) 100vw, 896px"
-              priority
-            />
-          </div>
+          <figure className="mb-10">
+            <div className="relative aspect-[16/9] overflow-hidden rounded-2xl">
+              <Image
+                src={post.featuredImageUrl}
+                alt={post.title}
+                fill
+                className="object-cover"
+                sizes="(max-width: 768px) 100vw, 896px"
+                priority
+              />
+            </div>
+            {post.featuredImageCaption && (
+              <figcaption className="mt-2 text-sm text-gray-500 text-center">
+                {post.featuredImageCaption}
+              </figcaption>
+            )}
+          </figure>
 
           <BlogPostContent html={post.content} />
         </article>

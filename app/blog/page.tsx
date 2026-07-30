@@ -22,7 +22,7 @@ export default async function BlogPage({ searchParams }: PageProps) {
   const { page: pageParam } = await searchParams;
   const currentPage = Math.max(1, Number(pageParam) || 1);
 
-  const { posts, total, totalPages } = await fetchPosts({
+  const { posts, totalPages } = await fetchPosts({
     page: currentPage,
     perPage: BLOG_POSTS_PER_PAGE,
   });
@@ -45,12 +45,6 @@ export default async function BlogPage({ searchParams }: PageProps) {
           <p className="text-gray-600 text-base sm:text-lg max-w-2xl md:max-w-none mx-auto md:whitespace-nowrap">
             Actualités, conseils et inspirations autour de l&apos;œnotourisme et des domaines viticoles de France.
           </p>
-          {total > 0 && (
-            <p className="text-sm text-gray-500 mt-3">
-              {total} article{total > 1 ? 's' : ''}
-              {totalPages > 1 ? ` • Page ${currentPage} sur ${totalPages}` : ''}
-            </p>
-          )}
         </div>
 
         {posts.length === 0 ? (

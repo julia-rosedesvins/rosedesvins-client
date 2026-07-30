@@ -30,6 +30,13 @@ export function getFeaturedImageUrl(post: WpPost): string {
   return media?.source_url || DEFAULT_OG_IMAGE;
 }
 
+export function getFeaturedImageCaption(post: WpPost): string | undefined {
+  const caption = post._embedded?.['wp:featuredmedia']?.[0]?.caption?.rendered;
+  if (!caption) return undefined;
+  const text = decodeHtmlEntities(stripHtml(caption)).trim();
+  return text || undefined;
+}
+
 export function getAuthorName(post: WpPost): string {
   return post._embedded?.author?.[0]?.name || 'Rose des Vins';
 }
@@ -57,6 +64,7 @@ export function toBlogPostDetail(post: WpPost): BlogPostDetail {
   return {
     ...toBlogPostSummary(post),
     content: post.content.rendered,
+    featuredImageCaption: getFeaturedImageCaption(post),
   };
 }
 

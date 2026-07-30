@@ -14,6 +14,7 @@ export interface WpFeaturedMedia {
   id: number;
   source_url: string;
   alt_text?: string;
+  caption?: WpRenderedField;
   media_details?: {
     width?: number;
     height?: number;
@@ -57,6 +58,7 @@ export interface BlogPostSummary {
 
 export interface BlogPostDetail extends BlogPostSummary {
   content: string;
+  featuredImageCaption?: string;
 }
 
 export interface PaginatedPostsResult {
