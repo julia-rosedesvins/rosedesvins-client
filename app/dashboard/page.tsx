@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { userService, DashboardAnalytics, DashboardPeriod } from "@/services/user.service";
 import { getVendorTransactions, TransactionStatus } from "@/services/stripe-checkout.service";
 import { BookingSourceFilterProvider, useBookingSourceFilter } from "@/components/userDashboard/BookingSourceFilterContext";
+import { BookingSourceFilterDropdown } from "@/components/userDashboard/BookingSourceFilterDropdown";
 import toast from "react-hot-toast";
 
 type UiPeriod = "cette-semaine" | "ce-mois" | "cette-annee";
@@ -115,10 +116,10 @@ function UserDashboardContent() {
                         <p className="text-sm lg:text-base text-gray-600">Vue d'ensemble de votre activité œnotouristique.</p>
                     </div>
 
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
-                        <span className="text-sm text-gray-600">Période :</span>
+                    <div className="flex flex-row flex-wrap items-center gap-2">
+                        <span className="text-sm text-gray-600 shrink-0">Période :</span>
                         <Select value={selectedPeriod} onValueChange={(value) => setSelectedPeriod(value as UiPeriod)}>
-                            <SelectTrigger className="w-full sm:w-40">
+                            <SelectTrigger className="w-40">
                                 <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -127,6 +128,7 @@ function UserDashboardContent() {
                                 <SelectItem value="cette-annee">Cette année</SelectItem>
                             </SelectContent>
                         </Select>
+                        <BookingSourceFilterDropdown />
                     </div>
                 </div>
             </div>

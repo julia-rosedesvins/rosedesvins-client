@@ -36,7 +36,7 @@ const BlogSection = ({ posts }: BlogSectionProps) => {
               {posts.map((post) => (
                 <CarouselItem key={post.id} className="pl-2 md:pl-4 md:basis-1/3">
                   <Link href={`/blog/${post.slug}`} className="group block">
-                    <div className="relative overflow-hidden rounded-2xl aspect-square mb-4 shadow-sm">
+                    <div className="relative overflow-hidden rounded-2xl aspect-[4/3] mb-4 shadow-sm">
                       <Image
                         src={post.featuredImageUrl}
                         alt={post.title}

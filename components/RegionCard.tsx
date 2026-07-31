@@ -14,19 +14,20 @@ const RegionCard = ({ title, image, href, priority = false }: RegionCardProps) =
 
   const content = (
     <div className="flex flex-col items-center group cursor-pointer">
-      <div className="relative w-64 h-64 md:w-72 md:h-72 rounded-2xl overflow-hidden mb-4 shadow-sm">
+      <div className="relative w-64 h-64 md:w-72 md:h-72 rounded-2xl overflow-hidden shadow-sm">
         <Image
           src={imageUrl}
           alt={title}
           fill
           priority={priority}
           sizes="(max-width: 768px) 256px, 288px"
-          className="object-cover"
+          className="object-cover transition-transform duration-300 group-hover:scale-105"
         />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/25 to-transparent" />
+        <h3 className="absolute bottom-0 left-0 right-0 p-3 md:p-4 text-[27px] leading-tight font-semibold text-white text-center">
+          {title}
+        </h3>
       </div>
-      <h3 className="text-lg font-semibold text-[#264035] text-center">
-        {title}
-      </h3>
     </div>
   );
 

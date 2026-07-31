@@ -15,7 +15,7 @@ const navLinks = [
   // { href: "#contact", label: "Contact", isSpecial: true },
   // { href: "/", label: "Espace domaines viticoles" },
   { href: "/about", label: "À propos" },
-  // { href: "#blog", label: "Blog" },
+  { href: "/blog", label: "Blog" },
   // { href: "/faqs", label: "FAQ" },
 ]
 

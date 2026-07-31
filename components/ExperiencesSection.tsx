@@ -65,9 +65,8 @@ const ExperiencesSection = () => {
           {loading ? (
             <div className="flex gap-6 overflow-hidden justify-center">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="flex-shrink-0 flex flex-col items-center gap-4">
+                <div key={i} className="flex-shrink-0 flex flex-col items-center">
                   <Skeleton className="w-64 h-64 rounded-2xl" />
-                  <Skeleton className="h-6 w-40" />
                 </div>
               ))}
             </div>
@@ -88,14 +87,14 @@ const ExperiencesSection = () => {
               }}
               className="w-full max-w-7xl mx-auto"
             >
-              <CarouselContent className="-ml-2 md:-ml-4">
+              <CarouselContent className="-ml-1 md:-ml-2">
                 {categories.map((category, index) => (
-                  <CarouselItem key={category._id} className="pl-2 md:pl-4 basis-full md:basis-1/3">
+                  <CarouselItem key={category._id} className="pl-1 md:pl-2 basis-full md:basis-1/3">
                     <Link
                       href={`/experiences?category=${category._id}`}
                       className="flex flex-col items-center group cursor-pointer"
                     >
-                      <div className="relative w-64 h-64 md:w-72 md:h-72 rounded-2xl overflow-hidden mb-4 shadow-sm">
+                      <div className="relative w-64 h-64 md:w-72 md:h-72 rounded-2xl overflow-hidden shadow-sm">
                         <Image
                           src={CATEGORY_IMAGES[index % CATEGORY_IMAGES.length]}
                           alt={category.category_name}
@@ -104,10 +103,11 @@ const ExperiencesSection = () => {
                           sizes="(max-width: 768px) 256px, 288px"
                           className="object-cover transition-transform duration-300 group-hover:scale-105"
                         />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/25 to-transparent" />
+                        <h3 className="absolute bottom-0 left-0 right-0 p-3 md:p-4 text-[27px] leading-tight font-semibold text-white text-center group-hover:text-white/95 transition-colors">
+                          {category.category_name}
+                        </h3>
                       </div>
-                      <h3 className="text-lg font-semibold text-[#264035] text-center group-hover:text-[#318160] transition-colors">
-                        {category.category_name}
-                      </h3>
                     </Link>
                   </CarouselItem>
                 ))}

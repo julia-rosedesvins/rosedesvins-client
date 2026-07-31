@@ -602,6 +602,10 @@ export default function RegionPageClient({
                     ) : (
                         <div className="space-y-4">
                             {filteredListDomains.map((domain, index) => {
+                                const profileHref = domain.domainId
+                                    ? `/experience/${region?.slug || encodeURIComponent(region?.denom || regionName)}/${domain.slug || domain.domainId}`
+                                    : null;
+
                                 return (
                                     <div key={index} className="bg-background rounded-lg shadow-sm overflow-hidden">
                                         {(domain.mainImage || domain.domainProfilePictureUrl) && (
@@ -617,11 +621,20 @@ export default function RegionPageClient({
                                         )}
                                         <div className="p-4">
                                             <div className="flex items-start justify-between gap-2">
-                                                <h3 className="text-lg font-bold text-primary">
-                                                    {domain.domainName}
-                                                </h3>
-                                                {domain.domainId && (
-                                                    <Link href={`/experience/${region?.slug || encodeURIComponent(region?.denom || regionName)}/${domain.slug || domain.domainId}`}>
+                                                {profileHref ? (
+                                                    <Link
+                                                        href={profileHref}
+                                                        className="text-lg font-bold text-primary hover:text-primary/80 hover:underline transition-colors"
+                                                    >
+                                                        {domain.domainName}
+                                                    </Link>
+                                                ) : (
+                                                    <h3 className="text-lg font-bold text-primary">
+                                                        {domain.domainName}
+                                                    </h3>
+                                                )}
+                                                {profileHref && (
+                                                    <Link href={profileHref}>
                                                         <Button
                                                             size="sm"
                                                             className="bg-primary hover:bg-primary/90 text-white shrink-0"
