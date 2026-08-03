@@ -195,6 +195,7 @@ const RegionMap = forwardRef<RegionMapRef, RegionMapProps>(({ centerLat, centerL
 
     map.current = new maplibregl.Map({
       container: mapContainer.current,
+      attributionControl: false,
       style: {
         version: 8,
         sources: {

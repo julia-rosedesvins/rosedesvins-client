@@ -24,6 +24,7 @@ export default function DomainMap({ latitude, longitude, domainName, address, ci
     // Initialize map
     map.current = new maplibregl.Map({
       container: mapContainer.current,
+      attributionControl: false,
       style: {
         version: 8,
         sources: {

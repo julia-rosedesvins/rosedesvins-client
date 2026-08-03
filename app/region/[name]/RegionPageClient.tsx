@@ -234,8 +234,12 @@ export default function RegionPageClient({
 
     const handlePageChange = (page: number) => {
         setCurrentPage(page);
-        // Scroll to top of listings
-        document.querySelector('.overflow-y-auto')?.scrollTo(0, 0);
+        // Desktop: scroll the listings pane. Mobile: scroll the page (listings use document flow).
+        if (typeof window !== 'undefined' && window.matchMedia('(min-width: 768px)').matches) {
+            document.querySelector('.region-listings-pane')?.scrollTo(0, 0);
+        } else {
+            document.querySelector('.region-listings-pane')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
     };
 
     const handleLocateDomain = (domainId: string | null) => {
@@ -385,7 +389,7 @@ export default function RegionPageClient({
                 </div>
             </section>
 
-            <section className="bg-background py-4 px-4 border-b sticky top-[60px] z-20 shadow-sm">
+            <section className="bg-background py-4 px-4 border-b sticky top-0 z-[60] md:top-[72px] md:z-20 shadow-sm">
                 <div className="space-y-2">
                     <div className="flex flex-wrap gap-3">
                         {/* Date Filter - Quand? */}
@@ -549,8 +553,10 @@ export default function RegionPageClient({
                 </div>
             </section>
 
-            {/* Split Layout: Map + Listings - fills remaining viewport */}
-            <section className="flex flex-col lg:flex-row" style={{ height: 'calc(100vh - 140px)' }}>
+            {/* Split Layout: Map + Listings
+                Mobile: document scroll so the footer only appears after listings.
+                Desktop: fixed-height split pane with inner listing scroll. */}
+            <section className="flex flex-col lg:flex-row md:h-[calc(100vh-140px)]">
                 {/* Interactive Map - 60% */}
                 <div className={`${mobileView === 'map' ? 'block' : 'hidden'} md:block lg:w-[60%] h-[600px] lg:h-full lg:sticky lg:top-[140px] relative z-10`}>
                     {!isMapLoaded && (
@@ -576,8 +582,8 @@ export default function RegionPageClient({
                     )}
                 </div>
 
-                {/* Winemaker Listings - 40% - scrollable */}
-                <div className={`${mobileView === 'list' ? 'block' : 'hidden'} md:block lg:w-[40%] bg-muted/30 p-6 overflow-y-auto pb-24 md:pb-6`}>
+                {/* Winemaker Listings - 40% - page scroll on mobile, pane scroll on md+ */}
+                <div className={`region-listings-pane ${mobileView === 'list' ? 'block' : 'hidden'} md:block lg:w-[40%] bg-muted/30 p-6 md:overflow-y-auto pb-24 md:pb-6`}>
                     {isLoading ? (
                         <div className="space-y-4">
                             {Array.from({ length: 5 }).map((_, index) => (
