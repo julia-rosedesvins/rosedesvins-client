@@ -29,7 +29,7 @@ export function BookingSourceFilterDropdown() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm" className="flex items-center gap-2">
+        <Button variant="outline" className="h-9 flex items-center gap-2 bg-white">
           <Filter className="h-4 w-4" />
           {triggerLabel}
         </Button>

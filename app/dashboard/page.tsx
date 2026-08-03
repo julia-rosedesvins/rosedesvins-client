@@ -119,7 +119,7 @@ function UserDashboardContent() {
                     <div className="flex flex-row flex-wrap items-center gap-2">
                         <span className="text-sm text-gray-600 shrink-0">Période :</span>
                         <Select value={selectedPeriod} onValueChange={(value) => setSelectedPeriod(value as UiPeriod)}>
-                            <SelectTrigger className="w-40">
+                            <SelectTrigger className="w-40 h-9 bg-white">
                                 <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
