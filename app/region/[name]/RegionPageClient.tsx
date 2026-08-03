@@ -24,6 +24,54 @@ const RegionMap = dynamic(() => import('@/components/RegionMap'), {
     loading: () => <div className="w-full h-full bg-gray-200 flex items-center justify-center">Chargement de la carte...</div>
 });
 
+function ListingDescription({ text }: { text: string }) {
+    const textRef = useRef<HTMLParagraphElement>(null);
+    const [expanded, setExpanded] = useState(false);
+    const [isOverflowing, setIsOverflowing] = useState(false);
+
+    useEffect(() => {
+        const el = textRef.current;
+        if (!el) return;
+
+        const measure = () => {
+            // Temporarily clamp to 2 lines to detect overflow, then restore.
+            el.classList.add('line-clamp-2');
+            setIsOverflowing(el.scrollHeight > el.clientHeight + 1);
+            if (expanded) {
+                el.classList.remove('line-clamp-2');
+            }
+        };
+
+        measure();
+        const observer = new ResizeObserver(measure);
+        observer.observe(el);
+        return () => observer.disconnect();
+    }, [text, expanded]);
+
+    return (
+        <div className="mb-3">
+            <p
+                ref={textRef}
+                className={`text-foreground/80 text-sm leading-relaxed ${expanded ? '' : 'line-clamp-2'}`}
+            >
+                {text}
+            </p>
+            {isOverflowing && (
+                <button
+                    type="button"
+                    onClick={() => setExpanded((prev) => !prev)}
+                    className="mt-1 inline-flex items-center gap-1 text-primary hover:underline text-sm font-medium"
+                >
+                    {expanded ? 'Lire moins' : 'Lire plus'}
+                    <ChevronDown
+                        className={`w-3.5 h-3.5 transition-transform ${expanded ? 'rotate-180' : ''}`}
+                    />
+                </button>
+            )}
+        </div>
+    );
+}
+
 interface RegionPageClientProps {
     regionName: string;
     initialRegion?: Region | null;
@@ -659,9 +707,9 @@ export default function RegionPageClient({
                                                     <span className="text-muted-foreground">{domain.domainPrice}</span>
                                                 </div>
                                             )}
-                                            <p className="text-foreground/80 text-sm leading-relaxed line-clamp-3 mb-3">
-                                                {domain.domainDescription}
-                                            </p>
+                                            {domain.domainDescription && (
+                                                <ListingDescription text={domain.domainDescription} />
+                                            )}
                                             {domain.latitude && domain.longitude && (
                                                 <div className="flex justify-end">
                                                     <button
