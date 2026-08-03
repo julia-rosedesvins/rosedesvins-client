@@ -20,7 +20,7 @@ declare global {
   }
 }
 
-function prefersEnglish(): boolean {
+export function prefersEnglish(): boolean {
   if (typeof navigator === 'undefined') return false;
   const candidates = [
     ...(navigator.languages || []),
@@ -43,8 +43,53 @@ function setGoogTransCookie(value: string) {
   }
 }
 
+/** Clear googtrans so translation does not leak onto the main (French) site. */
+export function clearGoogTransCookie() {
+  const expire = 'Thu, 01 Jan 1970 00:00:00 GMT';
+  const clear = (extra = '') => {
+    document.cookie = `googtrans=;path=/;expires=${expire}${extra}`;
+    document.cookie = `googtrans=;path=/;max-age=0${extra}`;
+  };
+  clear();
+  try {
+    const host = window.location.hostname;
+    if (host && host !== 'localhost') {
+      clear(`;domain=${host}`);
+      const parts = host.split('.');
+      if (parts.length >= 2) {
+        clear(`;domain=.${parts.slice(-2).join('.')}`);
+      }
+    }
+  } catch {
+    // ignore
+  }
+}
+
 const SCRIPT_ID = 'google-translate-element-script';
 const STYLE_ID = 'google-translate-hide-banner';
+export const GOOG_TRANS_ACTIVE_FLAG = 'rdv-gt-active';
+
+/** Remove Google Translate chrome/script leftovers from the document. */
+export function teardownGoogleTranslateArtifacts() {
+  document.documentElement.classList.remove('translated-ltr', 'translated-rtl');
+  document.body.classList.remove('translated-ltr', 'translated-rtl');
+  document.body.style.removeProperty('top');
+
+  document
+    .querySelectorAll(
+      'iframe.goog-te-banner-frame, iframe.skiptranslate, body > .skiptranslate, #goog-gt-tt, .goog-te-spinner-pos, .goog-te-balloon-frame',
+    )
+    .forEach((el) => el.remove());
+
+  document.getElementById(SCRIPT_ID)?.remove();
+  document.getElementById(STYLE_ID)?.remove();
+
+  try {
+    delete window.googleTranslateElementInit;
+  } catch {
+    // ignore
+  }
+}
 
 /**
  * When the browser prefers English, auto-apply Google Website Translator (fr → en).
@@ -55,6 +100,11 @@ export function AutoGoogleTranslate() {
     if (!prefersEnglish()) return;
 
     setGoogTransCookie('/fr/en');
+    try {
+      sessionStorage.setItem(GOOG_TRANS_ACTIVE_FLAG, '1');
+    } catch {
+      // ignore
+    }
 
     if (!document.getElementById(STYLE_ID)) {
       const style = document.createElement('style');
@@ -73,13 +123,24 @@ export function AutoGoogleTranslate() {
           height: 0 !important;
           overflow: hidden !important;
         }
+        /* Loading spinner / progress overlay injected while translating */
+        .goog-te-spinner-pos,
+        .goog-te-spinner,
+        .goog-te-spinner-animation,
+        .goog-te-gadget-icon {
+          display: none !important;
+          visibility: hidden !important;
+          opacity: 0 !important;
+          pointer-events: none !important;
+        }
         body {
           top: 0 !important;
         }
-        .skiptranslate {
+        body > .skiptranslate {
           display: none !important;
         }
-        iframe.goog-te-banner-frame {
+        iframe.goog-te-banner-frame,
+        iframe.skiptranslate {
           display: none !important;
           visibility: hidden !important;
         }
@@ -102,6 +163,50 @@ export function AutoGoogleTranslate() {
       );
     };
 
+    // Aggressively hide spinner/banner nodes Google injects dynamically
+    const hideTranslateChrome = () => {
+      document
+        .querySelectorAll(
+          '.goog-te-spinner-pos, .goog-te-spinner, .goog-te-spinner-animation, iframe.goog-te-banner-frame, body > .skiptranslate',
+        )
+        .forEach((el) => {
+          const node = el as HTMLElement;
+          if (node.style.display === 'none') return;
+          node.style.setProperty('display', 'none', 'important');
+          node.style.setProperty('visibility', 'hidden', 'important');
+          node.style.setProperty('opacity', '0', 'important');
+          node.style.setProperty('pointer-events', 'none', 'important');
+        });
+      if (document.body.style.top !== '0px') {
+        document.body.style.setProperty('top', '0', 'important');
+      }
+    };
+
+    hideTranslateChrome();
+    let hideScheduled = false;
+    const observer = new MutationObserver((mutations) => {
+      const relevant = mutations.some((m) =>
+        Array.from(m.addedNodes).some((node) => {
+          if (!(node instanceof HTMLElement)) return false;
+          return (
+            node.matches?.(
+              '.goog-te-spinner-pos, .goog-te-spinner, .goog-te-spinner-animation, iframe.goog-te-banner-frame, .skiptranslate',
+            ) ||
+            !!node.querySelector?.(
+              '.goog-te-spinner-pos, .goog-te-spinner, .goog-te-spinner-animation, iframe.goog-te-banner-frame',
+            )
+          );
+        }),
+      );
+      if (!relevant || hideScheduled) return;
+      hideScheduled = true;
+      requestAnimationFrame(() => {
+        hideScheduled = false;
+        hideTranslateChrome();
+      });
+    });
+    observer.observe(document.documentElement, { childList: true, subtree: true });
+
     if (!document.getElementById(SCRIPT_ID)) {
       const script = document.createElement('script');
       script.id = SCRIPT_ID;
@@ -112,6 +217,13 @@ export function AutoGoogleTranslate() {
     } else if (window.google?.translate?.TranslateElement) {
       window.googleTranslateElementInit();
     }
+
+    return () => {
+      observer.disconnect();
+      // Leaving /if — do not leave translation enabled for the rest of the site
+      clearGoogTransCookie();
+      teardownGoogleTranslateArtifacts();
+    };
   }, []);
 
   return (

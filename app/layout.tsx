@@ -5,6 +5,7 @@ import { Toaster } from "react-hot-toast";
 import Script from "next/script";
 import { PostHogProvider } from "@/providers/PostHogProvider";
 import ChunkErrorRecovery from "@/components/ChunkErrorRecovery";
+import { ResetGoogleTranslateOutsideIf } from "@/app/if/google-translate/ResetGoogleTranslateOutsideIf";
 import {
   DEFAULT_DESCRIPTION,
   DEFAULT_OG_IMAGE,
@@ -101,6 +102,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
         </noscript>
         {/* End Google Tag Manager (noscript) */}
         <ChunkErrorRecovery />
+        <ResetGoogleTranslateOutsideIf />
         <PostHogProvider>
           {children}
         </PostHogProvider>

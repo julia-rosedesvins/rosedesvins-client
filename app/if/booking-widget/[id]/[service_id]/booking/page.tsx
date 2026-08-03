@@ -10,6 +10,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { WidgetProvider, useWidget } from "@/contexts/WidgetContext";
 import { eventsService, PublicScheduleData } from "@/services/events.service";
 import { getHolidays } from "@/services/availability.service";
+import { prefersEnglish } from "@/app/if/google-translate/AutoGoogleTranslate";
+
+const WIDGET_WEEK_DAYS = ["Lun", "Mar", "Wed", "Thu", "Ven", "Sam", "Dim"];
 
 function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
     const { widgetData, loading, error, colorCode } = useWidget();
@@ -28,8 +31,13 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
     const [afternoonStartIndex, setAfternoonStartIndex] = useState(0);
     const [bookedSlots, setBookedSlots] = useState<PublicScheduleData[]>([]);
     const [loadingSchedule, setLoadingSchedule] = useState(false);
+    const [isEnglish, setIsEnglish] = useState(false);
     const [validationErrors, setValidationErrors] = useState<string[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    useEffect(() => {
+      setIsEnglish(prefersEnglish());
+    }, []);
 
     // Function to convert language to French display name
     const getLanguageInFrench = (language: string) => {
@@ -1163,6 +1171,7 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
               onDateSelect={setSelectedDate}
               isDateAvailable={isDateAvailable}
               colorCode={colorCode}
+              weekDays={WIDGET_WEEK_DAYS}
             />
           )}
         </div>
@@ -1398,7 +1407,13 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
 
         {/* Langues */}
         <div className="mb-8 md:mb-12">
-          <h2 className="text-xl md:text-2xl font-semibold mb-4 md:mb-6 text-center" style={{ color: colorCode }}>Langues</h2>
+          <h2
+            className="notranslate text-xl md:text-2xl font-semibold mb-4 md:mb-6 text-center"
+            style={{ color: colorCode }}
+            translate="no"
+          >
+            {isEnglish ? "Languages" : "Langues"}
+          </h2>
           {/* When a slot already has bookings, inform the user that only one language is available */}
           {slotRequiredLanguage && (
             <p className="text-center text-sm md:text-base text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-4 py-2 mb-4 max-w-md mx-auto">

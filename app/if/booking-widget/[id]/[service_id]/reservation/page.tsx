@@ -6,15 +6,21 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import { WidgetProvider, useWidget } from "@/contexts/WidgetContext";
 import { useSearchParams } from "next/navigation";
+import { prefersEnglish } from "@/app/if/google-translate/AutoGoogleTranslate";
 
 function ReservationContent({ id, serviceId }: { id: string, serviceId: string }) {
     const { widgetData, loading, error, colorCode } = useWidget();
     const [showFullText, setShowFullText] = useState(false);
+    const [isEnglish, setIsEnglish] = useState(false);
     const searchParams = useSearchParams();
     const withLayout = searchParams.get('withLayout') === 'true';
     
     const fullText = widgetData?.service?.description || "";
     const truncatedText = fullText.length > 200 ? fullText.substring(0, 200) + "..." : fullText;
+
+    useEffect(() => {
+        setIsEnglish(prefersEnglish());
+    }, []);
 
     // Function to convert language to French display name
     const getLanguageInFrench = (language: string) => {
@@ -149,10 +155,11 @@ function ReservationContent({ id, serviceId }: { id: string, serviceId: string }
                             <Link href={`/if/booking-widget/${id}/${serviceId}/booking${withLayout ? '?withLayout=true' : ''}`}>
                                 <Button
                                     size="lg"
-                                    className="hover:opacity-90 text-white px-8 md:px-12 py-3 text-base md:text-lg font-semibold rounded-md transition-colors w-full md:w-auto"
+                                    className="notranslate hover:opacity-90 text-white px-8 md:px-12 py-3 text-base md:text-lg font-semibold rounded-md transition-colors w-full md:w-auto"
                                     style={{ backgroundColor: colorCode }}
+                                    translate="no"
                                 >
-                                    Réserver
+                                    {isEnglish ? "Book Now" : "Réserver"}
                                 </Button>
                             </Link>
                         </div>
