@@ -386,8 +386,8 @@ export default function RegionPageClient({
     return (
         <LandingPageLayout>
 
-            {/* Hero Section */}
-            <section className="relative text-white min-h-[400px]">
+            {/* Hero Section — on mobile, height hugs content (+ padding); expands with "Lire plus" */}
+            <section className="relative text-white md:min-h-[400px]">
                 {/* Background image */}
                 <div className="absolute inset-0 overflow-hidden">
                     <Image
@@ -416,8 +416,8 @@ export default function RegionPageClient({
                 </div>
 
                 {/* Breadcrumb */}
-                <div className="relative z-10 max-w-6xl mx-auto px-4 pt-6">
-                    <div className="flex items-center text-white/80 text-sm mb-6">
+                <div className="relative z-10 max-w-6xl mx-auto px-4 pt-4 md:pt-6">
+                    <div className="flex items-center text-white/80 text-sm mb-4 md:mb-6">
                         <Home className="w-4 h-4 mr-2" />
                         <Link href="/regions" className="hover:text-white transition-colors">
                             <span>France</span>
@@ -429,7 +429,7 @@ export default function RegionPageClient({
                 </div>
 
                 {/* Content */}
-                <div className="relative z-10 max-w-6xl mx-auto px-4 pb-12">
+                <div className="relative z-10 max-w-6xl mx-auto px-4 pb-6 md:pb-12">
                     {searchQuery && (
                         <div className="mb-4">
                             <p className="text-white/90 text-lg">
@@ -438,7 +438,7 @@ export default function RegionPageClient({
                         </div>
                     )}
                     
-                    <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6">
+                    <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-3 md:mb-6">
                         {titleName} : {bannerSubtitle}
                     </h1>
                     <ExpandableText

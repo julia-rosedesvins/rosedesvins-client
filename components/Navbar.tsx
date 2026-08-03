@@ -461,7 +461,7 @@ export default function Navbar() {
             </Link>
             {mounted && (
               <p className="text-sm" style={{ color: "#8BB5A3" }}>
-                La technologie au service des domaines viticoles
+                Votre boussole viticole
               </p>
             )}
           </div>
