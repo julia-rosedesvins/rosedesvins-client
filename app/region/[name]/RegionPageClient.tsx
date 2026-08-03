@@ -24,7 +24,17 @@ const RegionMap = dynamic(() => import('@/components/RegionMap'), {
     loading: () => <div className="w-full h-full bg-gray-200 flex items-center justify-center">Chargement de la carte...</div>
 });
 
-function ListingDescription({ text }: { text: string }) {
+function ExpandableText({
+    text,
+    className,
+    buttonClassName,
+    wrapperClassName,
+}: {
+    text: string;
+    className?: string;
+    buttonClassName?: string;
+    wrapperClassName?: string;
+}) {
     const textRef = useRef<HTMLParagraphElement>(null);
     const [expanded, setExpanded] = useState(false);
     const [isOverflowing, setIsOverflowing] = useState(false);
@@ -49,10 +59,10 @@ function ListingDescription({ text }: { text: string }) {
     }, [text, expanded]);
 
     return (
-        <div className="mb-3">
+        <div className={wrapperClassName}>
             <p
                 ref={textRef}
-                className={`text-foreground/80 text-sm leading-relaxed ${expanded ? '' : 'line-clamp-2'}`}
+                className={`${className ?? ''} ${expanded ? '' : 'line-clamp-2'}`}
             >
                 {text}
             </p>
@@ -60,7 +70,7 @@ function ListingDescription({ text }: { text: string }) {
                 <button
                     type="button"
                     onClick={() => setExpanded((prev) => !prev)}
-                    className="mt-1 inline-flex items-center gap-1 text-primary hover:underline text-sm font-medium"
+                    className={buttonClassName}
                 >
                     {expanded ? 'Lire moins' : 'Lire plus'}
                     <ChevronDown
@@ -431,9 +441,12 @@ export default function RegionPageClient({
                     <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6">
                         {titleName} : {bannerSubtitle}
                     </h1>
-                    <p className="text-lg md:text-xl max-w-4xl leading-relaxed">
-                        {bannerDescription}
-                    </p>
+                    <ExpandableText
+                        text={bannerDescription}
+                        wrapperClassName="max-w-4xl"
+                        className="text-lg md:text-xl leading-relaxed"
+                        buttonClassName="mt-2 inline-flex items-center gap-1 text-white/90 hover:text-white font-medium text-sm md:text-base transition-colors"
+                    />
                 </div>
             </section>
 
@@ -708,7 +721,12 @@ export default function RegionPageClient({
                                                 </div>
                                             )}
                                             {domain.domainDescription && (
-                                                <ListingDescription text={domain.domainDescription} />
+                                                <ExpandableText
+                                                    text={domain.domainDescription}
+                                                    wrapperClassName="mb-3"
+                                                    className="text-foreground/80 text-sm leading-relaxed"
+                                                    buttonClassName="mt-1 inline-flex items-center gap-1 text-primary hover:underline text-sm font-medium"
+                                                />
                                             )}
                                             {domain.latitude && domain.longitude && (
                                                 <div className="flex justify-end">
