@@ -26,10 +26,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: path === '/' ? 1 : 0.8,
   }));
 
-  const [{ regions, experiences }, blogSitemap] = await Promise.all([
+  const [sitemapPaths, blogSitemap] = await Promise.all([
     fetchAllSitemapPaths(),
     fetchBlogSitemapData(),
   ]);
+
+  // Defend against a backend that hasn't been deployed with this endpoint yet (falls
+  // through to a differently-shaped route) or any other API/shape mismatch — a broken
+  // sitemap should never fail the whole production build.
+  const regions = Array.isArray(sitemapPaths?.regions) ? sitemapPaths.regions : [];
+  const experiences = Array.isArray(sitemapPaths?.experiences) ? sitemapPaths.experiences : [];
+  const blogPosts = Array.isArray(blogSitemap?.posts) ? blogSitemap.posts : [];
 
   const regionEntries: MetadataRoute.Sitemap = regions.map((entry) => ({
     url: `${SITE_URL}${entry.path}`,
@@ -45,7 +52,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.85,
   }));
 
-  const blogLastModified = blogSitemap.latestModified
+  const blogLastModified = blogSitemap?.latestModified
     ? new Date(blogSitemap.latestModified)
     : now;
 
@@ -57,7 +64,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   };
 
   const blogPaginationEntries: MetadataRoute.Sitemap = Array.from(
-    { length: Math.max(0, blogSitemap.totalPages - 1) },
+    { length: Math.max(0, (blogSitemap?.totalPages ?? 1) - 1) },
     (_, index) => ({
       url: `${SITE_URL}/blog?page=${index + 2}`,
       lastModified: blogLastModified,
@@ -66,7 +73,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }),
   );
 
-  const blogPostEntries: MetadataRoute.Sitemap = blogSitemap.posts.map((entry) => ({
+  const blogPostEntries: MetadataRoute.Sitemap = blogPosts.map((entry) => ({
     url: `${SITE_URL}/blog/${entry.slug}`,
     lastModified: entry.modified ? new Date(entry.modified) : blogLastModified,
     changeFrequency: 'weekly',
