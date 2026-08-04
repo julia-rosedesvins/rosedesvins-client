@@ -10,9 +10,10 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { WidgetProvider, useWidget } from "@/contexts/WidgetContext";
 import { eventsService, PublicScheduleData } from "@/services/events.service";
 import { getHolidays } from "@/services/availability.service";
-import { prefersEnglish } from "@/app/if/google-translate/AutoGoogleTranslate";
+import { useIsTranslatedToEnglish } from "@/app/if/google-translate/AutoGoogleTranslate";
 
-const WIDGET_WEEK_DAYS = ["Lun", "Mar", "Wed", "Thu", "Ven", "Sam", "Dim"];
+const WIDGET_WEEK_DAYS_FR = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
+const WIDGET_WEEK_DAYS_EN = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
     const { widgetData, loading, error, colorCode } = useWidget();
@@ -31,13 +32,9 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
     const [afternoonStartIndex, setAfternoonStartIndex] = useState(0);
     const [bookedSlots, setBookedSlots] = useState<PublicScheduleData[]>([]);
     const [loadingSchedule, setLoadingSchedule] = useState(false);
-    const [isEnglish, setIsEnglish] = useState(false);
+    const isEnglish = useIsTranslatedToEnglish();
     const [validationErrors, setValidationErrors] = useState<string[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
-
-    useEffect(() => {
-      setIsEnglish(prefersEnglish());
-    }, []);
 
     // Function to convert language to French display name
     const getLanguageInFrench = (language: string) => {
@@ -1171,7 +1168,7 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
               onDateSelect={setSelectedDate}
               isDateAvailable={isDateAvailable}
               colorCode={colorCode}
-              weekDays={WIDGET_WEEK_DAYS}
+              weekDays={isEnglish ? WIDGET_WEEK_DAYS_EN : WIDGET_WEEK_DAYS_FR}
             />
           )}
         </div>
