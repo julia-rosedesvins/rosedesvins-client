@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
+import { GOOGLE_TRANSLATE_ENABLED } from './config';
 
 declare global {
   interface Window {
@@ -30,7 +31,6 @@ export function prefersEnglish(): boolean {
   return candidates.some((lang) => lang.toLowerCase().startsWith('en'));
 }
 
-/** True once Google has actually translated the document (our widget or the browser's own "Translate this page"). */
 function isDomTranslatedToEnglish(): boolean {
   if (typeof document === 'undefined') return false;
   return (
@@ -40,25 +40,24 @@ function isDomTranslatedToEnglish(): boolean {
 }
 
 /**
- * Whether the current page should be shown in English. This combines two signals:
- * - `prefersEnglish()`: the browser's language preference, which is what auto-triggers
- *   our own AutoGoogleTranslate widget.
- * - the DOM `translated-ltr`/`translated-rtl` marker Google adds once translation has
- *   actually run — this covers cases where translation happens through a different path
- *   than our widget (e.g. the visitor's browser offering its own "Translate this page"
- *   prompt), which our cookie/script logic never sees.
- *
- * Elements that hardcode French/English strings (calendar day names, CTA copy, etc.)
- * should read this instead of a one-time `prefersEnglish()` check so they stay in sync
- * even when translation is triggered/toggled after the initial render.
+ * Whether the page should use English UI strings (calendar labels, CTA copy, etc.).
+ * When Google Translate is disabled, this always returns false (French source UI).
  */
 export function useIsTranslatedToEnglish(): boolean {
   const [translated, setTranslated] = useState(
-    () => prefersEnglish() || isDomTranslatedToEnglish(),
+    () =>
+      GOOGLE_TRANSLATE_ENABLED &&
+      (prefersEnglish() || isDomTranslatedToEnglish()),
   );
 
   useEffect(() => {
-    const update = () => setTranslated(prefersEnglish() || isDomTranslatedToEnglish());
+    if (!GOOGLE_TRANSLATE_ENABLED) {
+      setTranslated(false);
+      return;
+    }
+
+    const update = () =>
+      setTranslated(prefersEnglish() || isDomTranslatedToEnglish());
     update();
 
     const observer = new MutationObserver(update);
@@ -76,7 +75,6 @@ export function useIsTranslatedToEnglish(): boolean {
 function setGoogTransCookie(value: string) {
   const maxAge = 60 * 60 * 24 * 365;
   document.cookie = `googtrans=${value};path=/;max-age=${maxAge}`;
-  // Also set without domain for iframe / localhost edge cases
   try {
     const host = window.location.hostname;
     if (host && host !== 'localhost') {
@@ -137,47 +135,39 @@ export function teardownGoogleTranslateArtifacts() {
 
 /**
  * Google's Website Translator only translates the DOM present when it initializes.
- * It does not automatically re-scan subtrees that Next.js swaps in on client-side
- * route changes (e.g. moving between /reservation, /booking, /checkout inside the
- * same widget layout), which otherwise leaves every step after the first untranslated.
- * The standard workaround is to force the hidden language <select> to re-fire its
- * change event, which makes the widget re-walk the current DOM.
+ * Force the hidden language select to re-fire on client-side route changes.
  */
-function fireComboChange(targetLang: string) {
+function retriggerGoogleTranslate(targetLang = 'en', attemptsLeft = 10, intervalMs = 200) {
   const combo = document.querySelector<HTMLSelectElement>('select.goog-te-combo');
-  if (!combo) return false;
-  combo.value = targetLang;
-  combo.dispatchEvent(new Event('change', { bubbles: true }));
-  return true;
-}
-
-// Extra delayed re-fires after the <select> is first found — Google's own change
-// listener ships in a second async chunk (`el_main`) that can finish loading a beat
-// after the <select> itself appears. Dispatching only once, the instant the element
-// exists, can land before anyone is listening and silently do nothing.
-const FOLLOW_UP_DELAYS_MS = [150, 400, 800, 1500, 3000, 5000];
-
-function retriggerGoogleTranslate(targetLang = 'en', attemptsLeft = 15, intervalMs = 200) {
-  if (fireComboChange(targetLang)) {
-    FOLLOW_UP_DELAYS_MS.forEach((delay) => {
-      setTimeout(() => fireComboChange(targetLang), delay);
-    });
+  if (combo) {
+    combo.value = targetLang;
+    combo.dispatchEvent(new Event('change', { bubbles: true }));
     return;
   }
-  // The combo box may not exist yet if the translate script is still loading.
   if (attemptsLeft <= 0) return;
   setTimeout(() => retriggerGoogleTranslate(targetLang, attemptsLeft - 1, intervalMs), intervalMs);
 }
 
 /**
- * When the browser prefers English, auto-apply Google Website Translator (fr → en).
- * Otherwise leave the French source UI alone. Banner/gadget UI is hidden for embeds.
+ * When enabled and the browser prefers English, auto-apply Google Website Translator (fr → en).
+ * When disabled, clears any stale translate state and renders nothing.
  */
 export function AutoGoogleTranslate() {
   const pathname = usePathname();
   const isFirstPathnameRef = useRef(true);
 
   useEffect(() => {
+    if (!GOOGLE_TRANSLATE_ENABLED) {
+      clearGoogTransCookie();
+      teardownGoogleTranslateArtifacts();
+      try {
+        sessionStorage.removeItem(GOOG_TRANS_ACTIVE_FLAG);
+      } catch {
+        // ignore
+      }
+      return;
+    }
+
     if (!prefersEnglish()) return;
 
     setGoogTransCookie('/fr/en');
@@ -204,7 +194,6 @@ export function AutoGoogleTranslate() {
           height: 0 !important;
           overflow: hidden !important;
         }
-        /* Loading spinner / progress overlay injected while translating */
         .goog-te-spinner-pos,
         .goog-te-spinner,
         .goog-te-spinner-animation,
@@ -231,7 +220,6 @@ export function AutoGoogleTranslate() {
 
     window.googleTranslateElementInit = () => {
       if (!window.google?.translate?.TranslateElement) return;
-      // Avoid double-init if script reloads
       const host = document.getElementById('google_translate_element');
       if (host && host.childElementCount > 0) return;
       new window.google.translate.TranslateElement(
@@ -242,15 +230,8 @@ export function AutoGoogleTranslate() {
         },
         'google_translate_element',
       );
-      // The `googtrans` cookie normally makes Google auto-display English on init,
-      // but when this widget is embedded via a cross-origin iframe, browsers treat
-      // that cookie as third-party and silently refuse to set/read it — so nothing
-      // ever gets translated even though the widget initialized fine. Force English
-      // through the language <select> directly instead of depending on the cookie.
-      retriggerGoogleTranslate();
     };
 
-    // Aggressively hide spinner/banner nodes Google injects dynamically
     const hideTranslateChrome = () => {
       document
         .querySelectorAll(
@@ -307,25 +288,27 @@ export function AutoGoogleTranslate() {
 
     return () => {
       observer.disconnect();
-      // Leaving /if — do not leave translation enabled for the rest of the site
       clearGoogTransCookie();
       teardownGoogleTranslateArtifacts();
     };
   }, []);
 
-  // Re-apply translation on every subsequent widget step (client-side route change).
-  // The very first pathname is already covered by the mount effect above.
   useEffect(() => {
+    if (!GOOGLE_TRANSLATE_ENABLED) return;
+
     if (isFirstPathnameRef.current) {
       isFirstPathnameRef.current = false;
       return;
     }
     if (!prefersEnglish()) return;
 
-    // Let the newly rendered route paint before forcing a rescan.
     const timer = setTimeout(() => retriggerGoogleTranslate(), 50);
     return () => clearTimeout(timer);
   }, [pathname]);
+
+  if (!GOOGLE_TRANSLATE_ENABLED) {
+    return null;
+  }
 
   return (
     <div

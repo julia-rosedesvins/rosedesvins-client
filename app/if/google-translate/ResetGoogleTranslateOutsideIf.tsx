@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import { usePathname } from 'next/navigation';
+import { GOOGLE_TRANSLATE_ENABLED } from './config';
 import {
   GOOG_TRANS_ACTIVE_FLAG,
   clearGoogTransCookie,
@@ -13,6 +14,7 @@ const RELOAD_FLAG = 'rdv-gt-reset-reload';
 /**
  * Google Translate (used only under /if) sets a site-wide googtrans cookie and mutates the DOM.
  * When the user navigates back to the main site, clear that state so pages stay French.
+ * Also runs when translation is disabled, to clean up stale state from prior sessions.
  */
 export function ResetGoogleTranslateOutsideIf() {
   const pathname = usePathname();
@@ -34,7 +36,9 @@ export function ResetGoogleTranslateOutsideIf() {
       document.documentElement.classList.contains('translated-ltr') ||
       document.documentElement.classList.contains('translated-rtl');
 
-    const needsFrenchRestore = flagActive || cookieForcesEnglish || domTranslated;
+    const needsFrenchRestore =
+      GOOGLE_TRANSLATE_ENABLED &&
+      (flagActive || cookieForcesEnglish || domTranslated);
 
     clearGoogTransCookie();
     teardownGoogleTranslateArtifacts();
@@ -46,8 +50,6 @@ export function ResetGoogleTranslateOutsideIf() {
 
     if (!needsFrenchRestore) return;
 
-    // Full reload is required: soft navigation keeps Google's mutated DOM.
-    // Guard against a reload loop with sessionStorage.
     try {
       if (sessionStorage.getItem(RELOAD_FLAG) === '1') {
         sessionStorage.removeItem(RELOAD_FLAG);
@@ -55,7 +57,7 @@ export function ResetGoogleTranslateOutsideIf() {
       }
       sessionStorage.setItem(RELOAD_FLAG, '1');
     } catch {
-      // If sessionStorage is unavailable, still attempt a single replace.
+      // ignore
     }
     window.location.replace(window.location.href);
   }, [pathname]);
