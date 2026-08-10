@@ -14,6 +14,14 @@ import { useIsTranslatedToEnglish } from "@/app/if/google-translate/AutoGoogleTr
 
 const WIDGET_WEEK_DAYS_FR = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
 const WIDGET_WEEK_DAYS_EN = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const WIDGET_MONTHS_FR = [
+  "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
+  "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"
+];
+const WIDGET_MONTHS_EN = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December"
+];
 
 function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
     const { widgetData, loading, error, colorCode } = useWidget();
@@ -39,6 +47,15 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
     // Function to convert language to French display name
     const getLanguageInFrench = (language: string) => {
       const lang = language.toLowerCase();
+      if (isEnglish) {
+        if (lang === 'français' || lang === 'french') return 'French';
+        if (lang === 'anglais' || lang === 'english') return 'English';
+        if (lang === 'español' || lang === 'spanish') return 'Spanish';
+        if (lang === 'deutsch' || lang === 'german') return 'German';
+        if (lang === 'italien' || lang === 'italian') return 'Italian';
+        if (lang === 'russe' || lang === 'russian') return 'Russian';
+        return language;
+      }
       if (lang === 'français' || lang === 'french') return 'Français';
       if (lang === 'anglais' || lang === 'english') return 'Anglais';
       if (lang === 'español' || lang === 'spanish') return 'Espagnol';
@@ -149,27 +166,27 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
     const totalParticipants = adults + children;
     
     if (!selectedDate) {
-      errors.push("Veuillez sélectionner une date");
+      errors.push(isEnglish ? "Please select a date" : "Veuillez sélectionner une date");
     }
     
     if (!selectedTime) {
-      errors.push("Veuillez sélectionner un horaire");
+      errors.push(isEnglish ? "Please select a time slot" : "Veuillez sélectionner un horaire");
     }
     
     if (adults <= 0) {
-      errors.push("Le nombre d'adultes doit être d'au moins 1");
+      errors.push(isEnglish ? "The number of adults must be at least 1" : "Le nombre d'adultes doit être d'au moins 1");
     }
     
     if (totalParticipants < minParticipants) {
-      errors.push(`Le nombre total de participants doit être d'au moins ${minParticipants} personnes`);
+      errors.push(isEnglish ? `The total number of participants must be at least ${minParticipants}` : `Le nombre total de participants doit être d'au moins ${minParticipants} personnes`);
     }
 
     if (totalParticipants > maxParticipants) {
-      errors.push(`Le nombre total de participants ne peut pas dépasser ${maxParticipants} personnes`);
+      errors.push(isEnglish ? `The total number of participants cannot exceed ${maxParticipants}` : `Le nombre total de participants ne peut pas dépasser ${maxParticipants} personnes`);
     }
     
     if (!selectedLanguage || selectedLanguage.trim() === "") {
-      errors.push("Veuillez sélectionner une langue");
+      errors.push(isEnglish ? "Please select a language" : "Veuillez sélectionner une langue");
     }
 
     // ✅ NEW: Check capacity for multiple bookings
@@ -206,7 +223,7 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
       const hasExternalEvent = overlappingBookings.some(booking => booking.eventType === 'external');
       
       if (hasExternalEvent) {
-        errors.push(`Ce créneau horaire n'est pas disponible en raison d'un événement externe dans le calendrier. Veuillez choisir un autre horaire.`);
+        errors.push(isEnglish ? `This time slot is unavailable due to an external calendar event. Please choose another time.` : `Ce créneau horaire n'est pas disponible en raison d'un événement externe dans le calendrier. Veuillez choisir un autre horaire.`);
       } else {
         // 🔒 NEW FIX: Check if any overlapping booking is for a DIFFERENT service
         const hasDifferentService = overlappingBookings.some(booking => {
@@ -215,12 +232,12 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
         });
 
         if (hasDifferentService) {
-          errors.push(`Ce créneau horaire n'est pas disponible car une autre expérience est déjà réservée. Veuillez choisir un autre horaire.`);
+          errors.push(isEnglish ? `This time slot is unavailable because another experience is already booked. Please choose another time.` : `Ce créneau horaire n'est pas disponible car une autre expérience est déjà réservée. Veuillez choisir un autre horaire.`);
         } else {
           // 🔒 LANGUAGE CONSTRAINT: all bookings for the same slot must share the same language
           const bookingWithLanguage = overlappingBookings.find(b => b.selectedLanguage && b.selectedLanguage.trim() !== '');
           if (bookingWithLanguage && selectedLanguage && selectedLanguage !== bookingWithLanguage.selectedLanguage) {
-            errors.push(`Veuillez sélectionner la langue ${getLanguageInFrench(bookingWithLanguage.selectedLanguage!)} ou choisir un autre horaire.`);
+            errors.push(isEnglish ? `Please select the ${getLanguageInFrench(bookingWithLanguage.selectedLanguage!)} language or choose another time.` : `Veuillez sélectionner la langue ${getLanguageInFrench(bookingWithLanguage.selectedLanguage!)} ou choisir un autre horaire.`);
           } else {
             // Calculate total existing participants (only for same service)
             const totalExistingParticipants = overlappingBookings.reduce((sum, booking) => {
@@ -230,7 +247,7 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
             const totalWithNewBooking = totalExistingParticipants + totalParticipants;
             
             if (totalWithNewBooking > maxParticipants) {
-              errors.push(`Ce créneau horaire a atteint sa capacité maximale. Participants actuels: ${totalExistingParticipants}/${maxParticipants}. Veuillez choisir un autre horaire.`);
+              errors.push(isEnglish ? `This time slot has reached its maximum capacity. Current participants: ${totalExistingParticipants}/${maxParticipants}. Please choose another time.` : `Ce créneau horaire a atteint sa capacité maximale. Participants actuels: ${totalExistingParticipants}/${maxParticipants}. Veuillez choisir un autre horaire.`);
             }
           }
         }
@@ -342,7 +359,7 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
 
           // Check if booking is made with sufficient advance time
           if (timeDifferenceHours < minimumAdvanceHours) {
-            errors.push(`La réservation doit être effectuée au moins ${limitLabel} à l'avance. Veuillez choisir une date et heure ultérieures.`);
+            errors.push(isEnglish ? `The booking must be made at least ${limitLabel} in advance. Please choose a later date and time.` : `La réservation doit être effectuée au moins ${limitLabel} à l'avance. Veuillez choisir une date et heure ultérieures.`);
           }
 
           console.log('📅 Frontend booking advance validation:', {
@@ -487,7 +504,7 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 mx-auto mb-4" style={{ borderColor: colorCode }}></div>
-          <p className="text-lg">Chargement...</p>
+          <p className="text-lg">{isEnglish ? "Loading..." : "Chargement..."}</p>
         </div>
       </div>
     );
@@ -497,7 +514,7 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
-          <h1 className="mb-4 text-2xl font-bold text-red-600">Erreur</h1>
+          <h1 className="mb-4 text-2xl font-bold text-red-600">{isEnglish ? "Error" : "Erreur"}</h1>
           <p className="text-lg text-gray-600 mb-8">{error}</p>
         </div>
       </div>
@@ -1121,7 +1138,7 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
       <div className="flex items-center mb-4 md:mb-6 lg:mb-8">
           <Link href={`/if/booking-widget/${id}/${serviceId}/reservation${withLayout ? '?withLayout=true' : ''}`} className="flex items-center text-muted-foreground hover:opacity-75" style={{ color: colorCode }}>
             <ChevronLeft className="w-5 h-5 mr-1" />
-            <span className="text-sm md:text-base">Retour</span>
+            <span className="text-sm md:text-base">{isEnglish ? "Back" : "Retour"}</span>
           </Link>
         </div>
 
@@ -1132,7 +1149,7 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
         {/* Validation Errors */}
         {validationErrors.length > 0 && (
           <div className="mb-4 md:mb-6 p-3 md:p-4 bg-red-50 border border-red-200 rounded-lg">
-            <h3 className="text-red-800 font-medium mb-2 text-base md:text-lg">Veuillez corriger les erreurs suivantes :</h3>
+            <h3 className="text-red-800 font-medium mb-2 text-base md:text-lg">{isEnglish ? "Please correct the following errors:" : "Veuillez corriger les erreurs suivantes :"}</h3>
             <ul className="text-red-700 space-y-1 text-base md:text-lg">
               {validationErrors.map((error, index) => (
                 <li key={index} className="flex items-start">
@@ -1150,7 +1167,7 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
             <div className="flex justify-center items-center py-6 md:py-8">
               <div className="text-center">
                 <div className="bg-red-50 border border-red-200 rounded-lg p-4 md:p-6">
-                  <p className="text-red-600 mb-2 font-medium text-sm md:text-base">Calendrier indisponible</p>
+                  <p className="text-red-600 mb-2 font-medium text-sm md:text-base">{isEnglish ? "Calendar unavailable" : "Calendrier indisponible"}</p>
                   <p className="text-xs md:text-sm text-red-500">{error}</p>
                 </div>
               </div>
@@ -1159,7 +1176,7 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
             <div className="flex justify-center items-center py-6 md:py-8">
               <div className="text-center">
                 <div className="animate-spin rounded-full h-6 w-6 border-b-2 mx-auto mb-2" style={{ borderColor: colorCode }}></div>
-                <p className="text-xs md:text-sm text-gray-600">Chargement des créneaux disponibles...</p>
+                <p className="text-xs md:text-sm text-gray-600">{isEnglish ? "Loading available time slots..." : "Chargement des créneaux disponibles..."}</p>
               </div>
             </div>
           ) : (
@@ -1169,43 +1186,44 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
               isDateAvailable={isDateAvailable}
               colorCode={colorCode}
               weekDays={isEnglish ? WIDGET_WEEK_DAYS_EN : WIDGET_WEEK_DAYS_FR}
+              months={isEnglish ? WIDGET_MONTHS_EN : WIDGET_MONTHS_FR}
             />
           )}
         </div>
 
         {/* Horaires */}
         <div className="mb-6 md:mb-8 mt-4">
-          <h2 className="text-xl md:text-2xl font-semibold mb-4 md:mb-6 text-center" style={{ color: colorCode }}>Horaires</h2>
+          <h2 className="text-xl md:text-2xl font-semibold mb-4 md:mb-6 text-center" style={{ color: colorCode }}>{isEnglish ? "Time slots" : "Horaires"}</h2>
           
           {error ? (
             <div className="text-center text-gray-500 py-6 md:py-8">
               <div className="bg-red-50 border border-red-200 rounded-lg p-4 md:p-6 max-w-md mx-auto">
-                <p className="text-red-600 mb-2 font-medium text-sm md:text-base">Horaires indisponibles</p>
-                <p className="text-xs md:text-sm text-red-500">Impossible de charger les créneaux horaires en raison d'une erreur.</p>
+                <p className="text-red-600 mb-2 font-medium text-sm md:text-base">{isEnglish ? "Time slots unavailable" : "Horaires indisponibles"}</p>
+                <p className="text-xs md:text-sm text-red-500">{isEnglish ? "Unable to load time slots due to an error." : "Impossible de charger les créneaux horaires en raison d'une erreur."}</p>
               </div>
             </div>
           ) : !selectedDate ? (
             <div className="text-center text-gray-500 py-6 md:py-8 text-sm md:text-base">
-              Veuillez sélectionner une date pour voir les créneaux disponibles
+              {isEnglish ? "Please select a date to see the available time slots" : "Veuillez sélectionner une date pour voir les créneaux disponibles"}
             </div>
           ) : allMorningTimes.length === 0 && allAfternoonTimes.length === 0 ? (
             <div className="text-center text-gray-500 py-6 md:py-8">
-              <p className="mb-2 text-sm md:text-base">Aucun créneau disponible pour cette date.</p>
+              <p className="mb-2 text-sm md:text-base">{isEnglish ? "No time slots available for this date." : "Aucun créneau disponible pour cette date."}</p>
               <p className="text-xs md:text-sm">
                 {selectedDate && selectedDate.toDateString() === new Date().toDateString() 
-                  ? "Les créneaux passés ne sont plus disponibles aujourd'hui."
-                  : "Tous les créneaux sont déjà réservés."}
+                  ? (isEnglish ? "Past time slots are no longer available today." : "Les créneaux passés ne sont plus disponibles aujourd'hui.")
+                  : (isEnglish ? "All time slots are already booked." : "Tous les créneaux sont déjà réservés.")}
               </p>
-              <p className="text-xs md:text-sm mt-1">Veuillez choisir une autre date.</p>
+              <p className="text-xs md:text-sm mt-1">{isEnglish ? "Please choose another date." : "Veuillez choisir une autre date."}</p>
             </div>
           ) : (
             <>
               {/* Matin */}
           <div className="mb-6 md:mb-8">
-            <h3 className="text-base md:text-lg font-medium mb-3 md:mb-4 text-center">Matin</h3>
+            <h3 className="text-base md:text-lg font-medium mb-3 md:mb-4 text-center">{isEnglish ? "Morning" : "Matin"}</h3>
             {allMorningTimes.length === 0 ? (
               <div className="text-center text-gray-500 py-4 text-sm md:text-base">
-                Aucun créneau disponible le matin
+                {isEnglish ? "No time slots available in the morning" : "Aucun créneau disponible le matin"}
               </div>
             ) : (
               <div className="flex justify-center gap-2 md:gap-3 mb-6 overflow-x-auto px-2">
@@ -1257,10 +1275,10 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
 
           {/* Après-midi */}
           <div className="mb-6 md:mb-8">
-            <h3 className="text-base md:text-lg font-medium mb-3 md:mb-4 text-center">Après-midi</h3>
+            <h3 className="text-base md:text-lg font-medium mb-3 md:mb-4 text-center">{isEnglish ? "Afternoon" : "Après-midi"}</h3>
             {allAfternoonTimes.length === 0 ? (
               <div className="text-center text-gray-500 py-4 text-sm md:text-base">
-                Aucun créneau disponible l'après-midi
+                {isEnglish ? "No time slots available in the afternoon" : "Aucun créneau disponible l'après-midi"}
               </div>
             ) : (
               <div className="flex justify-center gap-2 md:gap-3 overflow-x-auto px-2">
@@ -1320,34 +1338,36 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
             </div>
             <div className="flex items-center gap-2 justify-center">
               <Euro className="w-4 h-4 md:w-5 md:h-5 flex-shrink-0" style={{ color: colorCode }} />
-              <span className="text-xs md:text-base">{widgetData?.service?.pricePerPerson ?? 5} € / pers.</span>
+              <span className="text-xs md:text-base">{widgetData?.service?.pricePerPerson ?? 5} € / {isEnglish ? "pers." : "pers."}</span>
             </div>
             <div className="flex items-center gap-2 justify-center">
               <Wine className="w-4 h-4 md:w-5 md:h-5 flex-shrink-0" style={{ color: colorCode }} />
-              <span className="text-xs md:text-base">{widgetData?.service?.numberOfWinesTasted ?? 5} {(widgetData?.service?.numberOfWinesTasted ?? 5) === 1 ? 'vin' : 'vins'}</span>
+              <span className="text-xs md:text-base">{widgetData?.service?.numberOfWinesTasted ?? 5} {isEnglish ? ((widgetData?.service?.numberOfWinesTasted ?? 5) === 1 ? 'wine' : 'wines') : ((widgetData?.service?.numberOfWinesTasted ?? 5) === 1 ? 'vin' : 'vins')}</span>
             </div>
             <div className="flex items-center gap-2 justify-center">
               <Users className="w-4 h-4 md:w-5 md:h-5 flex-shrink-0" style={{ color: colorCode }} />
-              <span className="text-xs md:text-base">{widgetData?.service?.numberOfPeople ?? '1-10'} pers.</span>
+              <span className="text-xs md:text-base">{widgetData?.service?.numberOfPeople ?? '1-10'} {isEnglish ? "pers." : "pers."}</span>
             </div>
           </div>
         </div>
 
         {/* Participants */}
         <div className="mb-6 md:mb-8">
-          <h2 className="text-xl md:text-2xl font-semibold mb-4 md:mb-6 text-center" style={{ color: colorCode }}>Participants</h2>
+          <h2 className="text-xl md:text-2xl font-semibold mb-4 md:mb-6 text-center" style={{ color: colorCode }}>{isEnglish ? "Participants" : "Participants"}</h2>
           
           {/* Show max participants info */}
           <div className="text-center mb-3 md:mb-4">
             <span className="text-xs md:text-sm text-muted-foreground">
-              Minimum {getMinParticipants()} - Maximum {getMaxParticipants()} personnes • Total actuel: {adults + children}
+              {isEnglish
+                ? `Minimum ${getMinParticipants()} - Maximum ${getMaxParticipants()} people • Current total: ${adults + children}`
+                : `Minimum ${getMinParticipants()} - Maximum ${getMaxParticipants()} personnes • Total actuel: ${adults + children}`}
             </span>
           </div>
           
           <div className="space-y-4 md:space-y-6 max-w-md mx-auto px-2">
             {/* Adultes */}
             <div className="flex items-center justify-between">
-              <span className="font-medium text-base md:text-lg">Adultes</span>
+              <span className="font-medium text-base md:text-lg">{isEnglish ? "Adults" : "Adultes"}</span>
               <div className="flex items-center gap-3 md:gap-4">
                 <Button
                   variant="outline"
@@ -1374,8 +1394,8 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
             {/* Enfants */}
             <div className="flex items-center justify-between">
               <div>
-                <span className="font-medium text-base md:text-lg">Enfants</span>
-                <div className="text-sm md:text-base text-muted-foreground">-18 ans</div>
+                <span className="font-medium text-base md:text-lg">{isEnglish ? "Children" : "Enfants"}</span>
+                <div className="text-sm md:text-base text-muted-foreground">{isEnglish ? "Under 18" : "-18 ans"}</div>
               </div>
               <div className="flex items-center gap-3 md:gap-4">
                 <Button
@@ -1414,7 +1434,9 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
           {/* When a slot already has bookings, inform the user that only one language is available */}
           {slotRequiredLanguage && (
             <p className="text-center text-sm md:text-base text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-4 py-2 mb-4 max-w-md mx-auto">
-              Vous ne pouvez réserver ce créneau qu'en <strong>{getLanguageInFrench(slotRequiredLanguage)}</strong>.
+              {isEnglish
+                ? <>You can only book this time slot in <strong>{getLanguageInFrench(slotRequiredLanguage)}</strong>.</>
+                : <>Vous ne pouvez réserver ce créneau qu'en <strong>{getLanguageInFrench(slotRequiredLanguage)}</strong>.</>}
             </p>
           )}
           <div className="flex flex-wrap justify-center gap-3 md:gap-4 px-2">
@@ -1460,12 +1482,12 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
             {isSubmitting ? (
               <>
                 <Loader2 className="w-4 h-4 md:w-5 md:h-5 animate-spin mr-2" />
-                Traitement...
+                {isEnglish ? "Processing..." : "Traitement..."}
               </>
             ) : error ? (
-              "Service indisponible"
+              isEnglish ? "Service unavailable" : "Service indisponible"
             ) : (
-              "Sélectionner"
+              isEnglish ? "Select" : "Sélectionner"
             )}
           </Button>
         </div>

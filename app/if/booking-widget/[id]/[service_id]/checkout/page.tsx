@@ -24,6 +24,7 @@ import {
 import { WidgetProvider, useWidget } from "@/contexts/WidgetContext";
 import { bookingService } from "@/services/booking.service";
 import { createPaymentIntent } from "@/services/stripe-checkout.service";
+import { useIsTranslatedToEnglish } from "@/app/if/google-translate/AutoGoogleTranslate";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -48,6 +49,7 @@ interface StripeCardFormProps {
   setIsProcessing: (v: boolean) => void;
   onSuccess: (bookingId: string) => void;
   getClientSecret: () => Promise<{ clientSecret: string; bookingId: string }>;
+  isEnglish: boolean;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -60,6 +62,7 @@ function StripeCardForm({
   setIsProcessing,
   onSuccess,
   getClientSecret,
+  isEnglish,
 }: StripeCardFormProps) {
   const stripe = useStripeHook();
   const elements = useElements();
@@ -69,7 +72,7 @@ function StripeCardForm({
   const handlePay = async () => {
     if (!stripe || !elements || isProcessing) return;
     if (!cardholderName.trim()) {
-      setCardError("Veuillez entrer le nom du titulaire de la carte.");
+      setCardError(isEnglish ? "Please enter the cardholder's name." : "Veuillez entrer le nom du titulaire de la carte.");
       return;
     }
     setCardError(null);
@@ -88,14 +91,14 @@ function StripeCardForm({
       });
 
       if (error) {
-        setCardError(error.message || "Le paiement a échoué. Veuillez réessayer.");
+        setCardError(error.message || (isEnglish ? "Payment failed. Please try again." : "Le paiement a échoué. Veuillez réessayer."));
         setIsProcessing(false);
       } else if (paymentIntent?.status === "succeeded") {
-        toast.success("Paiement réussi !");
+        toast.success(isEnglish ? "Payment successful!" : "Paiement réussi !");
         onSuccess(bookingId);
       }
     } catch (err: any) {
-      setCardError(err.message || "Erreur lors du paiement. Veuillez réessayer.");
+      setCardError(err.message || (isEnglish ? "Payment error. Please try again." : "Erreur lors du paiement. Veuillez réessayer."));
       setIsProcessing(false);
     }
   };
@@ -120,14 +123,14 @@ function StripeCardForm({
       <div className="flex items-center gap-2">
         <CreditCard className="w-4 h-4" style={{ color: colorCode }} />
         <span className="text-sm font-semibold" style={{ color: colorCode }}>
-          Paiement par carte
+          {isEnglish ? "Card payment" : "Paiement par carte"}
         </span>
       </div>
 
       {/* Cardholder name */}
       <div>
         <label className="block text-xs font-medium text-gray-600 mb-1">
-          Nom du titulaire
+          {isEnglish ? "Cardholder name" : "Nom du titulaire"}
         </label>
         <input
           type="text"
@@ -143,7 +146,7 @@ function StripeCardForm({
       {/* Card number */}
       <div>
         <label className="block text-xs font-medium text-gray-600 mb-1">
-          Numéro de carte
+          {isEnglish ? "Card number" : "Numéro de carte"}
         </label>
         <div className="px-3 py-3 border border-gray-300 rounded-lg bg-white">
           <CardNumberElement options={elementOptions} />
@@ -154,7 +157,7 @@ function StripeCardForm({
       <div className="grid grid-cols-2 gap-3">
         <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">
-            Date d&apos;expiration
+            {isEnglish ? "Expiry date" : "Date d&apos;expiration"}
           </label>
           <div className="px-3 py-3 border border-gray-300 rounded-lg bg-white">
             <CardExpiryElement options={elementOptions} />
@@ -181,7 +184,7 @@ function StripeCardForm({
       {/* Security note */}
       <div className="flex items-center gap-2 text-xs text-gray-500">
         <Lock className="w-3 h-3" />
-        <span>Paiement sécurisé — données chiffrées par Stripe</span>
+        <span>{isEnglish ? "Secure payment — data encrypted by Stripe" : "Paiement sécurisé — données chiffrées par Stripe"}</span>
       </div>
 
       {/* Pay button */}
@@ -195,12 +198,12 @@ function StripeCardForm({
         {isProcessing ? (
           <div className="flex items-center gap-2 justify-center">
             <Loader2 className="w-4 h-4 animate-spin" />
-            Traitement du paiement...
+            {isEnglish ? "Processing payment..." : "Traitement du paiement..."}
           </div>
         ) : (
           <div className="flex items-center gap-2 justify-center">
             <Lock className="w-4 h-4" />
-            Payer {totalPrice} €
+            {isEnglish ? "Pay" : "Payer"} {totalPrice} €
           </div>
         )}
       </Button>
@@ -216,6 +219,7 @@ function CheckoutContent({ id, serviceId }: { id: string; serviceId: string }) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const withLayout = searchParams.get("withLayout");
+  const isEnglish = useIsTranslatedToEnglish();
 
   const bookingData: BookingData = {
     date: searchParams.get("date") || "",
@@ -257,7 +261,7 @@ function CheckoutContent({ id, serviceId }: { id: string; serviceId: string }) {
             className="animate-spin rounded-full h-8 w-8 border-b-2 mx-auto mb-4"
             style={{ borderColor: colorCode }}
           />
-          <p className="text-lg">Chargement...</p>
+          <p className="text-lg">{isEnglish ? "Loading..." : "Chargement..."}</p>
         </div>
       </div>
     );
@@ -267,7 +271,7 @@ function CheckoutContent({ id, serviceId }: { id: string; serviceId: string }) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
-          <h1 className="mb-4 text-2xl font-bold text-red-600">Erreur</h1>
+          <h1 className="mb-4 text-2xl font-bold text-red-600">{isEnglish ? "Error" : "Erreur"}</h1>
           <p className="text-lg text-gray-600 mb-8">{error}</p>
         </div>
       </div>
@@ -277,19 +281,30 @@ function CheckoutContent({ id, serviceId }: { id: string; serviceId: string }) {
   const formatDate = (dateString: string) =>
     format(new Date(dateString), "dd/MM/yyyy", { locale: fr });
 
-  const displayTime = bookingData?.selectedTime || "Aucun horaire sélectionné";
+  const displayTime = bookingData?.selectedTime || (isEnglish ? "No time slot selected" : "Aucun horaire sélectionné");
   const totalParticipants = (bookingData?.adults ?? 0) + (bookingData?.children ?? 0);
 
   const formatParticipants = () => {
     const adults = bookingData?.adults ?? 0;
     const children = bookingData?.children ?? 0;
     if (children > 0)
-      return `${totalParticipants} personnes (${adults} adultes, ${children} enfants)`;
-    return `${adults} personnes (adultes)`;
+      return isEnglish
+        ? `${totalParticipants} people (${adults} adults, ${children} children)`
+        : `${totalParticipants} personnes (${adults} adultes, ${children} enfants)`;
+    return isEnglish ? `${adults} people (adults)` : `${adults} personnes (adultes)`;
   };
 
   const getLanguageInFrench = (language: string) => {
     const lang = language.toLowerCase();
+    if (isEnglish) {
+      if (lang === "français" || lang === "french") return "French";
+      if (lang === "anglais" || lang === "english") return "English";
+      if (lang === "español" || lang === "spanish") return "Spanish";
+      if (lang === "deutsch" || lang === "german") return "German";
+      if (lang === "italien" || lang === "italian") return "Italian";
+      if (lang === "russe" || lang === "russian") return "Russian";
+      return language;
+    }
     if (lang === "français" || lang === "french") return "Français";
     if (lang === "anglais" || lang === "english") return "Anglais";
     if (lang === "español" || lang === "spanish") return "Espagnol";
@@ -323,7 +338,7 @@ function CheckoutContent({ id, serviceId }: { id: string; serviceId: string }) {
 
     const bookingResult = await bookingService.createBooking(bookingPayload);
     const bookingId = bookingResult.data?._id || (bookingResult as any)._id;
-    if (!bookingId) throw new Error("Impossible de créer la réservation.");
+    if (!bookingId) throw new Error(isEnglish ? "Unable to create the booking." : "Impossible de créer la réservation.");
 
     const pi = await createPaymentIntent({
       bookingId,
@@ -374,7 +389,7 @@ function CheckoutContent({ id, serviceId }: { id: string; serviceId: string }) {
       const result = await bookingService.createBooking(bookingPayload);
 
       if (result.success || result.data || (result as any)._id) {
-        toast.success("Réservation créée avec succès !");
+        toast.success(isEnglish ? "Booking created successfully!" : "Réservation créée avec succès !");
         const bookingId = result.data?._id || (result as any)._id || "unknown";
         const params = new URLSearchParams(searchParams);
         params.set("bookingId", bookingId);
@@ -383,11 +398,11 @@ function CheckoutContent({ id, serviceId }: { id: string; serviceId: string }) {
           `/if/booking-widget/${id}/${serviceId}/confirmation-success?${params.toString()}`,
         );
       } else {
-        toast.error(result.message || "Erreur lors de la création de la réservation");
+        toast.error(result.message || (isEnglish ? "Error creating the booking" : "Erreur lors de la création de la réservation"));
       }
     } catch (error: any) {
       if (error.response?.status === 201 && error.response?.data) {
-        toast.success("Réservation créée avec succès !");
+        toast.success(isEnglish ? "Booking created successfully!" : "Réservation créée avec succès !");
         const bookingId =
           error.response.data._id || error.response.data.data?._id || "unknown";
         const params = new URLSearchParams(searchParams);
@@ -401,7 +416,7 @@ function CheckoutContent({ id, serviceId }: { id: string; serviceId: string }) {
       toast.error(
         error.message ||
           error.response?.data?.message ||
-          "Erreur lors de la création de la réservation",
+          (isEnglish ? "Error creating the booking" : "Erreur lors de la création de la réservation"),
       );
     } finally {
       setIsProcessing(false);
@@ -509,10 +524,10 @@ function CheckoutContent({ id, serviceId }: { id: string; serviceId: string }) {
                               <CreditCard className="w-5 h-5 text-gray-600" />
                               <div>
                                 <span className="text-gray-800 font-medium">
-                                  Carte bancaire (en ligne)
+                                  {isEnglish ? "Bank card (online)" : "Carte bancaire (en ligne)"}
                                 </span>
                                 <p className="text-xs text-gray-500 mt-0.5">
-                                  Paiement sécurisé via Stripe
+                                  {isEnglish ? "Secure payment via Stripe" : "Paiement sécurisé via Stripe"}
                                 </p>
                               </div>
                             </div>
@@ -528,6 +543,7 @@ function CheckoutContent({ id, serviceId }: { id: string; serviceId: string }) {
                                 setIsProcessing={setIsProcessing}
                                 onSuccess={handleStripeSuccess}
                                 getClientSecret={getStripeClientSecret}
+                                isEnglish={isEnglish}
                               />
                             </Elements>
                           )}

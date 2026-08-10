@@ -4,16 +4,18 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { WidgetProvider, useWidget } from "@/contexts/WidgetContext";
 import { useEffect, useState } from "react";
+import { useIsTranslatedToEnglish } from "@/app/if/google-translate/AutoGoogleTranslate";
 
 function BookingWidgetContent({ id, serviceId }: { id: string; serviceId: string }) {
     const { widgetData, loading, error, colorCode } = useWidget();
+    const isEnglish = useIsTranslatedToEnglish();
 
     if (loading) {
         return (
             <div className="flex min-h-screen items-center justify-center bg-[#E8D6C9]">
                 <div className="text-center">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 mx-auto mb-4" style={{ borderColor: colorCode }}></div>
-                    <p className="text-lg">Chargement...</p>
+                    <p className="text-lg">{isEnglish ? "Loading..." : "Chargement..."}</p>
                 </div>
             </div>
         );
@@ -25,10 +27,10 @@ function BookingWidgetContent({ id, serviceId }: { id: string; serviceId: string
         <div className="flex min-h-screen items-center justify-center" style={{ backgroundColor: '#E8D6C9' }}>
             <div className="text-center">
                 <h1 className="mb-4 text-4xl font-bold" style={{ color: colorCode }}>
-                    {widgetData?.service?.name || 'Expériences Vinicoles'}
+                    {widgetData?.service?.name || (isEnglish ? 'Wine Experiences' : 'Expériences Vinicoles')}
                 </h1>
                 <p className="text-xl text-muted-foreground mb-8">
-                    {widgetData?.service?.description || 'Découvrez nos caves et dégustations authentiques'}
+                    {widgetData?.service?.description || (isEnglish ? 'Discover our authentic cellars and tastings' : 'Découvrez nos caves et dégustations authentiques')}
                 </p>
                 <Link href={`/if/booking-widget/${id}/${serviceId}/reservation`}>
                     <Button 
@@ -39,7 +41,7 @@ function BookingWidgetContent({ id, serviceId }: { id: string; serviceId: string
                             borderColor: colorCode
                         }}
                     >
-                        Voir nos expériences
+                        {isEnglish ? "See our experiences" : "Voir nos expériences"}
                     </Button>
                 </Link>
             </div>

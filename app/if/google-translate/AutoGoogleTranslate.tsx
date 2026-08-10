@@ -24,19 +24,25 @@ declare global {
 
 export function prefersEnglish(): boolean {
   if (typeof navigator === 'undefined') return false;
-  const candidates = [
-    ...(navigator.languages || []),
-    navigator.language,
-  ].filter(Boolean);
-  return candidates.some((lang) => lang.toLowerCase().startsWith('en'));
+  // Only the PRIMARY language matters here — navigator.languages is a full
+  // fallback preference list and very commonly includes English (en, en-US,
+  // en-GB, ...) even when the browser's actual UI/primary language is French.
+  // Checking the whole list with .some(...) caused false positives: a user
+  // with languages = ['fr', 'en-GB', 'en-US', 'en', 'ur'] would incorrectly
+  // be detected as preferring English.
+  const primary = navigator.language || navigator.languages?.[0];
+  const result = !!primary && primary.toLowerCase().startsWith('en');
+  console.log('[gt-debug] prefersEnglish()', { primary, languages: navigator.languages, result });
+  return result;
 }
 
 function isDomTranslatedToEnglish(): boolean {
   if (typeof document === 'undefined') return false;
-  return (
-    document.documentElement.classList.contains('translated-ltr') ||
-    document.documentElement.classList.contains('translated-rtl')
-  );
+  const ltr = document.documentElement.classList.contains('translated-ltr');
+  const rtl = document.documentElement.classList.contains('translated-rtl');
+  const result = ltr || rtl;
+  console.log('[gt-debug] isDomTranslatedToEnglish()', { ltr, rtl, result });
+  return result;
 }
 
 /**
@@ -56,8 +62,11 @@ export function useIsTranslatedToEnglish(): boolean {
       return;
     }
 
-    const update = () =>
-      setTranslated(prefersEnglish() || isDomTranslatedToEnglish());
+    const update = () => {
+      const next = prefersEnglish() || isDomTranslatedToEnglish();
+      console.log('[gt-debug] useIsTranslatedToEnglish update()', { next, cookie: document.cookie.match(/(?:^|;\s*)googtrans=([^;]*)/)?.[1] });
+      setTranslated(next);
+    };
     update();
 
     const observer = new MutationObserver(update);
@@ -134,18 +143,46 @@ export function teardownGoogleTranslateArtifacts() {
 }
 
 /**
- * Google's Website Translator only translates the DOM present when it initializes.
- * Force the hidden language select to re-fire on client-side route changes.
+ * Guards against overlapping retranslation attempts.
  */
-function retriggerGoogleTranslate(targetLang = 'en', attemptsLeft = 10, intervalMs = 200) {
+let retranslateLock = false;
+
+/**
+ * Best-effort, one-directional nudge for Google's Website Translator after a
+ * route change. Deliberately never toggles back to the source language first:
+ * doing so (even briefly) causes a visible French flash mid-cycle, which is
+ * worse than an occasional missed retranslation. If the combo already reads
+ * `en` this is a no-op — screens are expected to translate their own dynamic
+ * content manually (see the `isEnglish`/`useIsTranslatedToEnglish` pattern)
+ * rather than depend on Google re-scanning React-driven DOM updates.
+ */
+function forceRetranslate(targetLang = 'en') {
+  if (retranslateLock) return;
+  const combo = document.querySelector<HTMLSelectElement>('select.goog-te-combo');
+  if (!combo || combo.value === targetLang) return;
+
+  retranslateLock = true;
+  combo.value = targetLang;
+  combo.dispatchEvent(new Event('change', { bubbles: true }));
+  setTimeout(() => {
+    retranslateLock = false;
+  }, 250);
+}
+
+/**
+ * Google's Website Translator script + widget bootstrap asynchronously, so the
+ * hidden `select.goog-te-combo` may not exist yet right after a route change.
+ * Poll for it (script bootstrap can be slow on a cold iframe load) and apply
+ * the one-directional nudge once it's available.
+ */
+function waitForComboAndRetranslate(targetLang = 'en', attemptsLeft = 30, intervalMs = 200) {
   const combo = document.querySelector<HTMLSelectElement>('select.goog-te-combo');
   if (combo) {
-    combo.value = targetLang;
-    combo.dispatchEvent(new Event('change', { bubbles: true }));
+    forceRetranslate(targetLang);
     return;
   }
   if (attemptsLeft <= 0) return;
-  setTimeout(() => retriggerGoogleTranslate(targetLang, attemptsLeft - 1, intervalMs), intervalMs);
+  setTimeout(() => waitForComboAndRetranslate(targetLang, attemptsLeft - 1, intervalMs), intervalMs);
 }
 
 /**
@@ -157,6 +194,13 @@ export function AutoGoogleTranslate() {
   const isFirstPathnameRef = useRef(true);
 
   useEffect(() => {
+    console.log('[gt-debug] AutoGoogleTranslate mount', {
+      GOOGLE_TRANSLATE_ENABLED,
+      navigatorLanguage: typeof navigator !== 'undefined' ? navigator.language : undefined,
+      navigatorLanguages: typeof navigator !== 'undefined' ? navigator.languages : undefined,
+      existingCookie: document.cookie.match(/(?:^|;\s*)googtrans=([^;]*)/)?.[1],
+    });
+
     if (!GOOGLE_TRANSLATE_ENABLED) {
       clearGoogTransCookie();
       teardownGoogleTranslateArtifacts();
@@ -168,8 +212,24 @@ export function AutoGoogleTranslate() {
       return;
     }
 
-    if (!prefersEnglish()) return;
+    if (!prefersEnglish()) {
+      // Browser no longer prefers English (e.g. user switched language, or a
+      // stale cookie/class survived from a previous English session). Clear
+      // any leftover googtrans cookie and translated-* markup so the page
+      // renders in French and useIsTranslatedToEnglish doesn't get fooled by
+      // a stale `translated-ltr` class left over from before.
+      console.log('[gt-debug] Browser does not prefer English — clearing googtrans cookie/artifacts, staying French');
+      clearGoogTransCookie();
+      teardownGoogleTranslateArtifacts();
+      try {
+        sessionStorage.removeItem(GOOG_TRANS_ACTIVE_FLAG);
+      } catch {
+        // ignore
+      }
+      return;
+    }
 
+    console.log('[gt-debug] Browser prefers English — setting googtrans=/fr/en cookie');
     setGoogTransCookie('/fr/en');
     try {
       sessionStorage.setItem(GOOG_TRANS_ACTIVE_FLAG, '1');
@@ -302,7 +362,10 @@ export function AutoGoogleTranslate() {
     }
     if (!prefersEnglish()) return;
 
-    const timer = setTimeout(() => retriggerGoogleTranslate(), 50);
+    // One-directional nudge only — never toggles back to French first, so this
+    // can never cause a visible language flash. Widget screens are expected to
+    // translate their own dynamic content manually (isEnglish pattern).
+    const timer = setTimeout(() => waitForComboAndRetranslate(), 50);
     return () => clearTimeout(timer);
   }, [pathname]);
 

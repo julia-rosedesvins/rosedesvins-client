@@ -11,11 +11,18 @@ interface DatePickerProps {
   colorCode?: string;
   /** Override weekday headers (e.g. Wed/Thu to avoid Google Translate mangling Mer/Jeu) */
   weekDays?: string[];
+  /** Override month names (e.g. August to avoid Google Translate mangling Août) */
+  months?: string[];
 }
 
 const DEFAULT_WEEK_DAYS = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
 
-export const DatePicker = ({ selectedDate, onDateSelect, isDateAvailable, colorCode = '#3A7E53', weekDays = DEFAULT_WEEK_DAYS }: DatePickerProps) => {
+const DEFAULT_MONTHS = [
+  "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
+  "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"
+];
+
+export const DatePicker = ({ selectedDate, onDateSelect, isDateAvailable, colorCode = '#3A7E53', weekDays = DEFAULT_WEEK_DAYS, months = DEFAULT_MONTHS }: DatePickerProps) => {
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
   const selectedButtonRef = useRef<HTMLButtonElement>(null);
@@ -40,11 +47,6 @@ export const DatePicker = ({ selectedDate, onDateSelect, isDateAvailable, colorC
     console.log("DatePicker selectedDate month:", selectedDate.getMonth());
   }
   console.log("=========================")
-
-  const months = [
-    "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
-    "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"
-  ];
 
   const getDaysInMonth = (month: number, year: number) => {
     return new Date(year, month + 1, 0).getDate();

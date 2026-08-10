@@ -18,9 +18,18 @@ function ReservationContent({ id, serviceId }: { id: string, serviceId: string }
     const fullText = widgetData?.service?.description || "";
     const truncatedText = fullText.length > 200 ? fullText.substring(0, 200) + "..." : fullText;
 
-    // Function to convert language to French display name
+    // Function to convert language to a display name in the current UI language
     const getLanguageInFrench = (language: string) => {
         const lang = language.toLowerCase();
+        if (isEnglish) {
+            if (lang === 'français' || lang === 'french') return 'French';
+            if (lang === 'anglais' || lang === 'english') return 'English';
+            if (lang === 'español' || lang === 'spanish') return 'Spanish';
+            if (lang === 'deutsch' || lang === 'german') return 'German';
+            if (lang === 'italien' || lang === 'italian') return 'Italian';
+            if (lang === 'russe' || lang === 'russian') return 'Russian';
+            return language;
+        }
         if (lang === 'français' || lang === 'french') return 'Français';
         if (lang === 'anglais' || lang === 'english') return 'Anglais';
         if (lang === 'español' || lang === 'spanish') return 'Espagnol';
@@ -35,7 +44,7 @@ function ReservationContent({ id, serviceId }: { id: string, serviceId: string }
             <div className="min-h-screen bg-white flex items-center justify-center">
                 <div className="text-center">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 mx-auto mb-4" style={{ borderColor: colorCode }}></div>
-                    <p className="text-lg">Chargement...</p>
+                    <p className="text-lg">{isEnglish ? "Loading..." : "Chargement..."}</p>
                 </div>
             </div>
         );
@@ -78,7 +87,7 @@ function ReservationContent({ id, serviceId }: { id: string, serviceId: string }
                                     className="hover:opacity-75 font-medium text-sm md:text-base"
                                     style={{ color: colorCode }}
                                 >
-                                    {showFullText ? "Voir moins ▲" : "En savoir plus ▼"}
+                                    {showFullText ? (isEnglish ? "See less ▲" : "Voir moins ▲") : (isEnglish ? "Learn more ▼" : "En savoir plus ▼")}
                                 </button>
                             </div>
                         )}
@@ -94,19 +103,19 @@ function ReservationContent({ id, serviceId }: { id: string, serviceId: string }
                             <div className="flex items-center gap-2 text-muted-foreground min-w-0">
                                 <Wine className="w-5 h-5 md:w-6 md:h-6 flex-shrink-0" style={{ color: colorCode }} />
                                 <span className="font-medium text-xs md:text-base whitespace-nowrap overflow-hidden text-ellipsis">
-                                    {widgetData?.service?.numberOfWinesTasted ?? '-'} {widgetData?.service?.numberOfWinesTasted === 1 ? 'vin' : 'vins'}
+                                    {widgetData?.service?.numberOfWinesTasted ?? '-'} {isEnglish ? (widgetData?.service?.numberOfWinesTasted === 1 ? 'wine' : 'wines') : (widgetData?.service?.numberOfWinesTasted === 1 ? 'vin' : 'vins')}
                                 </span>
                             </div>
                             <div className="flex items-center gap-2 text-muted-foreground min-w-0">
                                 <Euro className="w-5 h-5 md:w-6 md:h-6 flex-shrink-0" style={{ color: colorCode }} />
                                 <span className="font-medium text-xs md:text-base whitespace-nowrap overflow-hidden text-ellipsis">
-                                    {widgetData?.service?.pricePerPerson ?? '-'} € / personne
+                                    {widgetData?.service?.pricePerPerson ?? '-'} € / {isEnglish ? "person" : "personne"}
                                 </span>
                             </div>
                             <div className="flex items-center gap-2 text-muted-foreground min-w-0">
                                 <Users className="w-5 h-5 md:w-6 md:h-6 flex-shrink-0" style={{ color: colorCode }} />
                                 <span className="font-medium text-xs md:text-base whitespace-nowrap overflow-hidden text-ellipsis">
-                                    {widgetData?.service?.numberOfPeople ?? '2-10'} personnes
+                                    {widgetData?.service?.numberOfPeople ?? '2-10'} {isEnglish ? "people" : "personnes"}
                                 </span>
                             </div>
                         </div>
@@ -119,7 +128,7 @@ function ReservationContent({ id, serviceId }: { id: string, serviceId: string }
                                 <div key={index} className="flex items-center gap-2 md:gap-3">
                                     {language.toLowerCase() === 'russe' || language.toLowerCase() === 'russian' ? (
                                         <span className="text-2xl md:text-4xl flex items-center justify-center w-8 h-8 md:w-12 md:h-12 rounded-sm overflow-hidden leading-none" style={{ background: 'linear-gradient(to bottom, #fff 33.3%, #0039a6 33.3%, #0039a6 66.6%, #d52b1e 66.6%)', fontSize: '0', minWidth: '2rem' }}>
-                                            <span className="sr-only">Russie</span>
+                                            <span className="sr-only">{isEnglish ? "Russia" : "Russie"}</span>
                                         </span>
                                     ) : (
                                         <span className="text-2xl md:text-4xl">
@@ -136,11 +145,11 @@ function ReservationContent({ id, serviceId }: { id: string, serviceId: string }
                                 <>
                                     <div className="flex items-center gap-2 md:gap-3">
                                         <span className="text-2xl md:text-4xl">🇫🇷</span>
-                                        <span className="text-muted-foreground text-base md:text-xl font-medium">Français</span>
+                                        <span className="text-muted-foreground text-base md:text-xl font-medium">{isEnglish ? "French" : "Français"}</span>
                                     </div>
                                     <div className="flex items-center gap-2 md:gap-3">
                                         <span className="text-2xl md:text-4xl">🇬🇧</span>
-                                        <span className="text-muted-foreground text-base md:text-xl font-medium">Anglais</span>
+                                        <span className="text-muted-foreground text-base md:text-xl font-medium">{isEnglish ? "English" : "Anglais"}</span>
                                     </div>
                                 </>
                             )}
