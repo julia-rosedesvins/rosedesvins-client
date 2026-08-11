@@ -128,9 +128,10 @@ export function teardownGoogleTranslateArtifacts() {
 
   document
     .querySelectorAll(
-      'iframe.goog-te-banner-frame, iframe.skiptranslate, body > .skiptranslate, #goog-gt-tt, .goog-te-spinner-pos, .goog-te-balloon-frame',
+      'iframe.goog-te-banner-frame, iframe.skiptranslate, body > .skiptranslate, #goog-gt-tt, .goog-te-spinner-pos, .goog-te-balloon-frame, .goog-te-ftab, .goog-te-ftab-float, #goog-te-ftab, iframe.goog-te-ftab-frame',
     )
     .forEach((el) => el.remove());
+  removeStrayGoogleChromeNodes();
 
   document.getElementById(SCRIPT_ID)?.remove();
   document.getElementById(STYLE_ID)?.remove();
@@ -139,6 +140,59 @@ export function teardownGoogleTranslateArtifacts() {
     delete window.googleTranslateElementInit;
   } catch {
     // ignore
+  }
+}
+
+/**
+ * Google injects its banner/spinner/tooltip/floating-tab chrome as direct
+ * children of `<html>`/`<body>` under a variety of class/id names that have
+ * changed over time (`goog-te-ftab`, `goog-te-spinner-pos`, `#goog-gt-tt`,
+ * `.goog-te-balloon-frame`, ...). Rather than maintain a brittle allow-list of
+ * every historical selector, treat ANY top-level node whose id/class mentions
+ * "goog-te"/"goog-gt"/"skiptranslate" as chrome and forcibly hide/remove it.
+ * This deliberately only looks at direct children of html/body — actual
+ * translated page text lives deep inside the app's own DOM tree, so this
+ * can't accidentally hide real content.
+ */
+const GOOGLE_CHROME_NAME_RE = /goog-te|goog-gt|skiptranslate/i;
+
+function isOwnTranslateHost(el: Element): boolean {
+  return el.id === 'google_translate_element' || !!el.querySelector?.('#google_translate_element');
+}
+
+function removeStrayGoogleChromeNodes() {
+  const candidates = [
+    ...Array.from(document.body?.children ?? []),
+    ...Array.from(document.documentElement.children),
+  ];
+  for (const el of candidates) {
+    if (isOwnTranslateHost(el)) continue;
+    const name = `${el.id || ''} ${el.className?.toString() || ''}`;
+    if (GOOGLE_CHROME_NAME_RE.test(name)) {
+      el.remove();
+    }
+  }
+}
+
+function hideStrayGoogleChromeNodes() {
+  const candidates = [
+    ...Array.from(document.body?.children ?? []),
+    ...Array.from(document.documentElement.children),
+  ];
+  for (const el of candidates) {
+    if (isOwnTranslateHost(el)) continue;
+    const name = `${el.id || ''} ${el.className?.toString() || ''}`;
+    if (!GOOGLE_CHROME_NAME_RE.test(name)) continue;
+    const node = el as HTMLElement;
+    node.style.setProperty('display', 'none', 'important');
+    node.style.setProperty('visibility', 'hidden', 'important');
+    node.style.setProperty('opacity', '0', 'important');
+    node.style.setProperty('pointer-events', 'none', 'important');
+    node.style.setProperty('width', '0', 'important');
+    node.style.setProperty('height', '0', 'important');
+  }
+  if (document.body && document.body.style.top !== '0px') {
+    document.body.style.setProperty('top', '0', 'important');
   }
 }
 
@@ -263,6 +317,19 @@ export function AutoGoogleTranslate() {
           opacity: 0 !important;
           pointer-events: none !important;
         }
+        /* Floating translate tab/icon Google shows in a page corner while (re)loading */
+        .goog-te-ftab,
+        .goog-te-ftab-float,
+        #goog-te-ftab,
+        .goog-te-menu-frame,
+        iframe.goog-te-ftab-frame {
+          display: none !important;
+          visibility: hidden !important;
+          opacity: 0 !important;
+          pointer-events: none !important;
+          width: 0 !important;
+          height: 0 !important;
+        }
         body {
           top: 0 !important;
         }
@@ -295,7 +362,7 @@ export function AutoGoogleTranslate() {
     const hideTranslateChrome = () => {
       document
         .querySelectorAll(
-          '.goog-te-spinner-pos, .goog-te-spinner, .goog-te-spinner-animation, iframe.goog-te-banner-frame, body > .skiptranslate',
+          '.goog-te-spinner-pos, .goog-te-spinner, .goog-te-spinner-animation, iframe.goog-te-banner-frame, body > .skiptranslate, .goog-te-ftab, .goog-te-ftab-float, #goog-te-ftab, iframe.goog-te-ftab-frame',
         )
         .forEach((el) => {
           const node = el as HTMLElement;
@@ -305,35 +372,37 @@ export function AutoGoogleTranslate() {
           node.style.setProperty('opacity', '0', 'important');
           node.style.setProperty('pointer-events', 'none', 'important');
         });
-      if (document.body.style.top !== '0px') {
-        document.body.style.setProperty('top', '0', 'important');
-      }
+      hideStrayGoogleChromeNodes();
     };
 
     hideTranslateChrome();
     let hideScheduled = false;
-    const observer = new MutationObserver((mutations) => {
-      const relevant = mutations.some((m) =>
-        Array.from(m.addedNodes).some((node) => {
-          if (!(node instanceof HTMLElement)) return false;
-          return (
-            node.matches?.(
-              '.goog-te-spinner-pos, .goog-te-spinner, .goog-te-spinner-animation, iframe.goog-te-banner-frame, .skiptranslate',
-            ) ||
-            !!node.querySelector?.(
-              '.goog-te-spinner-pos, .goog-te-spinner, .goog-te-spinner-animation, iframe.goog-te-banner-frame',
-            )
-          );
-        }),
-      );
-      if (!relevant || hideScheduled) return;
+    const scheduleHide = () => {
+      if (hideScheduled) return;
       hideScheduled = true;
       requestAnimationFrame(() => {
         hideScheduled = false;
         hideTranslateChrome();
       });
+    };
+    // Any childList mutation directly under html/body can introduce Google's
+    // banner/spinner/tooltip/floating-tab chrome, and its exact class/id names
+    // have shifted across Google Translate versions. Rather than trying to
+    // pattern-match every mutation (fragile — see history of this file), just
+    // re-run the cheap top-level sweep on every relevant mutation.
+    const observer = new MutationObserver((mutations) => {
+      const touchesTopLevel = mutations.some(
+        (m) => m.target === document.body || m.target === document.documentElement,
+      );
+      if (touchesTopLevel) scheduleHide();
     });
     observer.observe(document.documentElement, { childList: true, subtree: true });
+    // Safety net: Google's translate cycle (triggered on route changes via
+    // waitForComboAndRetranslate) can (re)introduce chrome slightly outside of
+    // observed mutations (e.g. iframe internal reflows). Poll briefly as a
+    // backstop so nothing is ever left visible for more than a fraction of a
+    // second, regardless of how Google names its elements.
+    const pollId = window.setInterval(hideTranslateChrome, 400);
 
     if (!document.getElementById(SCRIPT_ID)) {
       const script = document.createElement('script');
@@ -348,6 +417,7 @@ export function AutoGoogleTranslate() {
 
     return () => {
       observer.disconnect();
+      window.clearInterval(pollId);
       clearGoogTransCookie();
       teardownGoogleTranslateArtifacts();
     };
