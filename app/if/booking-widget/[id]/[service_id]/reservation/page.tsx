@@ -7,6 +7,7 @@ import { useState, useEffect } from "react";
 import { WidgetProvider, useWidget } from "@/contexts/WidgetContext";
 import { useSearchParams } from "next/navigation";
 import { useIsTranslatedToEnglish } from "@/app/if/google-translate/AutoGoogleTranslate";
+import { useTranslatedText } from "@/app/if/google-translate/useTranslatedText";
 
 function ReservationContent({ id, serviceId }: { id: string, serviceId: string }) {
     const { widgetData, loading, error, colorCode } = useWidget();
@@ -14,8 +15,9 @@ function ReservationContent({ id, serviceId }: { id: string, serviceId: string }
     const isEnglish = useIsTranslatedToEnglish();
     const searchParams = useSearchParams();
     const withLayout = searchParams.get('withLayout') === 'true';
-    
-    const fullText = widgetData?.service?.description || "";
+    const serviceName = useTranslatedText(widgetData?.service?.name);
+
+    const fullText = useTranslatedText(widgetData?.service?.description) || "";
     const truncatedText = fullText.length > 200 ? fullText.substring(0, 200) + "..." : fullText;
 
     // Function to convert language to a display name in the current UI language
@@ -73,7 +75,7 @@ function ReservationContent({ id, serviceId }: { id: string, serviceId: string }
                     {/* Content */}
                     <div className="p-4 md:p-8">
                         <h2 className="text-xl md:text-3xl font-bold mb-3 md:mb-4" style={{ color: colorCode }}>
-                            {widgetData?.service?.name || 'Visite libre & dégustation des cuvées Tradition'}
+                            {serviceName || 'Visite libre & dégustation des cuvées Tradition'}
                         </h2>
 
                         <p className="text-muted-foreground text-base md:text-lg mb-4 md:mb-6 leading-relaxed">

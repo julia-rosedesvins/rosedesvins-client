@@ -8,6 +8,7 @@ import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { WidgetProvider, useWidget } from "@/contexts/WidgetContext";
 import { useIsTranslatedToEnglish } from "@/app/if/google-translate/AutoGoogleTranslate";
+import { useTranslatedText } from "@/app/if/google-translate/useTranslatedText";
 
 interface BookingData {
   date: string;
@@ -23,6 +24,7 @@ function ConfirmationSuccessContent({ id, serviceId }: { id: string, serviceId: 
   const withLayout = searchParams.get('withLayout');
   const cancellationPolicy = searchParams.get('cancellationPolicy') || '';
   const isEnglish = useIsTranslatedToEnglish();
+  const serviceName = useTranslatedText(widgetData?.service?.name);
   
   // Get payment methods from widget data
   const acceptedPaymentMethods = widgetData?.paymentMethods?.methods || ['cash_on_onsite'];
@@ -189,7 +191,7 @@ function ConfirmationSuccessContent({ id, serviceId }: { id: string, serviceId: 
 
               <div className="flex items-center gap-3">
                 <Grape className="w-5 h-5" style={{ color: colorCode }} />
-                <span>{widgetData?.service?.name || (isEnglish ? "Tasting service" : "Service de dégustation")}</span>
+                <span>{serviceName || (isEnglish ? "Tasting service" : "Service de dégustation")}</span>
               </div>
 
               <div className="flex items-center gap-3">

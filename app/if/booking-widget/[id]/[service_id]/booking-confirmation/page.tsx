@@ -29,6 +29,7 @@ import { WidgetProvider, useWidget } from "@/contexts/WidgetContext";
 import { bookingService } from "@/services/booking.service";
 import { createPaymentIntent, confirmPaymentOnServer } from "@/services/stripe-checkout.service";
 import { useIsTranslatedToEnglish } from "@/app/if/google-translate/AutoGoogleTranslate";
+import { useTranslatedText } from "@/app/if/google-translate/useTranslatedText";
 // bookingService.cancelBookingAsGuest is used to roll back on card failure
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -225,6 +226,7 @@ function BookingConfirmationContent({ id, serviceId }: { id: string; serviceId: 
   const router = useRouter();
   const withLayout = searchParams.get("withLayout") === "true";
   const isEnglish = useIsTranslatedToEnglish();
+  const serviceName = useTranslatedText(widgetData?.service?.name);
 
   const bookingData = {
     date: searchParams.get("date") || "",
@@ -555,7 +557,7 @@ function BookingConfirmationContent({ id, serviceId }: { id: string; serviceId: 
                 <div className="flex items-center gap-3">
                   <Grape className="w-5 h-5" style={{ color: colorCode }} />
                   <span>
-                    {widgetData?.service?.name || "Visite libre & dégustation"}
+                    {serviceName || "Visite libre & dégustation"}
                   </span>
                 </div>
 

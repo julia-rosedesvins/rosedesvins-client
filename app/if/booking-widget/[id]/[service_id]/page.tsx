@@ -5,10 +5,13 @@ import Link from "next/link";
 import { WidgetProvider, useWidget } from "@/contexts/WidgetContext";
 import { useEffect, useState } from "react";
 import { useIsTranslatedToEnglish } from "@/app/if/google-translate/AutoGoogleTranslate";
+import { useTranslatedText } from "@/app/if/google-translate/useTranslatedText";
 
 function BookingWidgetContent({ id, serviceId }: { id: string; serviceId: string }) {
     const { widgetData, loading, error, colorCode } = useWidget();
     const isEnglish = useIsTranslatedToEnglish();
+    const serviceName = useTranslatedText(widgetData?.service?.name);
+    const serviceDescription = useTranslatedText(widgetData?.service?.description);
 
     if (loading) {
         return (
@@ -27,10 +30,10 @@ function BookingWidgetContent({ id, serviceId }: { id: string; serviceId: string
         <div className="flex min-h-screen items-center justify-center" style={{ backgroundColor: '#E8D6C9' }}>
             <div className="text-center">
                 <h1 className="mb-4 text-4xl font-bold" style={{ color: colorCode }}>
-                    {widgetData?.service?.name || (isEnglish ? 'Wine Experiences' : 'Expériences Vinicoles')}
+                    {serviceName || (isEnglish ? 'Wine Experiences' : 'Expériences Vinicoles')}
                 </h1>
                 <p className="text-xl text-muted-foreground mb-8">
-                    {widgetData?.service?.description || (isEnglish ? 'Discover our authentic cellars and tastings' : 'Découvrez nos caves et dégustations authentiques')}
+                    {serviceDescription || (isEnglish ? 'Discover our authentic cellars and tastings' : 'Découvrez nos caves et dégustations authentiques')}
                 </p>
                 <Link href={`/if/booking-widget/${id}/${serviceId}/reservation`}>
                     <Button 

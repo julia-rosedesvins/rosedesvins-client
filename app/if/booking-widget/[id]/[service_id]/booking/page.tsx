@@ -11,6 +11,7 @@ import { WidgetProvider, useWidget } from "@/contexts/WidgetContext";
 import { eventsService, PublicScheduleData } from "@/services/events.service";
 import { getHolidays } from "@/services/availability.service";
 import { useIsTranslatedToEnglish } from "@/app/if/google-translate/AutoGoogleTranslate";
+import { useTranslatedText } from "@/app/if/google-translate/useTranslatedText";
 
 const WIDGET_WEEK_DAYS_FR = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
 const WIDGET_WEEK_DAYS_EN = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -41,6 +42,7 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
     const [bookedSlots, setBookedSlots] = useState<PublicScheduleData[]>([]);
     const [loadingSchedule, setLoadingSchedule] = useState(false);
     const isEnglish = useIsTranslatedToEnglish();
+    const serviceName = useTranslatedText(widgetData?.service?.name);
     const [validationErrors, setValidationErrors] = useState<string[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -1143,7 +1145,7 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
         </div>
 
         <h1 className="text-xl md:text-2xl lg:text-3xl font-bold mb-6 md:mb-8 lg:mb-12 text-center px-2" style={{ color: colorCode }}>
-          {widgetData?.service?.name || 'Visite libre & dégustation des cuvées Tradition'}
+          {serviceName || 'Visite libre & dégustation des cuvées Tradition'}
         </h1>
 
         {/* Validation Errors */}
