@@ -47,7 +47,7 @@ export default function UserDashboard() {
 }
 
 function UserDashboardContent() {
-    const [selectedPeriod, setSelectedPeriod] = useState<UiPeriod>("ce-mois");
+    const [selectedPeriod, setSelectedPeriod] = useState<UiPeriod>("cette-annee");
     const [analytics, setAnalytics] = useState<DashboardAnalytics | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [transactions, setTransactions] = useState<TransactionStatus[]>([]);

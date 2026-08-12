@@ -662,7 +662,7 @@ class UserService {
    * @returns Promise with dashboard analytics data
    */
   async getDashboardAnalytics(
-    period: DashboardPeriod = 'month',
+    period: DashboardPeriod = 'year',
     bookingSources?: string[],
   ): Promise<DashboardAnalyticsResponse> {
     try {

@@ -38,7 +38,7 @@ const CHART_COPY: Record<
   },
   year: {
     title: 'Réservations cette année',
-    description: 'Évolution mensuelle de janvier au mois en cours',
+    description: 'Évolution mensuelle de janvier à décembre',
     empty: 'Aucune réservation cette année',
     tooltipPrefix: 'Mois',
   },
@@ -63,7 +63,7 @@ export default function BookingsChart({ data, period, isLoading = false }: Booki
           <div className="space-y-4">
             <Skeleton className="h-[280px] w-full rounded-lg" />
             <div className="flex justify-center gap-2">
-              {Array.from({ length: period === 'week' ? 7 : 6 }).map((_, index) => (
+              {Array.from({ length: period === 'week' ? 7 : period === 'year' ? 12 : 6 }).map((_, index) => (
                 <Skeleton key={index} className="h-3 w-8" />
               ))}
             </div>
