@@ -10,9 +10,17 @@ import type { Domain, Region } from '@/services/region.service';
 
 type PageProps = {
   params: Promise<{ name: string }>;
+  searchParams: Promise<{ page?: string }>;
 };
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+function parsePageParam(page?: string): number {
+  const parsed = Number(page);
+  if (!Number.isFinite(parsed) || parsed < 1) return 1;
+  return Math.floor(parsed);
+}
+
+export async function generateMetadata({ params, searchParams }: PageProps): Promise<Metadata> {
+  await searchParams;
   const { name } = await params;
   const regionName = decodeRouteParam(name);
   const data = await fetchRegionByName(regionName, 1, 5);
@@ -44,15 +52,18 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   });
 }
 
-export default async function RegionPage({ params }: PageProps) {
+export default async function RegionPage({ params, searchParams }: PageProps) {
   const { name } = await params;
+  const { page: pageParam } = await searchParams;
+  const initialPage = parsePageParam(pageParam);
   const regionName = decodeRouteParam(name);
-  const data = await fetchRegionByName(regionName, 1, 5);
+  const data = await fetchRegionByName(regionName, initialPage, 5);
 
   // Old-style links (raw region name, percent-encoded, or a non-canonical slug)
   // permanently redirect to the canonical slug URL.
   if (data?.region?.slug && data.region.slug !== name) {
-    permanentRedirect(`/region/${data.region.slug}`);
+    const pageSuffix = initialPage > 1 ? `?page=${initialPage}` : '';
+    permanentRedirect(`/region/${data.region.slug}${pageSuffix}`);
   }
 
   const displayName = data?.region
@@ -89,6 +100,7 @@ export default async function RegionPage({ params }: PageProps) {
           initialRegion={initialRegion}
           initialDomains={initialDomains}
           initialTotalPages={initialTotalPages}
+          initialPage={initialPage}
         />
       </Suspense>
     </>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import heroImg from "/public/assets/loire-valley-new-bg.webp";
@@ -89,6 +89,7 @@ interface RegionPageClientProps {
     initialRegion?: Region | null;
     initialDomains?: Domain[];
     initialTotalPages?: number;
+    initialPage?: number;
 }
 
 export default function RegionPageClient({
@@ -96,8 +97,10 @@ export default function RegionPageClient({
     initialRegion = null,
     initialDomains = [],
     initialTotalPages = 0,
+    initialPage = 1,
 }: RegionPageClientProps) {
     const router = useRouter();
+    const pathname = usePathname();
     const searchParams = useSearchParams();
     const searchQuery = (() => {
         const raw = searchParams.get('q');
@@ -106,18 +109,40 @@ export default function RegionPageClient({
     const cityLat = (() => { const v = searchParams.get('lat'); return v ? parseFloat(v) : null; })();
     const cityLon = (() => { const v = searchParams.get('lon'); return v ? parseFloat(v) : null; })();
     const cityCoords = cityLat !== null && cityLon !== null ? { lat: cityLat, lon: cityLon } : undefined;
+    const pageFromUrl = (() => {
+        const parsed = Number(searchParams.get('page'));
+        if (!Number.isFinite(parsed) || parsed < 1) return initialPage;
+        return Math.floor(parsed);
+    })();
 
     const [effectiveRegionName] = useState<string>(regionName);
 
     const [region, setRegion] = useState<Region | null>(initialRegion);
     const [domains, setDomains] = useState<Domain[]>(initialDomains);
     const [allMapDomains, setAllMapDomains] = useState<Domain[]>(initialDomains);
-    const [currentPage, setCurrentPage] = useState(1);
+    const [currentPage, setCurrentPage] = useState(pageFromUrl);
     const [totalPages, setTotalPages] = useState(initialTotalPages);
     const [isLoading, setIsLoading] = useState(false);
     const [isMapLoaded, setIsMapLoaded] = useState(false);
     const mapRef = useRef<RegionMapRef>(null);
     const limit = 5;
+
+    const replacePageQuery = (page: number) => {
+        const params = new URLSearchParams(searchParams.toString());
+        if (page <= 1) {
+            params.delete('page');
+        } else {
+            params.set('page', String(page));
+        }
+        const query = params.toString();
+        router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+    };
+
+    useEffect(() => {
+        if (pageFromUrl !== currentPage) {
+            setCurrentPage(pageFromUrl);
+        }
+    }, [pageFromUrl, currentPage]);
 
     // Mobile view states
     const [mobileView, setMobileView] = useState<'list' | 'map'>('list');
@@ -265,7 +290,7 @@ export default function RegionPageClient({
         setSelectedLanguages([]);
         setSelectedExperiences([]);
         setExpandedFilter(null);
-        setCurrentPage(1); // Reset to first page when clearing filters
+        replacePageQuery(1);
     };
 
     const hasActiveFilters = selectedDate !== null || priceRange > 0 || selectedLanguages.length > 0 || selectedExperiences.length > 0;
@@ -273,7 +298,7 @@ export default function RegionPageClient({
     // Reset to page 1 when filters change
     useEffect(() => {
         if (hasActiveFilters) {
-            setCurrentPage(1);
+            replacePageQuery(1);
         }
     }, [selectedDate, priceRange, selectedLanguages, selectedExperiences]);
 
@@ -293,7 +318,7 @@ export default function RegionPageClient({
     }, [expandedFilter]);
 
     const handlePageChange = (page: number) => {
-        setCurrentPage(page);
+        replacePageQuery(page);
         // Desktop: scroll the listings pane. Mobile: scroll the page (listings use document flow).
         if (typeof window !== 'undefined' && window.matchMedia('(min-width: 768px)').matches) {
             document.querySelector('.region-listings-pane')?.scrollTo(0, 0);
