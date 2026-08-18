@@ -6,14 +6,26 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Search, Loader2, MapPin, Wine, Building2 } from "lucide-react"
 import { regionService } from "@/services/region.service"
-import { citiesService } from "@/services/cities.service"
-import { rankSearchSuggestions, type SearchSuggestion } from "@/lib/search-suggestions"
+import {
+    fetchSearchSuggestions,
+    getSearchCacheKey,
+    type SearchSuggestion,
+    type SearchSuggestionIcons,
+} from "@/lib/search-suggestions"
 import toast from "react-hot-toast"
+
+const SEARCH_ICONS: SearchSuggestionIcons = {
+    city: MapPin,
+    region: MapPin,
+    domain: Building2,
+    service: Wine,
+    experience: Wine,
+}
 
 const HeroSection = () => {
     const [searchQuery, setSearchQuery] = useState("")
     const [isSearching, setIsSearching] = useState(false)
-    const [suggestions, setSuggestions] = useState<any[]>([])
+    const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([])
     const [showSuggestions, setShowSuggestions] = useState(false)
     const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false)
     const [selectedIndex, setSelectedIndex] = useState(-1)
@@ -21,7 +33,7 @@ const HeroSection = () => {
     const debounceTimer = useRef<NodeJS.Timeout | null>(null)
     const abortControllerRef = useRef<AbortController | null>(null)
     // Simple in-memory cache: query → { data, timestamp }
-    const cacheRef = useRef<Map<string, { data: any[]; ts: number }>>(new Map())
+    const cacheRef = useRef<Map<string, { data: SearchSuggestion[]; ts: number }>>(new Map())
     const CACHE_TTL = 60_000 // 60 seconds
     const router = useRouter()
 
@@ -36,7 +48,7 @@ const HeroSection = () => {
         }
 
         debounceTimer.current = setTimeout(async () => {
-            const key = `v2:${searchQuery.trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()}`
+            const key = getSearchCacheKey(searchQuery)
 
             // Serve from cache if fresh
             const cached = cacheRef.current.get(key)
@@ -53,97 +65,10 @@ const HeroSection = () => {
 
             try {
                 setIsLoadingSuggestions(true)
-                
-                // Fetch both backend results and cities in parallel
-                const [backendResult, citiesResult] = await Promise.all([
-                    regionService.unifiedSearch(searchQuery, signal),
-                    citiesService.searchCities(searchQuery, signal)
-                ])
-                
+                const finalSuggestions = await fetchSearchSuggestions(searchQuery, SEARCH_ICONS, signal)
+
                 if (signal.aborted) return
 
-                const allSuggestions: SearchSuggestion[] = []
-                
-                // Process cities from our backend
-                if (citiesResult.success && citiesResult.data && citiesResult.data.length > 0) {
-                    citiesResult.data.slice(0, 5).forEach((city: any) => {
-                        allSuggestions.push({
-                            type: 'city',
-                            name: city.nom_standard,
-                            description: 'France',
-                            icon: MapPin,
-                            route: `/region/${encodeURIComponent(city.nom_standard)}`
-                        })
-                    })
-                }
-                
-                // Add regions
-                if (backendResult.data.regions && backendResult.data.regions.length > 0) {
-                    backendResult.data.regions.slice(0, 5).forEach(region => {
-                        allSuggestions.push({
-                            type: 'region',
-                            name: region.denom,
-                            slug: (region as any).slug || null,
-                            icon: MapPin,
-                            route: `/region/${(region as any).slug || encodeURIComponent(region.denom)}`
-                        })
-                    })
-                }
-                
-                // Add domains
-                if (backendResult.data.domains && backendResult.data.domains.length > 0) {
-                    backendResult.data.domains.slice(0, 3).forEach(domain => {
-                        const regionName = domain.location?.region || domain.location?.city || domain.domainName || 'domaine'
-                        const route = (domain as any).experienceRoute || (domain.domainId
-                            ? `/experience/${encodeURIComponent(regionName)}/${(domain as any).slug || domain.domainId}`
-                            : '/regions')
-                        allSuggestions.push({
-                            type: 'domain',
-                            name: domain.domainName,
-                            description: domain.location?.city || '',
-                            icon: Building2,
-                            route: route,
-                            domainId: domain.domainId
-                        })
-                    })
-                }
-                
-                // Add services
-                if (backendResult.data.services && backendResult.data.services.length > 0) {
-                    backendResult.data.services.slice(0, 3).forEach(service => {
-                        const regionName = service.domain?.region || service.domain?.city || service.domain?.domainName || 'domaine'
-                        const route = (service as any).experienceRoute || (service.domain?.domainId
-                            ? `/experience/${encodeURIComponent(regionName)}/${(service.domain as any).slug || service.domain.domainId}`
-                            : '/experiences')
-                        allSuggestions.push({
-                            type: 'service',
-                            name: service.serviceName,
-                            description: `${service.domain.domainName} - ${service.pricePerPerson}€`,
-                            icon: Wine,
-                            route: route
-                        })
-                    })
-                }
-                
-                // Add static experiences
-                if (backendResult.data.staticExperiences && backendResult.data.staticExperiences.length > 0) {
-                    backendResult.data.staticExperiences.slice(0, 2).forEach(exp => {
-                        const regionName = exp.region || exp.city || 'domaine'
-                        const route = (exp as any).experienceRoute || ((exp as any).domainId
-                            ? `/experience/${encodeURIComponent(regionName)}/${(exp as any).slug || (exp as any).domainId}`
-                            : (exp.website || '#'))
-                        allSuggestions.push({
-                            type: 'experience',
-                            name: exp.name,
-                            description: exp.category || '',
-                            icon: Wine,
-                            route: route
-                        })
-                    })
-                }
-                
-                const finalSuggestions = rankSearchSuggestions(searchQuery, allSuggestions)
-                // Store in cache
                 cacheRef.current.set(key, { data: finalSuggestions, ts: Date.now() })
                 setSuggestions(finalSuggestions)
                 setShowSuggestions(finalSuggestions.length > 0)
@@ -182,30 +107,31 @@ const HeroSection = () => {
 
         try {
             setIsSearching(true)
-            const startTime = Date.now()
-            const result = await regionService.unifiedSearch(searchQuery)
+            setShowSuggestions(false)
 
-            // Ensure minimum loading time of 800ms for better UX
+            const trimmed = searchQuery.trim()
+            const cacheKey = getSearchCacheKey(trimmed)
+            const cached = cacheRef.current.get(cacheKey)
+            let rankedSuggestions = cached && Date.now() - cached.ts < CACHE_TTL
+                ? cached.data
+                : await fetchSearchSuggestions(trimmed, SEARCH_ICONS)
+
+            if (!cached || Date.now() - cached.ts >= CACHE_TTL) {
+                cacheRef.current.set(cacheKey, { data: rankedSuggestions, ts: Date.now() })
+            }
+
+            const startTime = Date.now()
+            const minLoadingTime = 400
             const elapsed = Date.now() - startTime
-            const minLoadingTime = 800
             if (elapsed < minLoadingTime) {
                 await new Promise(resolve => setTimeout(resolve, minLoadingTime - elapsed))
             }
 
-            if (result.data.suggestedRoute) {
-                let route = result.data.suggestedRoute
-                // Strip any ?q=... query string from /region/ routes (safety net)
-                if (route.startsWith('/region/')) {
-                    route = route.split('?')[0]
-                }
-                // Convert legacy /regions?q=NAME → /region/NAME
-                if (route.startsWith('/regions?q=')) {
-                    const regionName = decodeURIComponent(route.replace('/regions?q=', ''))
-                    route = `/region/${encodeURIComponent(regionName)}`
-                }
-                router.push(route)
+            const firstSuggestion = rankedSuggestions[0]
+            if (firstSuggestion?.route) {
+                router.push(firstSuggestion.route)
             } else {
-                router.push(`/no-results?q=${encodeURIComponent(searchQuery)}`)
+                router.push(`/no-results?q=${encodeURIComponent(trimmed)}`)
             }
         } catch (error: any) {
             console.error("Search error:", error)
@@ -215,44 +141,17 @@ const HeroSection = () => {
         }
     }
 
-    const handleSuggestionClick = async (suggestion: any) => {
+    const handleSuggestionClick = async (suggestion: SearchSuggestion) => {
         setSearchQuery(suggestion.name)
         setShowSuggestions(false)
 
-        // Navigate directly using the pre-built route (region, city, domain, service, etc.)
-        if (suggestion.route) {
-            setIsSearching(true)
-            await new Promise(resolve => setTimeout(resolve, 400))
-            router.push(suggestion.route)
-            setSearchQuery("")
-            setIsSearching(false)
-            return
-        }
-        
-        // Perform search with the full suggestion name to get proper routing
-        try {
-            setIsSearching(true)
-            const startTime = Date.now()
-            const result = await regionService.unifiedSearch(suggestion.name)
+        if (!suggestion.route) return
 
-            // Ensure minimum loading time of 800ms for better UX
-            const elapsed = Date.now() - startTime
-            const minLoadingTime = 800
-            if (elapsed < minLoadingTime) {
-                await new Promise(resolve => setTimeout(resolve, minLoadingTime - elapsed))
-            }
-
-            if (result.data.suggestedRoute) {
-                router.push(result.data.suggestedRoute)
-            } else {
-                router.push(`/no-results?q=${encodeURIComponent(suggestion.name)}`)
-            }
-        } catch (error: any) {
-            console.error("Search error:", error)
-            toast.error("Erreur lors de la recherche")
-        } finally {
-            setIsSearching(false)
-        }
+        setIsSearching(true)
+        await new Promise(resolve => setTimeout(resolve, 400))
+        router.push(suggestion.route)
+        setSearchQuery("")
+        setIsSearching(false)
     }
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
