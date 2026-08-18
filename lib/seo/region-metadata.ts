@@ -1,3 +1,5 @@
+import { slugify } from '@/lib/seo/site';
+
 export interface RegionPageMetadata {
   title: string;
   description: string;
@@ -140,8 +142,47 @@ export function getRegionDisplayName(slug: string, denom: string): string {
   return denom;
 }
 
-export function getRegionPageMetadata(slug: string): RegionPageMetadata | undefined {
-  const baseSlug = normalizeRegionSlug(slug);
-  const metadataKey = resolveRegionSlugAlias(baseSlug);
-  return REGION_PAGE_METADATA[metadataKey];
+function collectMetadataKeys(raw: string): string[] {
+  const trimmed = raw.trim();
+  if (!trimmed) return [];
+
+  const keys = new Set<string>();
+  const lower = trimmed.toLowerCase();
+  const slugified = slugify(trimmed);
+  const variants = [
+    lower,
+    normalizeRegionSlug(lower),
+    slugified,
+    normalizeRegionSlug(slugified),
+  ];
+
+  for (const variant of variants) {
+    keys.add(variant);
+    keys.add(resolveRegionSlugAlias(variant));
+  }
+
+  const ouParts = trimmed.split(/\s+ou\s+/i);
+  if (ouParts.length > 1) {
+    const shortName = ouParts[ouParts.length - 1]?.trim();
+    if (shortName) {
+      const shortSlug = slugify(shortName);
+      keys.add(shortSlug);
+      keys.add(resolveRegionSlugAlias(shortSlug));
+    }
+  }
+
+  return [...keys];
+}
+
+export function getRegionPageMetadata(
+  ...candidates: Array<string | null | undefined>
+): RegionPageMetadata | undefined {
+  for (const candidate of candidates) {
+    if (!candidate) continue;
+    for (const key of collectMetadataKeys(candidate)) {
+      const metadata = REGION_PAGE_METADATA[key];
+      if (metadata) return metadata;
+    }
+  }
+  return undefined;
 }

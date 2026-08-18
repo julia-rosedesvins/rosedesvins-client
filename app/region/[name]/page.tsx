@@ -28,7 +28,14 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
     ? getRegionDisplayName(data.region.slug || regionName, data.region.denom)
     : getRegionDisplayName(regionName, regionName);
   const canonicalSlug = data?.region?.slug || slugify(displayName);
-  const customMetadata = getRegionPageMetadata(canonicalSlug);
+  const customMetadata = getRegionPageMetadata(
+    name,
+    regionName,
+    canonicalSlug,
+    data?.region?.slug,
+    data?.region?.denom,
+    displayName,
+  );
 
   if (customMetadata) {
     return buildPageMetadata({
