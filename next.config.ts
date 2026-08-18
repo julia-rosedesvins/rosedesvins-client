@@ -2,6 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   images: {
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920],
     minimumCacheTTL: 60 * 60 * 24 * 30, // cache optimised images for 30 days
     remotePatterns: [
       // Development - localhost API

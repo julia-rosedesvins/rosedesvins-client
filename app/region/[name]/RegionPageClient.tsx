@@ -402,7 +402,7 @@ export default function RegionPageClient({
                         quality={85}
                         placeholder="blur"
                         className="object-cover object-[center_top]"
-                        sizes="100vw"
+                        sizes="(max-width: 768px) 100vw, 1920px"
                     />
                     {/* Green gradient overlay */}
                     <div className="absolute inset-0 bg-gradient-to-b from-[rgba(59,130,91,0.7)] to-[rgba(59,130,91,0.5)]" />

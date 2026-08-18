@@ -197,7 +197,7 @@ const HeroSection = () => {
                     fill
                     priority
                     quality={85}
-                    sizes="100vw"
+                    sizes="(max-width: 768px) 100vw, 1920px"
                     placeholder="blur"
                     blurDataURL="data:image/webp;base64,UklGRlYAAABXRUJQVlA4IEoAAADQAQCdASoIAAgAAUAmJZQCdAEO/gHOAAD++Knv3n7f////////7f////////7f////////7f////////7f////////wAA"
                     className="object-cover object-[center_60%]"
