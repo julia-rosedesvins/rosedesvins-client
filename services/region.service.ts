@@ -80,7 +80,7 @@ export interface ApiError {
 export interface UnifiedSearchResult {
   success: boolean;
   data: {
-    type: 'service' | 'domain' | 'region' | 'static-experience' | 'mixed' | null;
+    type: 'city' | 'service' | 'domain' | 'region' | 'static-experience' | 'mixed' | null;
     services?: Array<{
       serviceId: string;
       serviceName: string;
