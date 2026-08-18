@@ -182,11 +182,11 @@ export default function ExperienceDomainClient({
 
                     {/* Description */}
                     {domainProfile.domainDescription ? (
-                        <p className="text-white text-base md:text-lg leading-relaxed max-w-2xl">
+                        <p className="text-white text-base md:text-lg leading-relaxed max-w-[71.4rem]">
                             {domainProfile.domainDescription}
                         </p>
                     ) : (
-                        <p className="text-white/80 text-base md:text-lg italic max-w-2xl">
+                        <p className="text-white/80 text-base md:text-lg italic max-w-[71.4rem]">
                             Aucune description disponible pour ce domaine.
                         </p>
                     )}

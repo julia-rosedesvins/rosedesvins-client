@@ -88,7 +88,7 @@ const Experience = ({ params }: { params: Promise<{ name: string }> }) => {
                     <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6">
                         Visites de cave
                     </h1>
-                    <p className="text-lg md:text-xl max-w-4xl leading-relaxed">
+                    <p className="text-lg md:text-xl max-w-[95.2rem] leading-relaxed">
                         Poussez les portes des domaines et découvrez leurs coulisses pour une immersion privilégiée au cœur de l'univers des vignerons. Le temps d'une visite de cave, découvrez les secrets de leur savoir-faire, explorez les chais, échangez avec ceux qui façonnent le vin et dégustez leurs cuvées. Une manière concrète et authentique de comprendre le vin et de découvrir l'univers de ceux qui le produisent.
                     </p>
                 </div>
