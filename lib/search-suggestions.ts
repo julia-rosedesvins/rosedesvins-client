@@ -95,13 +95,14 @@ export function buildSearchSuggestionsFromResults(
 
     if (backendResult.data.domains && backendResult.data.domains.length > 0) {
         backendResult.data.domains.slice(0, 3).forEach((domain) => {
-            const regionName = domain.location?.region || domain.location?.city || domain.domainName || 'domaine';
+            const domainName = domain.domainName || 'Domaine';
+            const regionName = domain.location?.region || domain.location?.city || domainName;
             const route = (domain as any).experienceRoute || (domain.domainId
                 ? `/experience/${encodeURIComponent(regionName)}/${(domain as any).slug || domain.domainId}`
                 : '/regions');
             allSuggestions.push({
                 type: 'domain',
-                name: domain.domainName,
+                name: domainName,
                 description: domain.location?.city || '',
                 icon: icons.domain,
                 route,
@@ -119,7 +120,7 @@ export function buildSearchSuggestionsFromResults(
             allSuggestions.push({
                 type: 'service',
                 name: service.serviceName,
-                description: `${service.domain.domainName} - ${service.pricePerPerson}€`,
+                description: `${service.domain?.domainName || 'Domaine'} - ${service.pricePerPerson}€`,
                 icon: icons.service,
                 route,
             });
