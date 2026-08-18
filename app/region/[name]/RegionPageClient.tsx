@@ -17,6 +17,7 @@ import dynamic from "next/dynamic";
 import { DatePicker } from "@/components/DatePicker";
 import type { RegionMapRef } from "@/components/RegionMap";
 import { decodeRouteParam } from "@/lib/seo/site";
+import { resolveImageUrl } from "@/lib/media-url";
 
 // Dynamically import the map component to avoid SSR issues
 const RegionMap = dynamic(() => import('@/components/RegionMap'), {
@@ -672,13 +673,16 @@ export default function RegionPageClient({
                                 const profileHref = domain.domainId
                                     ? `/experience/${region?.slug || encodeURIComponent(region?.denom || regionName)}/${domain.slug || domain.domainId}`
                                     : null;
+                                const domainImageUrl = resolveImageUrl(
+                                    domain.mainImage || domain.domainProfilePictureUrl,
+                                );
 
                                 return (
                                     <div key={index} className="bg-background rounded-lg shadow-sm overflow-hidden">
-                                        {(domain.mainImage || domain.domainProfilePictureUrl) && (
+                                        {domainImageUrl && (
                                             <div className="relative w-full h-40">
                                                 <Image
-                                                    src={domain.mainImage || domain.domainProfilePictureUrl || ''}
+                                                    src={domainImageUrl}
                                                     alt={domain.domainName}
                                                     fill
                                                     sizes="(max-width: 768px) 100vw, 40vw"
