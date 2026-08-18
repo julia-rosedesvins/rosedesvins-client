@@ -3,7 +3,7 @@ import { Suspense } from 'react';
 import { permanentRedirect } from 'next/navigation';
 import RegionPageClient from './RegionPageClient';
 import { fetchRegionByName } from '@/lib/seo/fetch-public';
-import { getRegionPageMetadata } from '@/lib/seo/region-metadata';
+import { getRegionDisplayName, getRegionPageMetadata } from '@/lib/seo/region-metadata';
 import { buildPageMetadata, decodeRouteParam, slugify } from '@/lib/seo/site';
 import { JsonLdScript, breadcrumbJsonLd, regionItemListJsonLd } from '@/lib/seo/json-ld';
 import type { Domain, Region } from '@/services/region.service';
@@ -16,7 +16,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const { name } = await params;
   const regionName = decodeRouteParam(name);
   const data = await fetchRegionByName(regionName, 1, 5);
-  const displayName = data?.region?.denom || regionName;
+  const displayName = data?.region
+    ? getRegionDisplayName(data.region.slug || regionName, data.region.denom)
+    : getRegionDisplayName(regionName, regionName);
   const canonicalSlug = data?.region?.slug || slugify(displayName);
   const customMetadata = getRegionPageMetadata(canonicalSlug);
 
@@ -53,7 +55,9 @@ export default async function RegionPage({ params }: PageProps) {
     permanentRedirect(`/region/${data.region.slug}`);
   }
 
-  const displayName = data?.region?.denom || regionName;
+  const displayName = data?.region
+    ? getRegionDisplayName(data.region.slug || regionName, data.region.denom)
+    : getRegionDisplayName(regionName, regionName);
   const canonicalSlug = data?.region?.slug || slugify(displayName);
 
   const initialRegion = (data?.region as Region | null) ?? null;

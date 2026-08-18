@@ -9,6 +9,12 @@ import type { Domain } from '@/services/region.service';
 interface RegionMapProps {
   centerLat: number;
   centerLon: number;
+  regionBounds?: {
+    minLat: number;
+    minLon: number;
+    maxLat: number;
+    maxLon: number;
+  };
   domains: Domain[];
   regionName?: string;
   onMapLoad?: () => void;
@@ -19,7 +25,7 @@ export interface RegionMapRef {
   focusOnDomain: (domainId: string) => void;
 }
 
-const RegionMap = forwardRef<RegionMapRef, RegionMapProps>(({ centerLat, centerLon, domains, regionName, onMapLoad, userLocation }, ref) => {
+const RegionMap = forwardRef<RegionMapRef, RegionMapProps>(({ centerLat, centerLon, regionBounds, domains, regionName, onMapLoad, userLocation }, ref) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
   // Individual domain markers keyed by domainId
@@ -258,13 +264,19 @@ const RegionMap = forwardRef<RegionMapRef, RegionMapProps>(({ centerLat, centerL
     const setup = () => {
       if (!map.current) return;
 
-      // Fit bounds to all markers
+      // Fit bounds to the full wine region, plus any domain markers
+      const bounds = new maplibregl.LngLatBounds();
+      if (regionBounds) {
+        bounds.extend([regionBounds.minLon, regionBounds.minLat]);
+        bounds.extend([regionBounds.maxLon, regionBounds.maxLat]);
+      }
       if (validDomains.length > 0) {
-        const bounds = new maplibregl.LngLatBounds();
         validDomains.forEach(d => { if (d.latitude && d.longitude) bounds.extend([d.longitude, d.latitude]); });
-        if (userLocation) bounds.extend([userLocation.lon, userLocation.lat]);
+      }
+      if (userLocation) bounds.extend([userLocation.lon, userLocation.lat]);
 
-        map.current.fitBounds(bounds, { padding: 50, duration: 0 });
+      if (!bounds.isEmpty()) {
+        map.current.fitBounds(bounds, { padding: 50, duration: 0, maxZoom: 11 });
       } else {
         map.current.flyTo({ center: [centerLon, centerLat], zoom: 10, duration: 1000 });
       }
@@ -300,7 +312,7 @@ const RegionMap = forwardRef<RegionMapRef, RegionMapProps>(({ centerLat, centerL
     return () => {
       map.current?.off('move', onMove);
     };
-  }, [domains, centerLat, centerLon, onMapLoad, userLocation, regionName, renderClusters]);
+  }, [domains, centerLat, centerLon, regionBounds, onMapLoad, userLocation, regionName, renderClusters]);
 
   // ─── JSX ──────────────────────────────────────────────────────────────────
   return (

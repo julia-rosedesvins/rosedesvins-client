@@ -18,6 +18,7 @@ import { DatePicker } from "@/components/DatePicker";
 import type { RegionMapRef } from "@/components/RegionMap";
 import { decodeRouteParam } from "@/lib/seo/site";
 import { resolveImageUrl } from "@/lib/media-url";
+import { getRegionDisplayName } from "@/lib/seo/region-metadata";
 
 // Dynamically import the map component to avoid SSR issues
 const RegionMap = dynamic(() => import('@/components/RegionMap'), {
@@ -376,7 +377,9 @@ export default function RegionPageClient({
             .sort((a, b) => a.distance - b.distance)
         : domains;
 
-    const titleName = region?.denom || regionName;
+    const titleName = region
+        ? getRegionDisplayName(region.slug || regionName, region.denom)
+        : getRegionDisplayName(regionName, regionName);
     const bannerSubtitle =
         region?.subtitle?.trim() ||
         'sur la route des vins et des châteaux';
@@ -425,7 +428,7 @@ export default function RegionPageClient({
                         </Link>
                         <span className="mx-2">&gt;</span>
                         <MapPin className="w-4 h-4 mr-2" />
-                        <span>{region?.denom || regionName}</span>
+                        <span>{titleName}</span>
                     </div>
                 </div>
 
@@ -636,6 +639,12 @@ export default function RegionPageClient({
                             ref={mapRef}
                             centerLat={userLocation?.lat || (region.min_lat + region.max_lat) / 2}
                             centerLon={userLocation?.lon || (region.min_lon + region.max_lon) / 2}
+                            regionBounds={isAroundMeActive ? undefined : {
+                                minLat: region.min_lat,
+                                minLon: region.min_lon,
+                                maxLat: region.max_lat,
+                                maxLon: region.max_lon,
+                            }}
                             domains={isAroundMeActive ? filteredMapDomains : allMapDomains}
                             regionName={region.slug || region.denom}
                             onMapLoad={() => setIsMapLoaded(true)}

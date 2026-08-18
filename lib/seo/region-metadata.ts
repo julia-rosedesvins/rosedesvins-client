@@ -108,14 +108,40 @@ export const REGION_PAGE_METADATA: Record<string, RegionPageMetadata> = {
 
 const REGION_SLUG_ALIASES: Record<string, string> = {
   'vin-de-corse-ou-corse': 'corse',
+  corse: 'corse',
+  corsica: 'corse',
+};
+
+const REGION_DISPLAY_NAMES: Record<string, string> = {
+  corse: 'Corse',
 };
 
 function normalizeRegionSlug(slug: string): string {
   return slug.replace(/-\d+$/, '');
 }
 
+export function resolveRegionSlugAlias(slug: string): string {
+  const normalized = normalizeRegionSlug(slug.trim().toLowerCase());
+  return REGION_SLUG_ALIASES[normalized] ?? normalized;
+}
+
+export function getRegionDisplayName(slug: string, denom: string): string {
+  const metadataKey = resolveRegionSlugAlias(slug);
+  if (REGION_DISPLAY_NAMES[metadataKey]) {
+    return REGION_DISPLAY_NAMES[metadataKey];
+  }
+
+  const ouParts = denom.split(/\s+ou\s+/i);
+  if (ouParts.length > 1) {
+    const shortName = ouParts[ouParts.length - 1]?.trim();
+    if (shortName) return shortName;
+  }
+
+  return denom;
+}
+
 export function getRegionPageMetadata(slug: string): RegionPageMetadata | undefined {
   const baseSlug = normalizeRegionSlug(slug);
-  const metadataKey = REGION_SLUG_ALIASES[baseSlug] ?? baseSlug;
+  const metadataKey = resolveRegionSlugAlias(baseSlug);
   return REGION_PAGE_METADATA[metadataKey];
 }
