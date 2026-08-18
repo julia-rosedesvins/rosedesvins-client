@@ -8,6 +8,7 @@ import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import LandingPageLayout from "@/components/LandingPageLayout";
 import { regionService, Region } from "@/services/region.service";
+import { compareSearchMatch } from "@/lib/search-relevance";
 import heroImg from "/public/assets/chablis-vignoble-bourgogne.webp";
 
 interface RegionsPageClientProps {
@@ -43,9 +44,13 @@ function RegionsContent({ initialRegions, initialTotal }: RegionsPageClientProps
                 let filteredRegions = response.data;
                 
                 if (searchQuery) {
-                    filteredRegions = filteredRegions.filter(region =>
-                        region.denom.toLowerCase().includes(searchQuery.toLowerCase())
-                    );
+                    filteredRegions = filteredRegions
+                        .filter(region =>
+                            region.denom.toLowerCase().includes(searchQuery.toLowerCase())
+                        )
+                        .sort((a, b) =>
+                            compareSearchMatch(searchQuery, a.denom, b.denom, a.slug, b.slug),
+                        );
                 }
                 
                 setRegions(filteredRegions);

@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { regionService } from "@/services/region.service"
 import { citiesService } from "@/services/cities.service"
+import { rankSearchSuggestions, type SearchSuggestion } from "@/lib/search-suggestions"
 import toast from "react-hot-toast"
 
 // Navigation data structure
@@ -99,48 +100,28 @@ export default function Navbar() {
 
         if (signal.aborted) return
         
-        const normalizeLocationName = (value: string) =>
-          value
-            .normalize('NFD')
-            .replace(/[\u0300-\u036f]/g, '')
-            .replace(/[\u200B-\u200D\uFEFF]/g, '')
-            .replace(/['\u2019\u2018]/g, ' ')
-            .toLowerCase()
-            .replace(/\b(le|la|les|des|de|du|au|aux|en|et|un|une)\b/g, ' ')
-            .replace(/[^a-z0-9]+/g, ' ')
-            .replace(/\s+/g, ' ')
-            .trim()
-
-        const allSuggestions: any[] = []
-        const seenLocationNames = new Set<string>()
+        const allSuggestions: SearchSuggestion[] = []
         
         // Process cities from our backend
         if (citiesResult.success && citiesResult.data && citiesResult.data.length > 0) {
-          citiesResult.data.slice(0, 3).forEach((city: any) => {
-            const cityKey = normalizeLocationName(city.nom_standard || '')
-            if (!cityKey || seenLocationNames.has(cityKey)) return
-
-            seenLocationNames.add(cityKey)
-              allSuggestions.push({
-                type: 'city',
-                name: city.nom_standard,
-                description: 'France',
-                icon: MapPin,
-                route: `/region/${encodeURIComponent(city.nom_standard)}${city.latitude_centre != null && city.longitude_centre != null ? `?lat=${city.latitude_centre}&lon=${city.longitude_centre}` : ''}`
-              })
+          citiesResult.data.slice(0, 5).forEach((city: any) => {
+            allSuggestions.push({
+              type: 'city',
+              name: city.nom_standard,
+              description: 'France',
+              icon: MapPin,
+              route: `/region/${encodeURIComponent(city.nom_standard)}${city.latitude_centre != null && city.longitude_centre != null ? `?lat=${city.latitude_centre}&lon=${city.longitude_centre}` : ''}`
+            })
           })
         }
         
         // Add regions
         if (backendResult.data.regions && backendResult.data.regions.length > 0) {
-          backendResult.data.regions.slice(0, 2).forEach(region => {
-            const regionKey = normalizeLocationName(region.denom || '')
-            if (!regionKey || seenLocationNames.has(regionKey)) return
-
-            seenLocationNames.add(regionKey)
+          backendResult.data.regions.slice(0, 5).forEach(region => {
             allSuggestions.push({
               type: 'region',
               name: region.denom,
+              slug: (region as any).slug || null,
               icon: MapPin,
               route: `/region/${(region as any).slug || encodeURIComponent(region.denom)}`
             })
@@ -149,7 +130,7 @@ export default function Navbar() {
         
         // Add domains
         if (backendResult.data.domains && backendResult.data.domains.length > 0) {
-          backendResult.data.domains.slice(0, 2).forEach(domain => {
+          backendResult.data.domains.slice(0, 3).forEach(domain => {
             const regionName = domain.location?.region || domain.location?.city || domain.domainName || 'domaine'
             const route = (domain as any).experienceRoute || (domain.domainId
               ? `/experience/${encodeURIComponent(regionName)}/${(domain as any).slug || domain.domainId}`
@@ -167,7 +148,7 @@ export default function Navbar() {
         
         // Add services
         if (backendResult.data.services && backendResult.data.services.length > 0) {
-          backendResult.data.services.slice(0, 2).forEach(service => {
+          backendResult.data.services.slice(0, 3).forEach(service => {
             const regionName = service.domain?.region || service.domain?.city || service.domain?.domainName || 'domaine'
             const route = (service as any).experienceRoute || (service.domain?.domainId
               ? `/experience/${encodeURIComponent(regionName)}/${(service.domain as any).slug || service.domain.domainId}`
@@ -184,7 +165,7 @@ export default function Navbar() {
         
         // Add static experiences
         if (backendResult.data.staticExperiences && backendResult.data.staticExperiences.length > 0) {
-          backendResult.data.staticExperiences.slice(0, 1).forEach(exp => {
+          backendResult.data.staticExperiences.slice(0, 2).forEach(exp => {
             const regionName = exp.region || exp.city || 'domaine'
             const route = (exp as any).experienceRoute || ((exp as any).domainId
               ? `/experience/${encodeURIComponent(regionName)}/${(exp as any).slug || (exp as any).domainId}`
@@ -199,22 +180,7 @@ export default function Navbar() {
           })
         }
         
-        const seenFinalLocations = new Set<string>()
-        const finalSuggestions = allSuggestions
-          .filter((suggestion: any) => {
-            if (suggestion.type !== 'city' && suggestion.type !== 'region') {
-              return true
-            }
-
-            const normalized = normalizeLocationName(suggestion.name || '')
-            if (!normalized || seenFinalLocations.has(normalized)) {
-              return false
-            }
-
-            seenFinalLocations.add(normalized)
-            return true
-          })
-          .slice(0, 8)
+        const finalSuggestions = rankSearchSuggestions(searchQuery, allSuggestions)
         // Store in cache
         cacheRef.current.set(key, { data: finalSuggestions, ts: Date.now() })
         setSuggestions(finalSuggestions)
