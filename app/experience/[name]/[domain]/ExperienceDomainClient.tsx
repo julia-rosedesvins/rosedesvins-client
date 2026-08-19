@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { MapPin, Home, Euro, Clock, Users } from "lucide-react";
+import { MapPin, Home, Euro, Clock, Users, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import LandingPageLayout from "@/components/LandingPageLayout";
@@ -46,6 +46,65 @@ function languageFlag(language: string): React.ReactNode {
     lang === 'italien' || lang === 'italian' ? '🇮🇹' :
     '🌐';
   return <span className="text-sm leading-none" aria-hidden>{flag}</span>;
+}
+
+function ExpandableText({
+    text,
+    className,
+    buttonClassName,
+    wrapperClassName,
+}: {
+    text: string;
+    className?: string;
+    buttonClassName?: string;
+    wrapperClassName?: string;
+}) {
+    const textRef = useRef<HTMLParagraphElement>(null);
+    const [expanded, setExpanded] = useState(false);
+    const [isOverflowing, setIsOverflowing] = useState(false);
+
+    useEffect(() => {
+        const el = textRef.current;
+        if (!el) return;
+
+        const measure = () => {
+            el.classList.add('line-clamp-2');
+            setIsOverflowing(el.scrollHeight > el.clientHeight + 1);
+            if (expanded) {
+                el.classList.remove('line-clamp-2');
+            }
+        };
+
+        measure();
+        const observer = new ResizeObserver(measure);
+        observer.observe(el);
+        return () => observer.disconnect();
+    }, [text, expanded]);
+
+    if (!text) return null;
+
+    return (
+        <div className={wrapperClassName}>
+            <p
+                ref={textRef}
+                className={`${className ?? ''} ${expanded ? '' : 'line-clamp-2'}`}
+            >
+                {text}
+            </p>
+            {isOverflowing && (
+                <button
+                    type="button"
+                    onClick={() => setExpanded((prev) => !prev)}
+                    className={buttonClassName}
+                >
+                    {expanded ? 'Lire moins' : 'Lire plus'}
+                    <ChevronDown
+                        className={`w-3.5 h-3.5 transition-transform ${expanded ? 'rotate-180' : ''}`}
+                    />
+                </button>
+            )}
+        </div>
+    );
 }
 
 function parseTimeTo24h(timeStr: string, fallbackPeriod?: 'AM' | 'PM'): string {
@@ -371,9 +430,14 @@ export default function ExperienceDomainClient({
                                                 </div>
                                             )}
 
-                                            <p className="text-gray-700 text-sm leading-relaxed mb-4 flex-1">
-                                                {service.description}
-                                            </p>
+                                            {service.description && (
+                                                <ExpandableText
+                                                    text={service.description}
+                                                    className="text-gray-700 text-sm leading-relaxed"
+                                                    wrapperClassName="mb-4 flex-1"
+                                                    buttonClassName="mt-1 inline-flex items-center gap-1 text-sm font-medium text-primary hover:text-primary/80"
+                                                />
+                                            )}
 
                                             <Button
                                                 onClick={() => router.push(`/if/booking-widget/${domainProfile.userId}/${service._id}/booking?withLayout=true`)}
