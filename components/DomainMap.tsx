@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
+import { resolveImageUrl } from '@/lib/media-url';
 
 interface DomainMapProps {
   latitude: number;
@@ -17,6 +18,7 @@ interface DomainMapProps {
 export default function DomainMap({ latitude, longitude, domainName, address, city, codePostal, domainImage }: DomainMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
+  const safeDomainImage = resolveImageUrl(domainImage);
 
   useEffect(() => {
     if (!mapContainer.current || map.current) return;
@@ -83,10 +85,10 @@ export default function DomainMap({ latitude, longitude, domainName, address, ci
     // Create popup HTML
     const popupHTML = `
       <div class="bg-white" style="width: 350px; max-width: 85vw;">
-        ${domainImage ? `
+        ${safeDomainImage ? `
           <div class="relative w-full" style="height: 160px; overflow: hidden;">
             <img
-              src="${domainImage}"
+              src="${safeDomainImage}"
               alt="${domainName}"
               style="width: 100%; height: 100%; object-fit: cover;"
             />
@@ -135,7 +137,7 @@ export default function DomainMap({ latitude, longitude, domainName, address, ci
         map.current = null;
       }
     };
-  }, [latitude, longitude, domainName, domainImage]);
+  }, [latitude, longitude, domainName, safeDomainImage]);
 
   return (
     <>

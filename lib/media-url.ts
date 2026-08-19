@@ -5,6 +5,26 @@ function repairDoublePrefixedUrl(url: string): string {
     return match ? match[1] : url;
 }
 
+function encodeUrlPath(url: string): string {
+    try {
+        const parsed = new URL(url.replace(/ /g, '%20'));
+        parsed.pathname = parsed.pathname
+            .split('/')
+            .map((segment) => {
+                if (!segment) return segment;
+                try {
+                    return encodeURIComponent(decodeURIComponent(segment));
+                } catch {
+                    return encodeURIComponent(segment);
+                }
+            })
+            .join('/');
+        return parsed.toString();
+    } catch {
+        return encodeURI(url).replace(/\(/g, '%28').replace(/\)/g, '%29');
+    }
+}
+
 export function resolveImageUrl(url?: string | null): string | null {
     if (!url || typeof url !== 'string') return null;
 
@@ -18,10 +38,17 @@ export function resolveImageUrl(url?: string | null): string | null {
         resolved = `${API_BASE_URL}${trimmed.startsWith('/') ? '' : '/'}${trimmed}`;
     }
 
+    const encoded = encodeUrlPath(resolved);
     try {
-        new URL(resolved);
-        return resolved;
+        new URL(encoded);
+        return encoded;
     } catch {
         return null;
     }
+}
+
+export function toCssImageUrl(url?: string | null): string | null {
+    const resolved = resolveImageUrl(url);
+    if (!resolved) return null;
+    return `url("${resolved}")`;
 }

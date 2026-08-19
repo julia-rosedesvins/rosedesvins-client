@@ -5,6 +5,7 @@ import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import Supercluster from 'supercluster';
 import type { Domain } from '@/services/region.service';
+import { resolveImageUrl } from '@/lib/media-url';
 
 interface RegionMapProps {
   centerLat: number;
@@ -57,12 +58,13 @@ const RegionMap = forwardRef<RegionMapRef, RegionMapProps>(({ centerLat, centerL
           : `/experience/${domainSlugOrId}`)
       : (domain.siteUrl || '#');
     const buttonLabel = domain.producer === 'client' ? 'Réserver maintenant' : 'Voir le profil';
+    const pictureUrl = resolveImageUrl(domain.domainProfilePictureUrl);
 
     return `
       <div class="bg-white" style="width:100%;max-width:100%;box-sizing:border-box;">
-        ${domain.domainProfilePictureUrl ? `
+        ${pictureUrl ? `
           <div style="height:112px;overflow:hidden;">
-            <img src="${domain.domainProfilePictureUrl}" alt="${domain.domainName}"
+            <img src="${pictureUrl}" alt="${domain.domainName}"
               style="width:100%;height:100%;object-fit:cover;display:block;" />
           </div>` : ''}
         <div style="padding:10px 12px;display:flex;flex-direction:column;gap:8px;box-sizing:border-box;">

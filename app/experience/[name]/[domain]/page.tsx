@@ -3,6 +3,7 @@ import { permanentRedirect } from 'next/navigation';
 import ExperienceDomainClient from './ExperienceDomainClient';
 import { fetchExperienceProfile, fetchExperienceProfileBySlug, fetchRegionByName } from '@/lib/seo/fetch-public';
 import { buildPageMetadata, decodeRouteParam, slugify } from '@/lib/seo/site';
+import { resolveImageUrl } from '@/lib/media-url';
 import { JsonLdScript, breadcrumbJsonLd, wineryJsonLd } from '@/lib/seo/json-ld';
 import type { DomainLocation, DomainProfile } from '@/services/domain-profile.service';
 
@@ -107,7 +108,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     title: `${displayName} - ${regionName}`,
     description,
     path: `/experience/${regionSlug}/${domainSlug}`,
-    ogImage: profile?.domainProfilePictureUrl || undefined,
+    ogImage: resolveImageUrl(profile?.domainProfilePictureUrl) || undefined,
   });
 }
 

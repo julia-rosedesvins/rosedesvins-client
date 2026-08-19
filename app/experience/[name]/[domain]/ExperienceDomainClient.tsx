@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import LandingPageLayout from "@/components/LandingPageLayout";
 import { domainProfileService, DomainProfile, DomainLocation } from "@/services/domain-profile.service";
 import { decodeRouteParam, slugify } from "@/lib/seo/site";
+import { toCssImageUrl } from "@/lib/media-url";
 import dynamic from "next/dynamic";
 
 // Dynamically import the map component to avoid SSR issues
@@ -221,15 +222,16 @@ export default function ExperienceDomainClient({
         );
     }
 
+    const heroImageUrl = toCssImageUrl(domainProfile.domainProfilePictureUrl)
+        || 'url(/assets/bourillon-orleans-entrance.webp)';
+
     return (
         <LandingPageLayout>
             {/* Hero Section */}
             <section
                 className="relative flex h-[400px] items-center bg-cover bg-center text-white"
                 style={{
-                    backgroundImage: domainProfile.domainProfilePictureUrl
-                        ? `linear-gradient(rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0.45)), url(${domainProfile.domainProfilePictureUrl})`
-                        : `linear-gradient(rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0.45)), url(/assets/bourillon-orleans-entrance.webp)`,
+                    backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0.45)), ${heroImageUrl}`,
                     backgroundSize: 'cover',
                     backgroundPosition: 'center center',
                     backgroundRepeat: 'no-repeat',
