@@ -54,11 +54,13 @@ function ExpandableText({
     className,
     buttonClassName,
     wrapperClassName,
+    collapsedClassName = 'line-clamp-2',
 }: {
     text: string;
     className?: string;
     buttonClassName?: string;
     wrapperClassName?: string;
+    collapsedClassName?: string;
 }) {
     const textRef = useRef<HTMLParagraphElement>(null);
     const [expanded, setExpanded] = useState(false);
@@ -67,20 +69,25 @@ function ExpandableText({
     useEffect(() => {
         const el = textRef.current;
         if (!el) return;
+        const collapsedClasses = collapsedClassName.split(/\s+/).filter(Boolean);
 
         const measure = () => {
-            el.classList.add('line-clamp-2');
+            collapsedClasses.forEach((cls) => el.classList.add(cls));
             setIsOverflowing(el.scrollHeight > el.clientHeight + 1);
             if (expanded) {
-                el.classList.remove('line-clamp-2');
+                collapsedClasses.forEach((cls) => el.classList.remove(cls));
             }
         };
 
         measure();
         const observer = new ResizeObserver(measure);
         observer.observe(el);
-        return () => observer.disconnect();
-    }, [text, expanded]);
+        window.addEventListener('resize', measure);
+        return () => {
+            observer.disconnect();
+            window.removeEventListener('resize', measure);
+        };
+    }, [text, expanded, collapsedClassName]);
 
     if (!text) return null;
 
@@ -88,7 +95,7 @@ function ExpandableText({
         <div className={wrapperClassName}>
             <p
                 ref={textRef}
-                className={`${className ?? ''} ${expanded ? '' : 'line-clamp-2'}`}
+                className={`${className ?? ''} ${expanded ? '' : collapsedClassName}`}
             >
                 {text}
             </p>
@@ -229,7 +236,7 @@ export default function ExperienceDomainClient({
         <LandingPageLayout>
             {/* Hero Section */}
             <section
-                className="relative flex h-[400px] items-center bg-cover bg-center text-white"
+                className="relative flex min-h-[400px] md:min-h-[400px] items-center bg-cover bg-center text-white"
                 style={{
                     backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0.45)), ${heroImageUrl}`,
                     backgroundSize: 'cover',
@@ -264,9 +271,13 @@ export default function ExperienceDomainClient({
 
                     {/* Description */}
                     {domainProfile.domainDescription ? (
-                        <p className="text-white text-base md:text-lg leading-relaxed max-w-[71.4rem]">
-                            {domainProfile.domainDescription}
-                        </p>
+                        <ExpandableText
+                            text={domainProfile.domainDescription}
+                            wrapperClassName="max-w-[71.4rem]"
+                            className="text-white text-base md:text-lg leading-relaxed"
+                            collapsedClassName="line-clamp-2 md:line-clamp-5"
+                            buttonClassName="mt-2 inline-flex items-center gap-1 text-white/90 hover:text-white font-medium text-sm"
+                        />
                     ) : (
                         <p className="text-white/80 text-base md:text-lg italic max-w-[71.4rem]">
                             Aucune description disponible pour ce domaine.
