@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { MapPin, Home, Euro, Clock, Users, Languages } from "lucide-react";
+import { MapPin, Home, Euro, Clock, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import LandingPageLayout from "@/components/LandingPageLayout";
@@ -26,6 +26,27 @@ const DAY_FR: Record<string, string> = {
   Saturday: 'Samedi',
   Sunday: 'Dimanche',
 };
+
+function languageFlag(language: string): React.ReactNode {
+  const lang = language.trim().toLowerCase();
+  if (lang === 'russe' || lang === 'russian') {
+    return (
+      <span
+        className="inline-block w-4 h-3 rounded-[1px] overflow-hidden shrink-0"
+        style={{ background: 'linear-gradient(to bottom, #fff 33.3%, #0039a6 33.3%, #0039a6 66.6%, #d52b1e 66.6%)' }}
+        aria-hidden
+      />
+    );
+  }
+  const flag =
+    lang === 'français' || lang === 'french' ? '🇫🇷' :
+    lang === 'anglais' || lang === 'english' ? '🇬🇧' :
+    lang === 'español' || lang === 'spanish' || lang === 'espagnol' ? '🇪🇸' :
+    lang === 'deutsch' || lang === 'german' || lang === 'allemand' ? '🇩🇪' :
+    lang === 'italien' || lang === 'italian' ? '🇮🇹' :
+    '🌐';
+  return <span className="text-sm leading-none" aria-hidden>{flag}</span>;
+}
 
 function parseTimeTo24h(timeStr: string, fallbackPeriod?: 'AM' | 'PM'): string {
   const m = timeStr.trim().match(/^(\d{1,2})(?::(\d{2}))?\s*(AM|PM)?$/i);
@@ -336,12 +357,17 @@ export default function ExperienceDomainClient({
 
                                             {service.languagesOffered && service.languagesOffered.length > 0 && (
                                                 <div className="flex items-center gap-3 mb-3 flex-wrap">
-                                                    {service.languagesOffered.map((lang, idx) => (
-                                                        <div key={idx} className="flex items-center text-xs text-gray-600">
-                                                            <Languages className="w-3 h-3 mr-1" />
-                                                            <span>{lang}</span>
-                                                        </div>
-                                                    ))}
+                                                    {service.languagesOffered
+                                                        .filter((lang) => {
+                                                            const value = lang.trim().toLowerCase();
+                                                            return value && value !== 'autre' && value !== 'other';
+                                                        })
+                                                        .map((lang, idx) => (
+                                                            <div key={idx} className="flex items-center gap-1.5 text-xs text-gray-600">
+                                                                {languageFlag(lang)}
+                                                                <span>{lang}</span>
+                                                            </div>
+                                                        ))}
                                                 </div>
                                             )}
 
