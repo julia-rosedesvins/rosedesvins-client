@@ -201,11 +201,18 @@ const RegionMap = forwardRef<RegionMapRef, RegionMapProps>(({ centerLat, centerL
   useEffect(() => {
     if (!mapContainer.current || map.current) return;
 
+    const placeName: maplibregl.ExpressionSpecification = [
+      'coalesce',
+      ['get', 'name:fr'],
+      ['get', 'name'],
+    ];
+
     map.current = new maplibregl.Map({
       container: mapContainer.current,
       attributionControl: false,
       style: {
         version: 8,
+        glyphs: 'https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf',
         sources: {
           'raster-tiles': {
             type: 'raster',
@@ -215,21 +222,105 @@ const RegionMap = forwardRef<RegionMapRef, RegionMapProps>(({ centerLat, centerL
               'https://c.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}.png',
             ],
             tileSize: 256,
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+            attribution:
+              '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a> &copy; <a href="https://openfreemap.org">OpenFreeMap</a> &copy; <a href="https://www.openmaptiles.org/">OpenMapTiles</a>',
           },
-          'label-tiles': {
-            type: 'raster',
-            tiles: [
-              'https://a.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}.png',
-              'https://b.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}.png',
-              'https://c.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}.png',
-            ],
-            tileSize: 256,
+          openmaptiles: {
+            type: 'vector',
+            url: 'https://tiles.openfreemap.org/planet',
           },
         },
         layers: [
           { id: 'simple-tiles', type: 'raster', source: 'raster-tiles', minzoom: 0, maxzoom: 22 },
-          { id: 'label-tiles',  type: 'raster', source: 'label-tiles',  minzoom: 0, maxzoom: 22 },
+          {
+            id: 'label_other',
+            type: 'symbol',
+            source: 'openmaptiles',
+            'source-layer': 'place',
+            minzoom: 8,
+            filter: ['match', ['get', 'class'], ['city', 'continent', 'country', 'state', 'town', 'village'], false, true],
+            layout: {
+              'symbol-sort-key': ['coalesce', ['get', 'rank'], 99],
+              'text-field': placeName,
+              'text-font': ['Noto Sans Regular'],
+              'text-letter-spacing': 0.05,
+              'text-max-width': 8,
+              'text-padding': 2,
+              'text-size': ['interpolate', ['linear'], ['zoom'], 8, 9, 12, 11],
+            },
+            paint: {
+              'text-color': '#333333',
+              'text-halo-blur': 1,
+              'text-halo-color': '#ffffff',
+              'text-halo-width': 1.2,
+            },
+          },
+          {
+            id: 'label_village',
+            type: 'symbol',
+            source: 'openmaptiles',
+            'source-layer': 'place',
+            minzoom: 8,
+            filter: ['==', ['get', 'class'], 'village'],
+            layout: {
+              'symbol-sort-key': ['coalesce', ['get', 'rank'], 50],
+              'text-field': placeName,
+              'text-font': ['Noto Sans Regular'],
+              'text-max-width': 8,
+              'text-padding': 2,
+              'text-size': ['interpolate', ['exponential', 1.2], ['zoom'], 8, 10, 14, 13],
+            },
+            paint: {
+              'text-color': '#111111',
+              'text-halo-blur': 1,
+              'text-halo-color': '#ffffff',
+              'text-halo-width': 1.2,
+            },
+          },
+          {
+            id: 'label_town',
+            type: 'symbol',
+            source: 'openmaptiles',
+            'source-layer': 'place',
+            minzoom: 6,
+            filter: ['==', ['get', 'class'], 'town'],
+            layout: {
+              'symbol-sort-key': ['coalesce', ['get', 'rank'], 20],
+              'text-field': placeName,
+              'text-font': ['Noto Sans Regular'],
+              'text-max-width': 8,
+              'text-padding': 2,
+              'text-size': ['interpolate', ['exponential', 1.2], ['zoom'], 7, 12, 14, 15],
+            },
+            paint: {
+              'text-color': '#111111',
+              'text-halo-blur': 1,
+              'text-halo-color': '#ffffff',
+              'text-halo-width': 1.4,
+            },
+          },
+          {
+            id: 'label_city',
+            type: 'symbol',
+            source: 'openmaptiles',
+            'source-layer': 'place',
+            minzoom: 3,
+            filter: ['==', ['get', 'class'], 'city'],
+            layout: {
+              'symbol-sort-key': ['coalesce', ['get', 'rank'], 1],
+              'text-field': placeName,
+              'text-font': ['Noto Sans Regular'],
+              'text-max-width': 8,
+              'text-padding': 2,
+              'text-size': ['interpolate', ['exponential', 1.2], ['zoom'], 4, 11, 7, 13, 11, 16],
+            },
+            paint: {
+              'text-color': '#000000',
+              'text-halo-blur': 1,
+              'text-halo-color': '#ffffff',
+              'text-halo-width': 1.5,
+            },
+          },
         ],
       },
       center: [centerLon, centerLat],
