@@ -2,11 +2,13 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import LandingPageLayout from '@/components/LandingPageLayout';
+import RegionCard from '@/components/RegionCard';
 import RegionsBackButton from './RegionsBackButton';
 import { fetchParentRegionsPage } from '@/lib/seo/fetch-public';
 import { JsonLdScript, collectionPageJsonLd } from '@/lib/seo/json-ld';
 import { buildCanonical, slugify } from '@/lib/seo/site';
 import { compareSearchMatch } from '@/lib/search-relevance';
+import { getRegionDisplayName } from '@/lib/seo/region-metadata';
 import heroImg from '/public/assets/chablis-vignoble-bourgogne.webp';
 
 type PageProps = {
@@ -115,27 +117,15 @@ export default async function RegionsPage({ searchParams }: PageProps) {
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-8 md:gap-12">
-                {regions.map((region) => (
-                  <div key={region._id} className="flex flex-col items-center text-center">
-                    <Link
-                      href={`/region/${region.slug || encodeURIComponent(region.denom)}`}
-                      className="flex flex-col items-center text-center hover:transform hover:scale-105 transition-transform"
-                    >
-                      <div className="relative w-32 h-32 md:w-40 md:h-40 rounded-full overflow-hidden mb-4 shadow-lg">
-                        <Image
-                          src={region.thumbnailUrl || '/assets/loire-valley-new.jpg'}
-                          alt={region.denom}
-                          fill
-                          sizes="(max-width: 768px) 128px, 160px"
-                          className="object-cover"
-                        />
-                      </div>
-                      <h3 className="text-[#318160] font-semibold text-lg hover:text-[#1D6346]">
-                        {region.denom}
-                      </h3>
-                    </Link>
-                  </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-12 justify-items-center">
+                {regions.map((region, index) => (
+                  <RegionCard
+                    key={region._id}
+                    title={getRegionDisplayName(region.slug || region.denom, region.denom)}
+                    image={region.thumbnailUrl || '/assets/loire-valley-new.jpg'}
+                    href={`/region/${region.slug || encodeURIComponent(region.denom)}`}
+                    priority={index < 6}
+                  />
                 ))}
               </div>
 
