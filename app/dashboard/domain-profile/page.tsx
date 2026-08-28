@@ -778,6 +778,35 @@ export default function UserDomainProfile() {
         }
     };
 
+    const handleCopyFloatingWidgetCode = async (prestationId: string) => {
+        try {
+            const service = services.find(s => s._id === prestationId);
+
+            if (!service || !domainProfile?.userId?._id) {
+                toast.error('Informations du service manquantes');
+                return;
+            }
+
+            const hostname = typeof window !== 'undefined' && window.location.hostname === 'localhost'
+                ? 'http://localhost:3000'
+                : typeof window !== 'undefined'
+                    ? `${window.location.protocol}//${window.location.host}`
+                    : 'https://rosedesvins.co';
+
+            const userId = domainProfile.userId._id;
+            const serviceId = service._id;
+            const color = formData.domainColor || '#3A7B59';
+
+            const scriptCode = `<script src="${hostname}/rdv-float.js" data-user="${userId}" data-service="${serviceId}" data-color="${color}" async></script>`;
+
+            await navigator.clipboard.writeText(scriptCode);
+            toast.success('Code du bouton flottant copié dans le presse-papiers !');
+        } catch (error) {
+            console.error('Error copying floating widget code:', error);
+            toast.error('Erreur lors de la copie du code du bouton flottant');
+        }
+    };
+
     // New handlers for enhanced functionality
     const handleTogglePeriod = (prestationId: string) => {
         const service = services.find(s => s._id === prestationId);
@@ -1216,6 +1245,13 @@ export default function UserDomainProfile() {
                                                             }}>
                                                                 <Code className="h-3 w-3 sm:mr-1" />
                                                                 <span className="hidden sm:inline">Code</span>
+                                                            </Button>
+                                                            <Button variant="ghost" size="sm" className="text-gray-600 hover:text-gray-800 text-xs px-2 py-1 sm:px-3 sm:py-2" onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleCopyFloatingWidgetCode(prestation.id);
+                                                            }}>
+                                                                <CalendarIcon className="h-3 w-3 sm:mr-1" />
+                                                                <span className="hidden sm:inline">Bouton</span>
                                                             </Button>
                                                             <div className="flex items-center space-x-1 sm:space-x-2" onClick={(e) => e.stopPropagation()}>
                                                                 <Switch
