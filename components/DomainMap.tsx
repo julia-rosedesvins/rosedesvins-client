@@ -23,34 +23,12 @@ export default function DomainMap({ latitude, longitude, domainName, address, ci
   useEffect(() => {
     if (!mapContainer.current || map.current) return;
 
-    // Initialize map
+    // Initialize map — Carto vector Voyager (same style as the old rasters,
+    // which now watermark every PNG with "API KEY REQUIRED").
     map.current = new maplibregl.Map({
       container: mapContainer.current,
       attributionControl: false,
-      style: {
-        version: 8,
-        sources: {
-          'raster-tiles': {
-            type: 'raster',
-            tiles: [
-              'https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
-              'https://b.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
-              'https://c.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png'
-            ],
-            tileSize: 256,
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-          }
-        },
-        layers: [
-          {
-            id: 'simple-tiles',
-            type: 'raster',
-            source: 'raster-tiles',
-            minzoom: 0,
-            maxzoom: 22
-          }
-        ]
-      },
+      style: 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json',
       center: [longitude, latitude],
       zoom: 13,
       scrollZoom: false
