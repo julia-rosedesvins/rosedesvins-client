@@ -65,10 +65,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="fr" suppressHydrationWarning={true}>
-      <head>
-        {/* Fix: Google Translate splits text nodes causing React removeChild errors */}
-        <script dangerouslySetInnerHTML={{ __html: `
-          (function() {
+      {/* Do not add a manual <head>: Next.js Metadata API owns it. A custom
+          <head> blocks streamed <title> from being hoisted, so the title
+          leaks as visible text after the footer. */}
+      <Script id="dom-guard" strategy="beforeInteractive">
+        {`(function() {
             var orig = Node.prototype.removeChild;
             Node.prototype.removeChild = function(child) {
               if (child.parentNode !== this) { return child; }
@@ -79,8 +80,12 @@ export default function RootLayout({
               if (refNode && refNode.parentNode !== this) { return newNode; }
               return origInsert.apply(this, arguments);
             };
-          })();
-        ` }} />
+          })();`}
+      </Script>
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        suppressHydrationWarning={true}
+      >
         {/* Google Tag Manager */}
         <Script id="google-tag-manager" strategy="afterInteractive">
           {`(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
@@ -90,11 +95,6 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 })(window,document,'script','dataLayer','GTM-5FK4PCW5');`}
         </Script>
         {/* End Google Tag Manager */}
-      </head>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-        suppressHydrationWarning={true}
-      >
         {/* Google Tag Manager (noscript) */}
         <noscript>
           <iframe src="https://www.googletagmanager.com/ns.html?id=GTM-5FK4PCW5"
