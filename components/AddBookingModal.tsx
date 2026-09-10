@@ -18,6 +18,12 @@ import { userService, DomainService } from "@/services/user.service";
 import { eventsService, EventData } from "@/services/events.service";
 import { useUser } from "@/contexts/UserContext";
 import toast from "react-hot-toast";
+import {
+  eventCalendarDateUtc,
+  pickerDateLocal,
+  isHardBusyEventType,
+  isAllDayBusy,
+} from "@/lib/booking-overlap";
 
 interface AddBookingModalProps {
   isOpen: boolean;
@@ -102,12 +108,11 @@ export const AddBookingModal = ({ isOpen, onClose, onBookingCreated }: AddBookin
     const startMinutes = hours * 60 + minutes;
     const endMinutes = startMinutes + serviceDuration;
     
-    const dateString = format(date, 'yyyy-MM-dd');
+    const dateString = pickerDateLocal(date);
     
     // Filter events for the same date
     const dayEvents = events.filter(event => {
-      const eventDate = new Date(event.eventDate);
-      return format(eventDate, 'yyyy-MM-dd') === dateString && event.eventStatus !== 'cancelled';
+      return eventCalendarDateUtc(event.eventDate) === dateString && event.eventStatus !== 'cancelled';
     });
 
     const allowMultiple = selectedService?.multipleBookings ?? false;
@@ -140,13 +145,13 @@ export const AddBookingModal = ({ isOpen, onClose, onBookingCreated }: AddBookin
       }
       
       const hasOverlap = startMinutes < eventEndMinutes && endMinutes > eventStartMinutes;
+      const hardBusy = isHardBusyEventType(event.eventType);
+      if (hardBusy && isAllDayBusy(event)) return true;
       if (!hasOverlap) continue;
 
-      // Non-booking events: 'blocked' and 'personal' always block.
-      // 'external' events are typically Google Calendar syncs of existing bookings —
-      // only block them when multiple bookings are NOT allowed.
-      if (event.eventType === 'blocked' || event.eventType === 'personal') return true;
-      if (event.eventType === 'external' && !allowMultiple) return true;
+      // External / personal / blocked always block — multi-slot is only for
+      // internal bookings of the same service (Google copies of RDV stay eventType 'booking').
+      if (hardBusy) return true;
 
       // If multiple bookings are not allowed, any overlap blocks
       if (!allowMultiple) return true;

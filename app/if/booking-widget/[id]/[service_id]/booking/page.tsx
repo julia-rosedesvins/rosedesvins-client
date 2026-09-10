@@ -12,6 +12,15 @@ import { eventsService, PublicScheduleData } from "@/services/events.service";
 import { getHolidays } from "@/services/availability.service";
 import { useIsTranslatedToEnglish } from "@/app/if/google-translate/AutoGoogleTranslate";
 import { useTranslatedText } from "@/app/if/google-translate/useTranslatedText";
+import {
+  pickerDateLocal,
+  parseTimeToMinutes,
+  isHardBusyEventType,
+  isAllDayBusy,
+  eventEndMinutes,
+  intervalsOverlap,
+  isSameCalendarDay,
+} from "@/lib/booking-overlap";
 
 const WIDGET_WEEK_DAYS_FR = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
 const WIDGET_WEEK_DAYS_EN = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -40,7 +49,7 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
     const [morningStartIndex, setMorningStartIndex] = useState(0);
     const [afternoonStartIndex, setAfternoonStartIndex] = useState(0);
     const [bookedSlots, setBookedSlots] = useState<PublicScheduleData[]>([]);
-    const [loadingSchedule, setLoadingSchedule] = useState(false);
+    const [loadingSchedule, setLoadingSchedule] = useState(true);
     const isEnglish = useIsTranslatedToEnglish();
     const serviceName = useTranslatedText(widgetData?.service?.name);
     const [validationErrors, setValidationErrors] = useState<string[]>([]);
@@ -80,25 +89,16 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
     // Derive the required language for the selected slot (always fresh – no stale closure)
     const slotRequiredLanguage = useMemo(() => {
       if (!selectedDate || !selectedTime || !widgetData?.availability?.multipleBookingsSameSlot || !bookedSlots.length) return null;
-      const dateString = `${selectedDate.getFullYear()}-${(selectedDate.getMonth() + 1).toString().padStart(2, '0')}-${selectedDate.getDate().toString().padStart(2, '0')}`;
       const serviceDuration = widgetData?.service?.timeOfServiceInMinutes || 60;
-      const [slotHours, slotMinutes] = selectedTime.split(':').map(Number);
-      const slotStartMinutes = slotHours * 60 + slotMinutes;
+      const slotStartMinutes = parseTimeToMinutes(selectedTime);
       const slotEndMinutes = slotStartMinutes + serviceDuration;
       const overlapping = bookedSlots.filter(slot => {
-        const sd = new Date(slot.eventDate);
-        const sds = `${sd.getFullYear()}-${(sd.getMonth() + 1).toString().padStart(2, '0')}-${sd.getDate().toString().padStart(2, '0')}`;
-        if (sds !== dateString) return false;
-        if (slot.eventType === 'external' || slot.eventType === 'personal' || slot.eventType === 'blocked') return false;
+        if (!isSameCalendarDay(slot.eventDate, selectedDate)) return false;
+        if (isHardBusyEventType(slot.eventType)) return false;
         if (slot.serviceId && slot.serviceId !== serviceId) return false;
-        const [eH, eM] = slot.eventTime.split(':').map(Number);
-        const eventStart = eH * 60 + eM;
-        let eventEnd = eventStart + serviceDuration;
-        if (slot.eventEndTime) {
-          const [endH, endM] = slot.eventEndTime.split(':').map(Number);
-          eventEnd = endH * 60 + endM;
-        }
-        return slotStartMinutes < eventEnd && slotEndMinutes > eventStart;
+        const eventStart = parseTimeToMinutes(slot.eventTime);
+        const eventEnd = eventEndMinutes(slot, serviceDuration);
+        return intervalsOverlap(slotStartMinutes, slotEndMinutes, eventStart, eventEnd);
       });
       const bookingWithLanguage = overlapping.find(b => b.selectedLanguage && b.selectedLanguage.trim() !== '');
       return bookingWithLanguage?.selectedLanguage ?? null;
@@ -191,42 +191,37 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
       errors.push(isEnglish ? "Please select a language" : "Veuillez sélectionner une langue");
     }
 
+    if (selectedDate && selectedTime) {
+      const serviceDuration = widgetData?.service?.timeOfServiceInMinutes || 60;
+      const slotStartMinutes = parseTimeToMinutes(selectedTime);
+      const slotEndMinutes = slotStartMinutes + serviceDuration;
+      const overlappingForBusy = bookedSlots.filter(slot => {
+        if (!isSameCalendarDay(slot.eventDate, selectedDate)) return false;
+        if (isHardBusyEventType(slot.eventType) && isAllDayBusy(slot)) return true;
+        const eventStartMinutes = parseTimeToMinutes(slot.eventTime);
+        const eventStopMinutes = eventEndMinutes(slot, serviceDuration);
+        return intervalsOverlap(slotStartMinutes, slotEndMinutes, eventStartMinutes, eventStopMinutes);
+      });
+      if (overlappingForBusy.some(slot => isHardBusyEventType(slot.eventType))) {
+        errors.push(isEnglish ? `This time slot is unavailable due to an external calendar event. Please choose another time.` : `Ce créneau horaire n'est pas disponible en raison d'un événement externe dans le calendrier. Veuillez choisir un autre horaire.`);
+      }
+    }
+
     // ✅ NEW: Check capacity for multiple bookings
     if (selectedDate && selectedTime && widgetData?.availability?.multipleBookingsSameSlot) {
-      const dateString = `${selectedDate.getFullYear()}-${(selectedDate.getMonth() + 1).toString().padStart(2, '0')}-${selectedDate.getDate().toString().padStart(2, '0')}`;
       const serviceDuration = widgetData?.service?.timeOfServiceInMinutes || 60;
-      
-      // Parse the selected time slot
-      const [slotHours, slotMinutes] = selectedTime.split(':').map(Number);
-      const slotStartMinutes = slotHours * 60 + slotMinutes;
+      const slotStartMinutes = parseTimeToMinutes(selectedTime);
       const slotEndMinutes = slotStartMinutes + serviceDuration;
       
-      // Find overlapping bookings
       const overlappingBookings = bookedSlots.filter(slot => {
-        const slotDate = new Date(slot.eventDate);
-        const slotDateString = `${slotDate.getFullYear()}-${(slotDate.getMonth() + 1).toString().padStart(2, '0')}-${slotDate.getDate().toString().padStart(2, '0')}`;
-        
-        if (slotDateString !== dateString) return false;
-        
-        const [eventHours, eventMinutes] = slot.eventTime.split(':').map(Number);
-        const eventStartMinutes = eventHours * 60 + eventMinutes;
-        
-        let eventEndMinutes = eventStartMinutes + serviceDuration;
-        if (slot.eventEndTime) {
-          const [endHours, endMinutes] = slot.eventEndTime.split(':').map(Number);
-          eventEndMinutes = endHours * 60 + endMinutes;
-        }
-        
-        return slotStartMinutes < eventEndMinutes && slotEndMinutes > eventStartMinutes;
+        if (!isSameCalendarDay(slot.eventDate, selectedDate)) return false;
+        if (isHardBusyEventType(slot.eventType)) return false;
+        const eventStartMinutes = parseTimeToMinutes(slot.eventTime);
+        const eventStopMinutes = eventEndMinutes(slot, serviceDuration);
+        return intervalsOverlap(slotStartMinutes, slotEndMinutes, eventStartMinutes, eventStopMinutes);
       });
       
-      // 🔒 CRITICAL FIX: Check if any overlapping event is external
-      // External events should block the slot completely, even with multi-slot enabled
-      const hasExternalEvent = overlappingBookings.some(booking => booking.eventType === 'external');
-      
-      if (hasExternalEvent) {
-        errors.push(isEnglish ? `This time slot is unavailable due to an external calendar event. Please choose another time.` : `Ce créneau horaire n'est pas disponible en raison d'un événement externe dans le calendrier. Veuillez choisir un autre horaire.`);
-      } else {
+      if (overlappingBookings.length > 0) {
         // 🔒 NEW FIX: Check if any overlapping booking is for a DIFFERENT service
         const hasDifferentService = overlappingBookings.some(booking => {
           if (!booking.serviceId) return true; // No serviceId means different service (personal/blocked)
@@ -636,6 +631,9 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
 
   // Get time slots from special date overrides for a specific date
   const getOverrideTimeSlotsForDate = (date: Date): { morning: string[], afternoon: string[] } => {
+    if (loadingSchedule) {
+      return { morning: [], afternoon: [] };
+    }
     if (!widgetData?.availability?.specialDateOverrides?.length) {
       return { morning: [], afternoon: [] };
     }
@@ -735,26 +733,17 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
     if (!bookedSlots.length) return null;
     if (!widgetData?.availability?.multipleBookingsSameSlot) return null;
 
-    const dateString = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
     const serviceDuration = widgetData?.service?.timeOfServiceInMinutes || 60;
-    const [slotHours, slotMinutes] = time.split(':').map(Number);
-    const slotStartMinutes = slotHours * 60 + slotMinutes;
+    const slotStartMinutes = parseTimeToMinutes(time);
     const slotEndMinutes = slotStartMinutes + serviceDuration;
 
     const overlapping = bookedSlots.filter(slot => {
-      const slotDate = new Date(slot.eventDate);
-      const slotDateString = `${slotDate.getFullYear()}-${(slotDate.getMonth() + 1).toString().padStart(2, '0')}-${slotDate.getDate().toString().padStart(2, '0')}`;
-      if (slotDateString !== dateString) return false;
-      if (slot.eventType === 'external' || slot.eventType === 'personal' || slot.eventType === 'blocked') return false;
+      if (!isSameCalendarDay(slot.eventDate, date)) return false;
+      if (isHardBusyEventType(slot.eventType)) return false;
       if (slot.serviceId && slot.serviceId !== serviceId) return false;
-      const [eH, eM] = slot.eventTime.split(':').map(Number);
-      const eventStart = eH * 60 + eM;
-      let eventEnd = eventStart + serviceDuration;
-      if (slot.eventEndTime) {
-        const [endH, endM] = slot.eventEndTime.split(':').map(Number);
-        eventEnd = endH * 60 + endM;
-      }
-      return slotStartMinutes < eventEnd && slotEndMinutes > eventStart;
+      const eventStart = parseTimeToMinutes(slot.eventTime);
+      const eventStop = eventEndMinutes(slot, serviceDuration);
+      return intervalsOverlap(slotStartMinutes, slotEndMinutes, eventStart, eventStop);
     });
 
     // Find the first booking that has a language assigned
@@ -765,9 +754,10 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
   // Check if a time slot is already booked by another user
   // Now handles multiple bookings with participant limits
   const isTimeSlotBooked = (date: Date, time: string): boolean => {
+    if (loadingSchedule) return true;
     if (!bookedSlots.length) return false;
     
-    const dateString = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
+    const dateString = pickerDateLocal(date);
     
     // Get service duration to calculate slot end time
     const serviceDuration = widgetData?.service?.timeOfServiceInMinutes || 60;
@@ -785,15 +775,9 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
 
     // Full-day external/blocked/personal busy (synced holidays, etc.) → block every slot
     const hasAllDayBlock = bookedSlots.some((slot) => {
-      const slotDate = new Date(slot.eventDate);
-      const slotDateString = `${slotDate.getFullYear()}-${(slotDate.getMonth() + 1).toString().padStart(2, '0')}-${slotDate.getDate().toString().padStart(2, '0')}`;
-      if (slotDateString !== dateString) return false;
-      if (slot.eventType !== 'external' && slot.eventType !== 'personal' && slot.eventType !== 'blocked') {
-        return false;
-      }
-      if (slot.isAllDay === true) return true;
-      // Fallback: day-spanning times used by sync expansion (00:00–23:59)
-      return slot.eventTime === '00:00' && (slot.eventEndTime === '23:59' || slot.eventEndTime === '23:59:59');
+      if (!isSameCalendarDay(slot.eventDate, date)) return false;
+      if (!isHardBusyEventType(slot.eventType)) return false;
+      return isAllDayBusy(slot);
     });
 
     if (hasAllDayBlock) {
@@ -801,40 +785,17 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
       return true;
     }
     
-    // Parse the time slot start time
-    const [slotHours, slotMinutes] = time.split(':').map(Number);
-    const slotStartMinutes = slotHours * 60 + slotMinutes;
+    const slotStartMinutes = parseTimeToMinutes(time);
     const slotEndMinutes = slotStartMinutes + serviceDuration;
     
     // Find all overlapping bookings for this date/time
     const overlappingBookings = bookedSlots.filter(slot => {
-      const slotDate = new Date(slot.eventDate);
-      const slotDateString = `${slotDate.getFullYear()}-${(slotDate.getMonth() + 1).toString().padStart(2, '0')}-${slotDate.getDate().toString().padStart(2, '0')}`;
+      if (!isSameCalendarDay(slot.eventDate, date)) return false;
       
-      // Check if it's the same date
-      if (slotDateString !== dateString) return false;
+      const eventStartMinutes = parseTimeToMinutes(slot.eventTime);
+      const eventStopMinutes = eventEndMinutes(slot, serviceDuration);
       
-      // Parse existing event start time
-      const [eventHours, eventMinutes] = slot.eventTime.split(':').map(Number);
-      const eventStartMinutes = eventHours * 60 + eventMinutes;
-      
-      // Parse existing event end time (if available)
-      let eventEndMinutes = eventStartMinutes + serviceDuration; // Default: assume same duration
-      if (slot.eventEndTime) {
-        const [endHours, endMinutes] = slot.eventEndTime.split(':').map(Number);
-        eventEndMinutes = endHours * 60 + endMinutes;
-      }
-      
-      // Check for overlap:
-      // New slot overlaps if:
-      // - New slot starts before existing event ends AND
-      // - New slot ends after existing event starts
-      const overlaps = (
-        slotStartMinutes < eventEndMinutes && 
-        slotEndMinutes > eventStartMinutes
-      );
-      
-      return overlaps;
+      return intervalsOverlap(slotStartMinutes, slotEndMinutes, eventStartMinutes, eventStopMinutes);
     });
     
     // If no overlapping bookings, slot is available
@@ -843,13 +804,13 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
     // 🔒 CRITICAL FIX: Check if any overlapping event is external
     // External events (from Google Calendar, Outlook, etc.) should ALWAYS block the slot
     // even if multi-slot bookings are enabled
-    const hasExternalEvent = overlappingBookings.some(booking => booking.eventType === 'external');
+    const hasHardBusy = overlappingBookings.some(booking => isHardBusyEventType(booking.eventType));
     
-    if (hasExternalEvent) {
+    if (hasHardBusy) {
       console.log('🚫 Slot blocked due to external calendar event (multi-slot disabled for external events):', {
         date: dateString,
         time,
-        externalEvents: overlappingBookings.filter(b => b.eventType === 'external').length
+        externalEvents: overlappingBookings.filter(b => isHardBusyEventType(b.eventType)).length
       });
       return true; // Block the slot completely
     }
@@ -922,6 +883,10 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
 
   // Get available time slots for the selected date
   const getAvailableTimeSlots = (date: Date | null) => {
+    if (loadingSchedule) {
+      return { morning: [], afternoon: [] };
+    }
+
     // Check if service is active
     if (widgetData?.service?.isActive === false) {
       return { morning: [], afternoon: [] };
