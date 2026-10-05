@@ -20,6 +20,7 @@ import {
   eventEndMinutes,
   intervalsOverlap,
   isSameCalendarDay,
+  isSameSlotStart,
 } from "@/lib/booking-overlap";
 
 const WIDGET_WEEK_DAYS_FR = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
@@ -96,6 +97,7 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
         if (!isSameCalendarDay(slot.eventDate, selectedDate)) return false;
         if (isHardBusyEventType(slot.eventType)) return false;
         if (slot.serviceId && slot.serviceId !== serviceId) return false;
+        if (!isSameSlotStart(slot.eventTime, selectedTime)) return false;
         const eventStart = parseTimeToMinutes(slot.eventTime);
         const eventEnd = eventEndMinutes(slot, serviceDuration);
         return intervalsOverlap(slotStartMinutes, slotEndMinutes, eventStart, eventEnd);
@@ -222,22 +224,29 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
       });
       
       if (overlappingBookings.length > 0) {
-        // 🔒 NEW FIX: Check if any overlapping booking is for a DIFFERENT service
         const hasDifferentService = overlappingBookings.some(booking => {
-          if (!booking.serviceId) return true; // No serviceId means different service (personal/blocked)
+          if (!booking.serviceId) return true;
           return booking.serviceId !== serviceId;
+        });
+
+        const hasDifferentStart = overlappingBookings.some(booking => {
+          if (!booking.serviceId || booking.serviceId !== serviceId) return false;
+          return !isSameSlotStart(booking.eventTime, selectedTime);
         });
 
         if (hasDifferentService) {
           errors.push(isEnglish ? `This time slot is unavailable because another experience is already booked. Please choose another time.` : `Ce créneau horaire n'est pas disponible car une autre expérience est déjà réservée. Veuillez choisir un autre horaire.`);
+        } else if (hasDifferentStart) {
+          errors.push(isEnglish ? `This time slot overlaps another booking for the same experience. Please choose another time.` : `Ce créneau chevauche une autre réservation pour la même expérience. Veuillez choisir un autre horaire.`);
         } else {
-          // 🔒 LANGUAGE CONSTRAINT: all bookings for the same slot must share the same language
-          const bookingWithLanguage = overlappingBookings.find(b => b.selectedLanguage && b.selectedLanguage.trim() !== '');
+          const sameSlotBookings = overlappingBookings.filter(booking =>
+            isSameSlotStart(booking.eventTime, selectedTime)
+          );
+          const bookingWithLanguage = sameSlotBookings.find(b => b.selectedLanguage && b.selectedLanguage.trim() !== '');
           if (bookingWithLanguage && selectedLanguage && selectedLanguage !== bookingWithLanguage.selectedLanguage) {
             errors.push(isEnglish ? `Please select the ${getLanguageInFrench(bookingWithLanguage.selectedLanguage!)} language or choose another time.` : `Veuillez sélectionner la langue ${getLanguageInFrench(bookingWithLanguage.selectedLanguage!)} ou choisir un autre horaire.`);
           } else {
-            // Calculate total existing participants (only for same service)
-            const totalExistingParticipants = overlappingBookings.reduce((sum, booking) => {
+            const totalExistingParticipants = sameSlotBookings.reduce((sum, booking) => {
               return sum + (booking.totalParticipants || 0);
             }, 0);
             
@@ -741,6 +750,7 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
       if (!isSameCalendarDay(slot.eventDate, date)) return false;
       if (isHardBusyEventType(slot.eventType)) return false;
       if (slot.serviceId && slot.serviceId !== serviceId) return false;
+      if (!isSameSlotStart(slot.eventTime, time)) return false;
       const eventStart = parseTimeToMinutes(slot.eventTime);
       const eventStop = eventEndMinutes(slot, serviceDuration);
       return intervalsOverlap(slotStartMinutes, slotEndMinutes, eventStart, eventStop);
@@ -834,15 +844,23 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
           .filter(b => !b.serviceId || b.serviceId !== serviceId)
           .map(b => ({ serviceId: b.serviceId, eventType: b.eventType, participants: b.totalParticipants }))
       });
-      return true; // Block the slot completely - different service booked
+      return true;
+    }
+
+    const hasDifferentStart = overlappingBookings.some(booking => {
+      if (!booking.serviceId || booking.serviceId !== serviceId) return false;
+      return !isSameSlotStart(booking.eventTime, time);
+    });
+    if (hasDifferentStart) {
+      return true;
     }
     
-    // If multiple bookings not allowed, slot is blocked if any booking exists
     if (!multipleBookingsAllowed) return true;
     
-    // If multiple bookings are allowed, check participant capacity
-    // Calculate total existing participants in overlapping bookings
-    const totalExistingParticipants = overlappingBookings.reduce((sum, booking) => {
+    const sameSlotBookings = overlappingBookings.filter(booking =>
+      isSameSlotStart(booking.eventTime, time)
+    );
+    const totalExistingParticipants = sameSlotBookings.reduce((sum, booking) => {
       return sum + (booking.totalParticipants || 0);
     }, 0);
     

@@ -23,6 +23,7 @@ import {
   pickerDateLocal,
   isHardBusyEventType,
   isAllDayBusy,
+  isSameSlotStart,
 } from "@/lib/booking-overlap";
 
 interface AddBookingModalProps {
@@ -150,27 +151,27 @@ export const AddBookingModal = ({ isOpen, onClose, onBookingCreated }: AddBookin
       if (!hasOverlap) continue;
 
       // External / personal / blocked always block — multi-slot is only for
-      // internal bookings of the same service (Google copies of RDV stay eventType 'booking').
+      // internal bookings of the same service at the same start time.
       if (hardBusy) return true;
 
-      // If multiple bookings are not allowed, any overlap blocks
-      if (!allowMultiple) return true;
-
-      // Multiple bookings allowed: only block if it's a different service with no shared capacity
-      // (same service overlaps are handled by capacity check below)
-      // Note: use toString() to handle ObjectId vs string comparison
       if (event.bookingId?.serviceId && selectedService?._id &&
           event.bookingId.serviceId.toString() !== selectedService._id.toString()) {
-        // Different service overlapping — block
         return true;
       }
+
+      // Same experience, different start (e.g. 15:30 vs 16:00) always blocks
+      if (!isSameSlotStart(event.eventTime, time)) {
+        return true;
+      }
+
+      if (!allowMultiple) return true;
     }
 
     if (allowMultiple) {
-      // Sum existing participants for overlapping booking events of the same service
       const existingParticipants = dayEvents
         .filter(event => {
           if (event.eventStatus === 'cancelled' || event.eventType !== 'booking') return false;
+          if (!isSameSlotStart(event.eventTime, time)) return false;
           const [eh, em] = event.eventTime.split(':').map(Number);
           const es = eh * 60 + em;
           let ee: number;

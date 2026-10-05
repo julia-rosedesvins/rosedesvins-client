@@ -56,6 +56,11 @@ export function intervalsOverlap(
   return startA < endB && endA > startB;
 }
 
+/** Multi-booking is only the same start time, not any overlapping window. */
+export function isSameSlotStart(timeA: string, timeB: string): boolean {
+  return parseTimeToMinutes(timeA) === parseTimeToMinutes(timeB);
+}
+
 export function isSameCalendarDay(eventDate: string | Date, pickerDate: Date): boolean {
   return eventCalendarDateUtc(eventDate) === pickerDateLocal(pickerDate);
 }
