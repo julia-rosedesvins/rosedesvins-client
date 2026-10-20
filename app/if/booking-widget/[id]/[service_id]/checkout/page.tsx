@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { useSearchParams, useRouter } from "next/navigation";
+import { useBookingRoute, useResolvedBookingIds } from "@/contexts/BookingRouteContext";
 import toast from "react-hot-toast";
 import { loadStripe } from "@stripe/stripe-js";
 import {
@@ -219,7 +220,9 @@ function CheckoutContent({ id, serviceId }: { id: string; serviceId: string }) {
   const { widgetData, loading, error, colorCode } = useWidget();
   const searchParams = useSearchParams();
   const router = useRouter();
-  const withLayout = searchParams.get("withLayout");
+  const { withLayout, platform, href: stepHref } = useBookingRoute(id, serviceId);
+  // In platform mode the /reservation layout already renders the page <h1>
+  const TitleTag = platform ? "h2" : "h1";
   const isEnglish = useIsTranslatedToEnglish();
   const serviceName = useTranslatedText(widgetData?.service?.name);
 
@@ -358,10 +361,7 @@ function CheckoutContent({ id, serviceId }: { id: string; serviceId: string }) {
   const handleStripeSuccess = (bookingId: string) => {
     const params = new URLSearchParams(searchParams);
     params.set("bookingId", bookingId);
-    if (withLayout) params.set("withLayout", withLayout);
-    router.push(
-      `/if/booking-widget/${id}/${serviceId}/confirmation-success?${params.toString()}`,
-    );
+    router.push(stepHref("confirmation-success", params));
   };
 
   // On-site / cash payment
@@ -395,10 +395,7 @@ function CheckoutContent({ id, serviceId }: { id: string; serviceId: string }) {
         const bookingId = result.data?._id || (result as any)._id || "unknown";
         const params = new URLSearchParams(searchParams);
         params.set("bookingId", bookingId);
-        if (withLayout) params.set("withLayout", withLayout);
-        router.push(
-          `/if/booking-widget/${id}/${serviceId}/confirmation-success?${params.toString()}`,
-        );
+        router.push(stepHref("confirmation-success", params));
       } else {
         toast.error(result.message || (isEnglish ? "Error creating the booking" : "Erreur lors de la création de la réservation"));
       }
@@ -409,10 +406,7 @@ function CheckoutContent({ id, serviceId }: { id: string; serviceId: string }) {
           error.response.data._id || error.response.data.data?._id || "unknown";
         const params = new URLSearchParams(searchParams);
         params.set("bookingId", bookingId);
-        if (withLayout) params.set("withLayout", withLayout);
-        router.push(
-          `/if/booking-widget/${id}/${serviceId}/confirmation-success?${params.toString()}`,
-        );
+        router.push(stepHref("confirmation-success", params));
         return;
       }
       toast.error(
@@ -462,9 +456,9 @@ function CheckoutContent({ id, serviceId }: { id: string; serviceId: string }) {
     <div className="min-h-screen bg-white">
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         <div className="rounded-lg p-6">
-          <h1 className="text-2xl font-bold text-center mb-8" style={{ color: colorCode }}>
+          <TitleTag className="text-2xl font-bold text-center mb-8" style={{ color: colorCode }}>
             Confirmation de votre réservation
-          </h1>
+          </TitleTag>
 
           <div className="grid md:grid-cols-2 gap-8">
             {/* ── Payment section ───────────────────────────────────────── */}
@@ -664,16 +658,9 @@ function CheckoutContent({ id, serviceId }: { id: string; serviceId: string }) {
 const Checkout = ({
   params,
 }: {
-  params: Promise<{ id: string; service_id: string }>;
+  params?: Promise<{ id: string; service_id: string }>;
 }) => {
-  const [resolvedParams, setResolvedParams] = useState<{
-    id: string;
-    service_id: string;
-  } | null>(null);
-
-  useEffect(() => {
-    params.then(setResolvedParams);
-  }, [params]);
+  const resolvedParams = useResolvedBookingIds(params);
 
   if (!resolvedParams) {
     return (

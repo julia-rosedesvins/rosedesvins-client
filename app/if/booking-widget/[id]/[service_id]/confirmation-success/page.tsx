@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { useBookingRoute, useResolvedBookingIds } from "@/contexts/BookingRouteContext";
 import { Clock, Grape, Users, Globe, Euro, CreditCard, Home } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
@@ -21,7 +22,9 @@ interface BookingData {
 function ConfirmationSuccessContent({ id, serviceId }: { id: string, serviceId: string }) {
   const { widgetData, loading, error, colorCode } = useWidget();
   const searchParams = useSearchParams();
-  const withLayout = searchParams.get('withLayout');
+  const { platform, href: stepHref } = useBookingRoute(id, serviceId);
+  // In platform mode the /reservation layout already renders the page <h1>
+  const TitleTag = platform ? 'h2' : 'h1';
   const cancellationPolicy = searchParams.get('cancellationPolicy') || '';
   const isEnglish = useIsTranslatedToEnglish();
   const serviceName = useTranslatedText(widgetData?.service?.name);
@@ -165,9 +168,9 @@ function ConfirmationSuccessContent({ id, serviceId }: { id: string, serviceId: 
     <div className="min-h-screen bg-white">
       <div className="container mx-auto px-4 py-8 max-w-2xl">
         <div className="rounded-lg p-8">
-          <h1 className="text-3xl font-bold text-center mb-8" style={{ color: colorCode }}>
+          <TitleTag className="text-3xl font-bold text-center mb-8" style={{ color: colorCode }}>
             {isEnglish ? "Booking confirmation" : "Confirmation de réservation"}
-          </h1>
+          </TitleTag>
 
           <div className="text-center mb-8">
             <h2 className="text-2xl font-bold mb-4">
@@ -225,7 +228,7 @@ function ConfirmationSuccessContent({ id, serviceId }: { id: string, serviceId: 
 
           {/* Bouton retour à l'accueil */}
           <div className="flex justify-center mt-8">
-            <Link href={`/if/booking-widget/${id}/${serviceId}/reservation${withLayout ? '?withLayout=true' : ''}`}>
+            <Link href={stepHref('reservation')}>
               <Button 
                 className="hover:opacity-90 text-white px-8 py-3 flex items-center gap-2"
                 style={{ backgroundColor: colorCode }}
@@ -242,12 +245,8 @@ function ConfirmationSuccessContent({ id, serviceId }: { id: string, serviceId: 
   );
 }
 
-const ConfirmationSuccess = ({ params }: { params: Promise<{ id: string, service_id: string }> }) => {
-  const [resolvedParams, setResolvedParams] = useState<{ id: string, service_id: string } | null>(null);
-
-  useEffect(() => {
-    params.then(setResolvedParams);
-  }, [params]);
+const ConfirmationSuccess = ({ params }: { params?: Promise<{ id: string, service_id: string }> }) => {
+  const resolvedParams = useResolvedBookingIds(params);
 
   if (!resolvedParams) {
     return (

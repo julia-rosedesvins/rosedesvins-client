@@ -1,28 +1,26 @@
-'use client';
+import type { Metadata } from 'next';
+import { notFound } from 'next/navigation';
+import { buildBookingMetadata, OBJECT_ID_PATTERN, resolveBooking } from '@/lib/booking-routes';
+import { NOINDEX_METADATA } from '@/lib/seo/site';
+import ReservationPage from '@/app/if/booking-widget/[id]/[service_id]/reservation/page';
+import LegacyReservationRedirect from './LegacyReservationRedirect';
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { use } from 'react';
+type Params = { id: string; serviceId: string };
 
-export default function ReservationRedirect({ 
-  params 
-}: { 
-  params: Promise<{ id: string; serviceId: string }> 
-}) {
-  const router = useRouter();
-  const { id, serviceId } = use(params);
+const isLegacy = ({ id, serviceId }: Params) =>
+  OBJECT_ID_PATTERN.test(id) && OBJECT_ID_PATTERN.test(serviceId);
 
-  useEffect(() => {
-    // Redirect to widget with layout flag
-    router.replace(`/if/booking-widget/${id}/${serviceId}/reservation?withLayout=true`);
-  }, [id, serviceId, router]);
+export async function generateMetadata({ params }: { params: Promise<Params> }): Promise<Metadata> {
+  const resolved = await params;
+  if (isLegacy(resolved)) return NOINDEX_METADATA;
+  return buildBookingMetadata(await resolveBooking(resolved.id, resolved.serviceId), 'reservation');
+}
 
-  return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="text-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-        <p className="text-lg">Chargement...</p>
-      </div>
-    </div>
-  );
+export default async function Page({ params }: { params: Promise<Params> }) {
+  const resolved = await params;
+  if (isLegacy(resolved)) {
+    return <LegacyReservationRedirect id={resolved.id} serviceId={resolved.serviceId} />;
+  }
+  if (!(await resolveBooking(resolved.id, resolved.serviceId))) notFound();
+  return <ReservationPage />;
 }

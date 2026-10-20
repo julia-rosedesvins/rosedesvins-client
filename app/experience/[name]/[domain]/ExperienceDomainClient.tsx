@@ -10,6 +10,7 @@ import LandingPageLayout from "@/components/LandingPageLayout";
 import { domainProfileService, DomainProfile, DomainLocation } from "@/services/domain-profile.service";
 import { decodeRouteParam, slugify } from "@/lib/seo/site";
 import { toCssImageUrl } from "@/lib/media-url";
+import { bookingPath, getServiceSlug } from "@/lib/booking-slugs";
 import dynamic from "next/dynamic";
 
 // Dynamically import the map component to avoid SSR issues
@@ -453,7 +454,17 @@ export default function ExperienceDomainClient({
                                             )}
 
                                             <Button
-                                                onClick={() => router.push(`/if/booking-widget/${domainProfile.userId}/${service._id}/booking?withLayout=true`)}
+                                                onClick={() =>
+                                                    router.push(
+                                                        domainProfile.slug
+                                                            ? bookingPath(
+                                                                domainProfile.slug,
+                                                                getServiceSlug(service, domainProfile.services ?? []),
+                                                                'booking',
+                                                            )
+                                                            : `/if/booking-widget/${domainProfile.userId}/${service._id}/booking?withLayout=true`,
+                                                    )
+                                                }
                                                 className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
                                             >
                                                 Réserver

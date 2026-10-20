@@ -5,7 +5,7 @@ import { Clock, Wine, Euro, Users, MapPin } from "lucide-react";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { WidgetProvider, useWidget } from "@/contexts/WidgetContext";
-import { useSearchParams } from "next/navigation";
+import { useBookingRoute, useResolvedBookingIds } from "@/contexts/BookingRouteContext";
 import { useIsTranslatedToEnglish } from "@/app/if/google-translate/AutoGoogleTranslate";
 import { useTranslatedText } from "@/app/if/google-translate/useTranslatedText";
 
@@ -13,8 +13,7 @@ function ReservationContent({ id, serviceId }: { id: string, serviceId: string }
     const { widgetData, loading, error, colorCode } = useWidget();
     const [showFullText, setShowFullText] = useState(false);
     const isEnglish = useIsTranslatedToEnglish();
-    const searchParams = useSearchParams();
-    const withLayout = searchParams.get('withLayout') === 'true';
+    const { href: stepHref } = useBookingRoute(id, serviceId);
     const serviceName = useTranslatedText(widgetData?.service?.name);
 
     const fullText = useTranslatedText(widgetData?.service?.description) || "";
@@ -159,7 +158,7 @@ function ReservationContent({ id, serviceId }: { id: string, serviceId: string }
 
                         {/* Reserve Button */}
                         <div className="text-center">
-                            <Link href={`/if/booking-widget/${id}/${serviceId}/booking${withLayout ? '?withLayout=true' : ''}`}>
+                            <Link href={stepHref('booking')}>
                                 <Button
                                     size="lg"
                                     className="notranslate hover:opacity-90 text-white px-8 md:px-12 py-3 text-base md:text-lg font-semibold rounded-md transition-colors w-full md:w-auto"
@@ -177,12 +176,8 @@ function ReservationContent({ id, serviceId }: { id: string, serviceId: string }
     );
 }
 
-export default function ReservationPage({ params }: { params: Promise<{ id: string, service_id: string }> }) {
-    const [resolvedParams, setResolvedParams] = useState<{ id: string, service_id: string } | null>(null);
-
-    useEffect(() => {
-        params.then(setResolvedParams);
-    }, [params]);
+export default function ReservationPage({ params }: { params?: Promise<{ id: string, service_id: string }> }) {
+    const resolvedParams = useResolvedBookingIds(params);
 
     if (!resolvedParams) {
         return (

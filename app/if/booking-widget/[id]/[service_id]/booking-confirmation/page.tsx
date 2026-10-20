@@ -15,6 +15,7 @@ import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
+import { useBookingRoute, useResolvedBookingIds } from "@/contexts/BookingRouteContext";
 import toast from "react-hot-toast";
 import { loadStripe } from "@stripe/stripe-js";
 import {
@@ -224,7 +225,9 @@ function BookingConfirmationContent({ id, serviceId }: { id: string; serviceId: 
   const { widgetData, loading, error, colorCode } = useWidget();
   const searchParams = useSearchParams();
   const router = useRouter();
-  const withLayout = searchParams.get("withLayout") === "true";
+  const { withLayout, platform, href: stepHref } = useBookingRoute(id, serviceId);
+  // In platform mode the /reservation layout already renders the page <h1>
+  const TitleTag = platform ? "h2" : "h1";
   const isEnglish = useIsTranslatedToEnglish();
   const serviceName = useTranslatedText(widgetData?.service?.name);
 
@@ -314,8 +317,7 @@ function BookingConfirmationContent({ id, serviceId }: { id: string; serviceId: 
       bookingId,
     });
     if (stripeAvailable && cancellationPolicy) params.set("cancellationPolicy", cancellationPolicy);
-    if (withLayout) params.set("withLayout", "true");
-    router.push(`/if/booking-widget/${id}/${serviceId}/confirmation-success?${params.toString()}`);
+    router.push(stepHref("confirmation-success", params));
   };
 
   // ── Stripe: called by StripeCardForm ──────────────────────────────────────
@@ -466,9 +468,9 @@ function BookingConfirmationContent({ id, serviceId }: { id: string; serviceId: 
     <div className="min-h-screen bg-white">
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         <div className="rounded-lg p-6">
-          <h1 className="text-2xl font-bold text-center mb-8" style={{ color: colorCode }}>
+          <TitleTag className="text-2xl font-bold text-center mb-8" style={{ color: colorCode }}>
             {isEnglish ? "Booking request" : "Demande de réservation"}
-          </h1>
+          </TitleTag>
 
           {/* Validation errors */}
           {validationErrors.length > 0 && (
@@ -620,13 +622,13 @@ function BookingConfirmationContent({ id, serviceId }: { id: string; serviceId: 
 
                 <div className="mt-6">
                   <Link
-                    href={`/if/booking-widget/${id}/${serviceId}/booking?${new URLSearchParams({
+                    href={stepHref("booking", new URLSearchParams({
                       date: bookingData.date,
                       selectedTime: bookingData.selectedTime || "",
                       adults: bookingData.adults.toString(),
                       children: bookingData.children.toString(),
                       language: bookingData.language,
-                    }).toString()}`}
+                    }))}
                     className="hover:opacity-75 underline text-sm"
                     style={{ color: colorCode }}
                   >
@@ -713,16 +715,9 @@ function BookingConfirmationContent({ id, serviceId }: { id: string; serviceId: 
 const BookingConfirmation = ({
   params,
 }: {
-  params: Promise<{ id: string; service_id: string }>;
+  params?: Promise<{ id: string; service_id: string }>;
 }) => {
-  const [resolvedParams, setResolvedParams] = useState<{
-    id: string;
-    service_id: string;
-  } | null>(null);
-
-  useEffect(() => {
-    params.then(setResolvedParams);
-  }, [params]);
+  const resolvedParams = useResolvedBookingIds(params);
 
   if (!resolvedParams) {
     return (

@@ -6,7 +6,8 @@ import { DatePicker } from "@/components/DatePicker";
 import { ChevronLeft, ChevronRight, Plus, Minus, Clock, Euro, Wine, Users, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
+import { useBookingRoute, useResolvedBookingIds } from "@/contexts/BookingRouteContext";
 import { WidgetProvider, useWidget } from "@/contexts/WidgetContext";
 import { eventsService, PublicScheduleData } from "@/services/events.service";
 import { getHolidays } from "@/services/availability.service";
@@ -37,8 +38,7 @@ const WIDGET_MONTHS_EN = [
 function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
     const { widgetData, loading, error, colorCode } = useWidget();
     const router = useRouter();
-    const searchParams = useSearchParams();
-    const withLayout = searchParams.get('withLayout') === 'true';
+    const { withLayout, platform, href: stepHref } = useBookingRoute(id, serviceId);
     
     // State declarations - must come before any useEffect hooks
     const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -420,11 +420,7 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
         widgetId: id,
       });
       
-      if (withLayout) {
-        query.append('withLayout', 'true');
-      }
-      
-      router.push(`/if/booking-widget/${id}/${serviceId}/booking-confirmation?${query.toString()}`);
+      router.push(stepHref('booking-confirmation', query));
     } catch (error) {
       // Reset loading state if something goes wrong
       setIsSubmitting(false);
@@ -1121,15 +1117,21 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
       <div className="container mx-auto px-3 md:px-4 py-4 md:py-8 max-w-2xl">
       {/* Header */}
       <div className="flex items-center mb-4 md:mb-6 lg:mb-8">
-          <Link href={`/if/booking-widget/${id}/${serviceId}/reservation${withLayout ? '?withLayout=true' : ''}`} className="flex items-center text-muted-foreground hover:opacity-75" style={{ color: colorCode }}>
+          <Link href={stepHref('reservation')} className="flex items-center text-muted-foreground hover:opacity-75" style={{ color: colorCode }}>
             <ChevronLeft className="w-5 h-5 mr-1" />
             <span className="text-sm md:text-base">{isEnglish ? "Back" : "Retour"}</span>
           </Link>
         </div>
 
-        <h1 className="text-xl md:text-2xl lg:text-3xl font-bold mb-6 md:mb-8 lg:mb-12 text-center px-2" style={{ color: colorCode }}>
-          {serviceName || 'Visite libre & dégustation des cuvées Tradition'}
-        </h1>
+        {/* In platform mode the /reservation layout already renders the page <h1> (producer + experience) */}
+        {(() => {
+          const TitleTag = platform ? 'h2' : 'h1';
+          return (
+            <TitleTag className="text-xl md:text-2xl lg:text-3xl font-bold mb-6 md:mb-8 lg:mb-12 text-center px-2" style={{ color: colorCode }}>
+              {serviceName || 'Visite libre & dégustation des cuvées Tradition'}
+            </TitleTag>
+          );
+        })()}
 
         {/* Validation Errors */}
         {validationErrors.length > 0 && (
@@ -1481,12 +1483,8 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
   );
 }
 
-export default function BookingPage({ params }: { params: Promise<{ id: string, service_id: string }> }) {
-  const [resolvedParams, setResolvedParams] = useState<{ id: string, service_id: string } | null>(null);
-
-  useEffect(() => {
-    params.then(setResolvedParams);
-  }, [params]);
+export default function BookingPage({ params }: { params?: Promise<{ id: string, service_id: string }> }) {
+  const resolvedParams = useResolvedBookingIds(params);
 
   if (!resolvedParams) {
     return (

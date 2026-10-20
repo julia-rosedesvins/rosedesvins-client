@@ -20,7 +20,8 @@ export function ResetGoogleTranslateOutsideIf() {
   const pathname = usePathname();
 
   useEffect(() => {
-    if (pathname?.startsWith('/if')) return;
+    // /reservation/... hosts the booking flow with translation, same as /if/booking-widget
+    if (pathname?.startsWith('/if') || pathname?.startsWith('/reservation/')) return;
 
     let flagActive = false;
     try {

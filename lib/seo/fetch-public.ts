@@ -86,6 +86,7 @@ export interface PublicDomainProfileResponse {
     domainProfile: {
       _id: string;
       slug?: string | null;
+      userId?: string | null;
       domainName: string;
       domainDescription: string;
       domainProfilePictureUrl: string | null;
@@ -208,6 +209,19 @@ export async function fetchExperienceProfileBySlug(
 ): Promise<PublicDomainProfileResponse | null> {
   return publicFetch<PublicDomainProfileResponse>(
     `/domain-profile/public/by-slug/${encodeURIComponent(slug)}`,
+  );
+}
+
+/**
+ * Same lookup as fetchExperienceProfileBySlug but with a short cache window, used by the
+ * booking routes so a newly created/renamed service resolves within seconds, not an hour.
+ */
+export async function fetchBookingProfileBySlug(
+  slug: string,
+): Promise<PublicDomainProfileResponse | null> {
+  return publicFetch<PublicDomainProfileResponse>(
+    `/domain-profile/public/by-slug/${encodeURIComponent(slug)}`,
+    { revalidate: 30 },
   );
 }
 
