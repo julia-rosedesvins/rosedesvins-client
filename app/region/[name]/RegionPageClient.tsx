@@ -16,9 +16,9 @@ import { toast } from "react-hot-toast";
 import dynamic from "next/dynamic";
 import { DatePicker } from "@/components/DatePicker";
 import type { RegionMapRef } from "@/components/RegionMap";
-import { decodeRouteParam } from "@/lib/seo/site";
-import { resolveImageUrl } from "@/lib/media-url";
-import { getRegionDisplayName } from "@/lib/seo/region-metadata";
+import { decodeRouteParam, slugify } from "@/lib/seo/site";
+import { canOptimizeImage, resolveImageUrl } from "@/lib/media-url";
+import { getRegionDescription, getRegionDisplayName } from "@/lib/seo/region-metadata";
 
 // Dynamically import the map component to avoid SSR issues
 const RegionMap = dynamic(() => import('@/components/RegionMap'), {
@@ -408,9 +408,20 @@ export default function RegionPageClient({
     const bannerSubtitle =
         region?.subtitle?.trim() ||
         'sur la route des vins et des châteaux';
-    const bannerDescription =
-        region?.description?.trim() ||
-        `Au cœur d'un patrimoine exceptionnel, découvrez la diversité des terroirs de ${titleName} et échangez avec des vignerons passionnés. Entre caves troglodytiques, châteaux et paysages inscrits à l'UNESCO, vivez des expériences œnotouristiques inoubliables dans la région de ${titleName}.`;
+    // Same resolver as the page's <meta name="description"> so both always match.
+    const { text: bannerDescription } = getRegionDescription({
+        candidates: [
+            regionName,
+            region?.slug || slugify(titleName),
+            region?.slug,
+            region?.denom,
+            titleName,
+        ],
+        displayName: titleName,
+        description: region?.description,
+    });
+    // Region thumbnail (same image as the homepage card); falls back to the default banner.
+    const heroSrc = resolveImageUrl(region?.thumbnailUrl);
 
     return (
         <LandingPageLayout>
@@ -420,12 +431,13 @@ export default function RegionPageClient({
                 {/* Background image */}
                 <div className="absolute inset-0 overflow-hidden">
                     <Image
-                        src={heroImg}
+                        src={heroSrc ?? heroImg}
                         alt=""
+                        unoptimized={!!heroSrc && !canOptimizeImage(heroSrc)}
                         fill
                         priority
                         quality={85}
-                        placeholder="blur"
+                        placeholder={heroSrc ? "empty" : "blur"}
                         className="object-cover object-[center_top]"
                         sizes="(max-width: 768px) 100vw, 1920px"
                     />
@@ -718,6 +730,7 @@ export default function RegionPageClient({
                                                 <Image
                                                     src={domainImageUrl}
                                                     alt={domain.domainName}
+                                                    unoptimized={!canOptimizeImage(domainImageUrl)}
                                                     fill
                                                     sizes="(max-width: 768px) 100vw, 40vw"
                                                     className="object-cover"

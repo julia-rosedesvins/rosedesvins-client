@@ -68,8 +68,15 @@ export default function RootLayout({
       {/* Do not add a manual <head>: Next.js Metadata API owns it. A custom
           <head> blocks streamed <title> from being hoisted, so the title
           leaks as visible text after the footer. */}
-      <Script id="dom-guard" strategy="beforeInteractive">
-        {`(function() {
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        suppressHydrationWarning={true}
+      >
+        {/* Must live inside <body> (not directly under <html>): React 19 rejects a
+            sync <script> outside the main document. It is the first child so it
+            still runs before React hydrates. */}
+        <Script id="dom-guard" strategy="beforeInteractive">
+          {`(function() {
             var orig = Node.prototype.removeChild;
             Node.prototype.removeChild = function(child) {
               if (child.parentNode !== this) { return child; }
@@ -81,11 +88,7 @@ export default function RootLayout({
               return origInsert.apply(this, arguments);
             };
           })();`}
-      </Script>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-        suppressHydrationWarning={true}
-      >
+        </Script>
         {/* Google Tag Manager */}
         <Script id="google-tag-manager" strategy="afterInteractive">
           {`(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':

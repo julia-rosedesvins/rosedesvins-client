@@ -148,8 +148,11 @@ export async function fetchRegionByName(
   page = 1,
   limit = 5,
 ): Promise<RegionByNameResponse | null> {
+  // Short revalidate window so admin edits (description, thumbnail) show up within a minute
+  // instead of after the default one-hour cache.
   return publicFetch<RegionByNameResponse>(
     `/regions/${encodeURIComponent(name)}?page=${page}&limit=${limit}`,
+    { revalidate: 60 },
   );
 }
 

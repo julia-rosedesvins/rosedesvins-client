@@ -3,7 +3,7 @@ import { Suspense } from 'react';
 import { permanentRedirect } from 'next/navigation';
 import RegionPageClient from './RegionPageClient';
 import { fetchRegionByName } from '@/lib/seo/fetch-public';
-import { getRegionDisplayName, getRegionPageMetadata } from '@/lib/seo/region-metadata';
+import { getRegionDescription, getRegionDisplayName, getRegionPageMetadata } from '@/lib/seo/region-metadata';
 import { buildPageMetadata, decodeRouteParam, slugify } from '@/lib/seo/site';
 import { JsonLdScript, breadcrumbJsonLd, regionItemListJsonLd } from '@/lib/seo/json-ld';
 import type { Domain, Region } from '@/services/region.service';
@@ -28,19 +28,25 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
     ? getRegionDisplayName(data.region.slug || regionName, data.region.denom)
     : getRegionDisplayName(regionName, regionName);
   const canonicalSlug = data?.region?.slug || slugify(displayName);
-  const customMetadata = getRegionPageMetadata(
+  const descriptionCandidates = [
     name,
     regionName,
     canonicalSlug,
     data?.region?.slug,
     data?.region?.denom,
     displayName,
-  );
+  ];
+  const customMetadata = getRegionPageMetadata(...descriptionCandidates);
+  const { metaText: metaDescription } = getRegionDescription({
+    candidates: descriptionCandidates,
+    displayName,
+    description: data?.region?.description,
+  });
 
   if (customMetadata) {
     return buildPageMetadata({
       title: customMetadata.title,
-      description: customMetadata.description,
+      description: metaDescription,
       path: `/region/${canonicalSlug}`,
       absolute: true,
     });
@@ -48,9 +54,6 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
 
   const subtitle =
     data?.region?.subtitle?.trim() || 'sur la route des vins';
-  const metaDescription =
-    data?.region?.description?.trim()?.slice(0, 155) ||
-    `Découvrez les domaines viticoles et expériences œnotouristiques en ${displayName}. Réservez une visite ou une dégustation près de chez vous.`;
 
   return buildPageMetadata({
     title: `${displayName} : ${subtitle}`.slice(0, 70),

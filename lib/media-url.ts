@@ -47,6 +47,33 @@ export function resolveImageUrl(url?: string | null): string | null {
     }
 }
 
+// Hosts allowed by `images.remotePatterns` in next.config.ts (keep both in sync).
+const OPTIMIZABLE_IMAGE_HOSTS = [
+    'rosedesvins.s3.us-east-1.amazonaws.com',
+    's3.us-east-1.amazonaws.com',
+    'lh3.googleusercontent.com',
+    'api.rosedesvins.co',
+    'cms.rosedesvins.co',
+    'localhost',
+];
+
+/**
+ * True when next/image is allowed to optimize this URL. Images hosted anywhere else
+ * (e.g. a winery's own website) make next/image throw, so render them with `unoptimized`.
+ */
+export function canOptimizeImage(url?: string | null): boolean {
+    if (!url) return false;
+    try {
+        const { hostname } = new URL(url);
+        return (
+            OPTIMIZABLE_IMAGE_HOSTS.includes(hostname) ||
+            hostname.endsWith('.googleapis.com')
+        );
+    } catch {
+        return false;
+    }
+}
+
 export function toCssImageUrl(url?: string | null): string | null {
     const resolved = resolveImageUrl(url);
     if (!resolved) return null;

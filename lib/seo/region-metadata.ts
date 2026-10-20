@@ -186,3 +186,43 @@ export function getRegionPageMetadata(
   }
   return undefined;
 }
+
+export interface RegionDescriptionInput {
+  /** Raw route param / region name candidates used to look up curated metadata. */
+  candidates: Array<string | null | undefined>;
+  displayName: string;
+  /** Admin-managed description stored on the region, if any. */
+  description?: string | null;
+}
+
+export interface RegionDescriptionResult {
+  /** Full text, used for the page banner. */
+  text: string;
+  /** Text used for <meta name="description"> (admin descriptions are cut to 155 chars). */
+  metaText: string;
+  source: 'region' | 'curated' | 'default';
+}
+
+/**
+ * Single source of truth for a region's description, shared by the page
+ * metadata and the banner so both always show the same text.
+ * Priority: admin description > curated text > generic default.
+ */
+export function getRegionDescription({
+  candidates,
+  displayName,
+  description,
+}: RegionDescriptionInput): RegionDescriptionResult {
+  const adminDescription = description?.trim();
+  if (adminDescription) {
+    return { text: adminDescription, metaText: adminDescription.slice(0, 155), source: 'region' };
+  }
+
+  const curated = getRegionPageMetadata(...candidates);
+  if (curated) {
+    return { text: curated.description, metaText: curated.description, source: 'curated' };
+  }
+
+  const fallback = `Découvrez les domaines viticoles et expériences œnotouristiques en ${displayName}. Réservez une visite ou une dégustation près de chez vous.`;
+  return { text: fallback, metaText: fallback, source: 'default' };
+}
