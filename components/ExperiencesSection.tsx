@@ -96,7 +96,7 @@ const ExperiencesSection = () => {
                     >
                       <div className="relative w-64 h-64 md:w-72 md:h-72 rounded-2xl overflow-hidden shadow-sm">
                         <Image
-                          src={CATEGORY_IMAGES[index % CATEGORY_IMAGES.length]}
+                          src={category.imageUrl || CATEGORY_IMAGES[index % CATEGORY_IMAGES.length]}
                           alt={category.category_name}
                           fill
                           priority={index < 3}
