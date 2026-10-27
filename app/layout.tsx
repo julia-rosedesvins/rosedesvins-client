@@ -5,6 +5,14 @@ import { Toaster } from "react-hot-toast";
 import Script from "next/script";
 import { PostHogProvider } from "@/providers/PostHogProvider";
 import ChunkErrorRecovery from "@/components/ChunkErrorRecovery";
+import { ResetGoogleTranslateOutsideIf } from "@/app/if/google-translate/ResetGoogleTranslateOutsideIf";
+import {
+  DEFAULT_DESCRIPTION,
+  DEFAULT_OG_IMAGE,
+  SITE_NAME,
+  SITE_URL,
+  buildCanonical,
+} from "@/lib/seo/site";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -17,11 +25,37 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Rose des Vins - La technologie au service des domaines viticoles",
-  description: "La technologie au service des domaines viticoles",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: `${SITE_NAME} : réservez vos domaines viticoles`,
+    template: `%s | ${SITE_NAME}`,
+  },
+  description: DEFAULT_DESCRIPTION,
+  alternates: {
+    canonical: buildCanonical('/'),
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+  openGraph: {
+    type: 'website',
+    locale: 'fr_FR',
+    url: SITE_URL,
+    siteName: SITE_NAME,
+    title: `${SITE_NAME} : réservez vos domaines viticoles`,
+    description: DEFAULT_DESCRIPTION,
+    images: [{ url: DEFAULT_OG_IMAGE, alt: SITE_NAME }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: `${SITE_NAME} : réservez vos domaines viticoles`,
+    description: DEFAULT_DESCRIPTION,
+    images: [DEFAULT_OG_IMAGE],
+  },
   icons: {
     icon: '/assets/logo.png',
-  }
+  },
 };
 
 export default function RootLayout({
@@ -30,11 +64,19 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning={true}>
-      <head>
-        {/* Fix: Google Translate splits text nodes causing React removeChild errors */}
-        <script dangerouslySetInnerHTML={{ __html: `
-          (function() {
+    <html lang="fr" suppressHydrationWarning={true}>
+      {/* Do not add a manual <head>: Next.js Metadata API owns it. A custom
+          <head> blocks streamed <title> from being hoisted, so the title
+          leaks as visible text after the footer. */}
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        suppressHydrationWarning={true}
+      >
+        {/* Must live inside <body> (not directly under <html>): React 19 rejects a
+            sync <script> outside the main document. It is the first child so it
+            still runs before React hydrates. */}
+        <Script id="dom-guard" strategy="beforeInteractive">
+          {`(function() {
             var orig = Node.prototype.removeChild;
             Node.prototype.removeChild = function(child) {
               if (child.parentNode !== this) { return child; }
@@ -45,8 +87,8 @@ export default function RootLayout({
               if (refNode && refNode.parentNode !== this) { return newNode; }
               return origInsert.apply(this, arguments);
             };
-          })();
-        ` }} />
+          })();`}
+        </Script>
         {/* Google Tag Manager */}
         <Script id="google-tag-manager" strategy="afterInteractive">
           {`(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
@@ -56,11 +98,6 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 })(window,document,'script','dataLayer','GTM-5FK4PCW5');`}
         </Script>
         {/* End Google Tag Manager */}
-      </head>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-        suppressHydrationWarning={true}
-      >
         {/* Google Tag Manager (noscript) */}
         <noscript>
           <iframe src="https://www.googletagmanager.com/ns.html?id=GTM-5FK4PCW5"
@@ -68,6 +105,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
         </noscript>
         {/* End Google Tag Manager (noscript) */}
         <ChunkErrorRecovery />
+        <ResetGoogleTranslateOutsideIf />
         <PostHogProvider>
           {children}
         </PostHogProvider>

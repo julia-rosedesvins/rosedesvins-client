@@ -9,9 +9,20 @@ interface DatePickerProps {
   onDateSelect: (date: Date | null) => void;
   isDateAvailable?: (date: Date) => boolean;
   colorCode?: string;
+  /** Override weekday headers (e.g. Wed/Thu to avoid Google Translate mangling Mer/Jeu) */
+  weekDays?: string[];
+  /** Override month names (e.g. August to avoid Google Translate mangling Août) */
+  months?: string[];
 }
 
-export const DatePicker = ({ selectedDate, onDateSelect, isDateAvailable, colorCode = '#3A7E53' }: DatePickerProps) => {
+const DEFAULT_WEEK_DAYS = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
+
+const DEFAULT_MONTHS = [
+  "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
+  "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"
+];
+
+export const DatePicker = ({ selectedDate, onDateSelect, isDateAvailable, colorCode = '#3A7E53', weekDays = DEFAULT_WEEK_DAYS, months = DEFAULT_MONTHS }: DatePickerProps) => {
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
   const selectedButtonRef = useRef<HTMLButtonElement>(null);
@@ -36,13 +47,6 @@ export const DatePicker = ({ selectedDate, onDateSelect, isDateAvailable, colorC
     console.log("DatePicker selectedDate month:", selectedDate.getMonth());
   }
   console.log("=========================")
-
-  const months = [
-    "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
-    "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"
-  ];
-
-  const weekDays = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
 
   const getDaysInMonth = (month: number, year: number) => {
     return new Date(year, month + 1, 0).getDate();
@@ -218,7 +222,8 @@ export const DatePicker = ({ selectedDate, onDateSelect, isDateAvailable, colorC
         {weekDays.map((day) => (
           <div
             key={day}
-            className="h-8 flex items-center justify-center text-sm font-medium text-muted-foreground"
+            className="notranslate h-8 flex items-center justify-center text-sm font-medium text-muted-foreground"
+            translate="no"
           >
             {day}
           </div>

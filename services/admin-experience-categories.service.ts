@@ -4,6 +4,7 @@ export interface ExperienceCategory {
   _id: string;
   category_name: string;
   isActive: boolean;
+  imageUrl?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -88,6 +89,31 @@ class AdminExperienceCategoriesService {
       await apiClient.delete(`/experience-categories/admin/${id}`);
     } catch (error: any) {
       console.error('Error deleting experience category:', error);
+      throw error;
+    }
+  }
+
+  async uploadImage(id: string, file: File): Promise<{ imageUrl: string }> {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const response = await apiClient.post<{ imageUrl: string }>(
+        `/experience-categories/admin/${id}/image`,
+        formData,
+        { headers: { 'Content-Type': 'multipart/form-data' } },
+      );
+      return response.data;
+    } catch (error: any) {
+      console.error('Error uploading category image:', error);
+      throw error;
+    }
+  }
+
+  async deleteImage(id: string): Promise<void> {
+    try {
+      await apiClient.delete(`/experience-categories/admin/${id}/image`);
+    } catch (error: any) {
+      console.error('Error deleting category image:', error);
       throw error;
     }
   }

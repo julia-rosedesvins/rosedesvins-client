@@ -2,6 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   images: {
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920],
     minimumCacheTTL: 60 * 60 * 24 * 30, // cache optimised images for 30 days
     remotePatterns: [
       // Development - localhost API
@@ -47,10 +48,34 @@ const nextConfig: NextConfig = {
         hostname: '*.googleapis.com',
         pathname: '/**',
       },
+      // WordPress CMS media
+      {
+        protocol: 'https',
+        hostname: 'cms.rosedesvins.co',
+        pathname: '/wp-content/**',
+      },
     ],
   },
   async headers() {
     return [
+      {
+        // Apply security headers to every route, including HSTS to force HTTPS on all future visits
+        source: '/(.*)',
+        headers: [
+          {
+            key: 'Strict-Transport-Security',
+            value: 'max-age=63072000; includeSubDomains; preload',
+          },
+          {
+            key: 'X-Content-Type-Options',
+            value: 'nosniff',
+          },
+          {
+            key: 'Referrer-Policy',
+            value: 'strict-origin-when-cross-origin',
+          },
+        ],
+      },
       {
         // Never cache HTML pages — ensures users always get fresh chunk references after deploy
         source: '/((?!_next/static|_next/image|assets|favicon.ico).*)',

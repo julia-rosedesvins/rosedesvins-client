@@ -5,10 +5,17 @@ import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import Supercluster from 'supercluster';
 import type { Domain } from '@/services/region.service';
+import { resolveImageUrl } from '@/lib/media-url';
 
 interface RegionMapProps {
   centerLat: number;
   centerLon: number;
+  regionBounds?: {
+    minLat: number;
+    minLon: number;
+    maxLat: number;
+    maxLon: number;
+  };
   domains: Domain[];
   regionName?: string;
   onMapLoad?: () => void;
@@ -19,7 +26,7 @@ export interface RegionMapRef {
   focusOnDomain: (domainId: string) => void;
 }
 
-const RegionMap = forwardRef<RegionMapRef, RegionMapProps>(({ centerLat, centerLon, domains, regionName, onMapLoad, userLocation }, ref) => {
+const RegionMap = forwardRef<RegionMapRef, RegionMapProps>(({ centerLat, centerLon, regionBounds, domains, regionName, onMapLoad, userLocation }, ref) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
   // Individual domain markers keyed by domainId
@@ -44,18 +51,20 @@ const RegionMap = forwardRef<RegionMapRef, RegionMapProps>(({ centerLat, centerL
 
   // ─── Build popup HTML for an individual domain ────────────────────────────
   const buildPopupHTML = useCallback((domain: Domain): string => {
-    const experienceHref = domain.domainId
+    const domainSlugOrId = domain.slug || domain.domainId;
+    const experienceHref = domainSlugOrId
       ? (regionName
-          ? `/experience/${encodeURIComponent(regionName)}/${domain.domainId}`
-          : `/experience/${domain.domainId}`)
+          ? `/experience/${regionName}/${domainSlugOrId}`
+          : `/experience/${domainSlugOrId}`)
       : (domain.siteUrl || '#');
     const buttonLabel = domain.producer === 'client' ? 'Réserver maintenant' : 'Voir le profil';
+    const pictureUrl = resolveImageUrl(domain.domainProfilePictureUrl);
 
     return `
       <div class="bg-white" style="width:100%;max-width:100%;box-sizing:border-box;">
-        ${domain.domainProfilePictureUrl ? `
+        ${pictureUrl ? `
           <div style="height:112px;overflow:hidden;">
-            <img src="${domain.domainProfilePictureUrl}" alt="${domain.domainName}"
+            <img src="${pictureUrl}" alt="${domain.domainName}"
               style="width:100%;height:100%;object-fit:cover;display:block;" />
           </div>` : ''}
         <div style="padding:10px 12px;display:flex;flex-direction:column;gap:8px;box-sizing:border-box;">
@@ -192,38 +201,121 @@ const RegionMap = forwardRef<RegionMapRef, RegionMapProps>(({ centerLat, centerL
   useEffect(() => {
     if (!mapContainer.current || map.current) return;
 
+    const placeName: maplibregl.ExpressionSpecification = [
+      'coalesce',
+      ['get', 'name:fr'],
+      ['get', 'name'],
+    ];
+
     map.current = new maplibregl.Map({
       container: mapContainer.current,
-      style: {
-        version: 8,
-        sources: {
-          'raster-tiles': {
-            type: 'raster',
-            tiles: [
-              'https://a.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}.png',
-              'https://b.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}.png',
-              'https://c.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}.png',
-            ],
-            tileSize: 256,
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-          },
-          'label-tiles': {
-            type: 'raster',
-            tiles: [
-              'https://a.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}.png',
-              'https://b.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}.png',
-              'https://c.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}.png',
-            ],
-            tileSize: 256,
-          },
-        },
-        layers: [
-          { id: 'simple-tiles', type: 'raster', source: 'raster-tiles', minzoom: 0, maxzoom: 22 },
-          { id: 'label-tiles',  type: 'raster', source: 'label-tiles',  minzoom: 0, maxzoom: 22 },
-        ],
-      },
+      attributionControl: false,
+      // Carto vector Voyager (same cartography as the old rasters).
+      // Raster PNGs now watermark every tile with "API KEY REQUIRED".
+      style: 'https://basemaps.cartocdn.com/gl/voyager-nolabels-gl-style/style.json',
       center: [centerLon, centerLat],
       zoom: 10,
+    });
+
+    const addPlaceNameLayers = (mapInst: maplibregl.Map) => {
+      if (mapInst.getSource('openmaptiles')) return;
+      mapInst.addSource('openmaptiles', {
+        type: 'vector',
+        url: 'https://tiles.openfreemap.org/planet',
+      });
+      mapInst.addLayer({
+        id: 'label_other',
+        type: 'symbol',
+        source: 'openmaptiles',
+        'source-layer': 'place',
+        minzoom: 8,
+        filter: ['match', ['get', 'class'], ['city', 'continent', 'country', 'state', 'town', 'village'], false, true],
+        layout: {
+          'symbol-sort-key': ['coalesce', ['get', 'rank'], 99],
+          'text-field': placeName,
+          'text-font': ['Noto Sans Regular'],
+          'text-letter-spacing': 0.05,
+          'text-max-width': 8,
+          'text-padding': 2,
+          'text-size': ['interpolate', ['linear'], ['zoom'], 8, 9, 12, 11],
+        },
+        paint: {
+          'text-color': '#333333',
+          'text-halo-blur': 1,
+          'text-halo-color': '#ffffff',
+          'text-halo-width': 1.2,
+        },
+      });
+      mapInst.addLayer({
+        id: 'label_village',
+        type: 'symbol',
+        source: 'openmaptiles',
+        'source-layer': 'place',
+        minzoom: 8,
+        filter: ['==', ['get', 'class'], 'village'],
+        layout: {
+          'symbol-sort-key': ['coalesce', ['get', 'rank'], 50],
+          'text-field': placeName,
+          'text-font': ['Noto Sans Regular'],
+          'text-max-width': 8,
+          'text-padding': 2,
+          'text-size': ['interpolate', ['exponential', 1.2], ['zoom'], 8, 10, 14, 13],
+        },
+        paint: {
+          'text-color': '#111111',
+          'text-halo-blur': 1,
+          'text-halo-color': '#ffffff',
+          'text-halo-width': 1.2,
+        },
+      });
+      mapInst.addLayer({
+        id: 'label_town',
+        type: 'symbol',
+        source: 'openmaptiles',
+        'source-layer': 'place',
+        minzoom: 6,
+        filter: ['==', ['get', 'class'], 'town'],
+        layout: {
+          'symbol-sort-key': ['coalesce', ['get', 'rank'], 20],
+          'text-field': placeName,
+          'text-font': ['Noto Sans Regular'],
+          'text-max-width': 8,
+          'text-padding': 2,
+          'text-size': ['interpolate', ['exponential', 1.2], ['zoom'], 7, 12, 14, 15],
+        },
+        paint: {
+          'text-color': '#111111',
+          'text-halo-blur': 1,
+          'text-halo-color': '#ffffff',
+          'text-halo-width': 1.4,
+        },
+      });
+      mapInst.addLayer({
+        id: 'label_city',
+        type: 'symbol',
+        source: 'openmaptiles',
+        'source-layer': 'place',
+        minzoom: 3,
+        filter: ['==', ['get', 'class'], 'city'],
+        layout: {
+          'symbol-sort-key': ['coalesce', ['get', 'rank'], 1],
+          'text-field': placeName,
+          'text-font': ['Noto Sans Regular'],
+          'text-max-width': 8,
+          'text-padding': 2,
+          'text-size': ['interpolate', ['exponential', 1.2], ['zoom'], 4, 11, 7, 13, 11, 16],
+        },
+        paint: {
+          'text-color': '#000000',
+          'text-halo-blur': 1,
+          'text-halo-color': '#ffffff',
+          'text-halo-width': 1.5,
+        },
+      });
+    };
+
+    map.current.on('load', () => {
+      if (map.current) addPlaceNameLayers(map.current);
     });
 
     map.current.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
@@ -256,13 +348,19 @@ const RegionMap = forwardRef<RegionMapRef, RegionMapProps>(({ centerLat, centerL
     const setup = () => {
       if (!map.current) return;
 
-      // Fit bounds to all markers
+      // Fit bounds to the full wine region, plus any domain markers
+      const bounds = new maplibregl.LngLatBounds();
+      if (regionBounds) {
+        bounds.extend([regionBounds.minLon, regionBounds.minLat]);
+        bounds.extend([regionBounds.maxLon, regionBounds.maxLat]);
+      }
       if (validDomains.length > 0) {
-        const bounds = new maplibregl.LngLatBounds();
         validDomains.forEach(d => { if (d.latitude && d.longitude) bounds.extend([d.longitude, d.latitude]); });
-        if (userLocation) bounds.extend([userLocation.lon, userLocation.lat]);
+      }
+      if (userLocation) bounds.extend([userLocation.lon, userLocation.lat]);
 
-        map.current.fitBounds(bounds, { padding: 50, duration: 0 });
+      if (!bounds.isEmpty()) {
+        map.current.fitBounds(bounds, { padding: 50, duration: 0, maxZoom: 11 });
       } else {
         map.current.flyTo({ center: [centerLon, centerLat], zoom: 10, duration: 1000 });
       }
@@ -298,7 +396,7 @@ const RegionMap = forwardRef<RegionMapRef, RegionMapProps>(({ centerLat, centerL
     return () => {
       map.current?.off('move', onMove);
     };
-  }, [domains, centerLat, centerLon, onMapLoad, userLocation, regionName, renderClusters]);
+  }, [domains, centerLat, centerLon, regionBounds, onMapLoad, userLocation, regionName, renderClusters]);
 
   // ─── JSX ──────────────────────────────────────────────────────────────────
   return (

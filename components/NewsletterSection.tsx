@@ -43,7 +43,7 @@ const NewsletterSection = () => {
     <section className="py-8 px-4 bg-gradient-to-br from-[#3181600d]/5 to-[#3181600d]/5">
       <div className="max-w-2xl mx-auto">
         <div className="bg-card border border-[#d1e0da] rounded-lg p-8 shadow-lg">
-          <div className="text-center mb-6">
+          <div className="text-center mb-1">
             <h2 className="text-3xl font-bold mb-4 text-[#318160]">
               Laissez-vous guider.
             </h2>

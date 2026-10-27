@@ -2,11 +2,14 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { useBookingRoute, useResolvedBookingIds } from "@/contexts/BookingRouteContext";
 import { Clock, Grape, Users, Globe, Euro, CreditCard, Home } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { WidgetProvider, useWidget } from "@/contexts/WidgetContext";
+import { useIsTranslatedToEnglish } from "@/app/if/google-translate/AutoGoogleTranslate";
+import { useTranslatedText } from "@/app/if/google-translate/useTranslatedText";
 
 interface BookingData {
   date: string;
@@ -19,8 +22,12 @@ interface BookingData {
 function ConfirmationSuccessContent({ id, serviceId }: { id: string, serviceId: string }) {
   const { widgetData, loading, error, colorCode } = useWidget();
   const searchParams = useSearchParams();
-  const withLayout = searchParams.get('withLayout');
+  const { platform, href: stepHref } = useBookingRoute(id, serviceId);
+  // In platform mode the /reservation layout already renders the page <h1>
+  const TitleTag = platform ? 'h2' : 'h1';
   const cancellationPolicy = searchParams.get('cancellationPolicy') || '';
+  const isEnglish = useIsTranslatedToEnglish();
+  const serviceName = useTranslatedText(widgetData?.service?.name);
   
   // Get payment methods from widget data
   const acceptedPaymentMethods = widgetData?.paymentMethods?.methods || ['cash_on_onsite'];
@@ -51,12 +58,31 @@ function ConfirmationSuccessContent({ id, serviceId }: { id: string, serviceId: 
     const children = bookingData?.children ?? 0;
     
     if (children > 0) {
-      return `${totalParticipants} personnes (${adults} adultes, ${children} enfants)`;
+      return isEnglish
+        ? `${totalParticipants} people (${adults} adults, ${children} children)`
+        : `${totalParticipants} personnes (${adults} adultes, ${children} enfants)`;
     }
-    return `${adults} personnes (adultes)`;
+    return isEnglish ? `${adults} people (adults)` : `${adults} personnes (adultes)`;
   };
 
   const getPaymentMethodLabel = (method: string) => {
+    if (isEnglish) {
+      switch (method.toLowerCase()) {
+        case 'bank card':
+        case 'bank_card':
+          return 'Bank card';
+        case 'checks':
+        case 'cheque':
+          return 'Checks';
+        case 'cash':
+        case 'cash_on_onsite':
+          return 'Cash';
+        case 'stripe':
+          return 'Bank card (Stripe)';
+        default:
+          return method;
+      }
+    }
     switch (method.toLowerCase()) {
       case 'bank card':
       case 'bank_card':
@@ -80,23 +106,34 @@ function ConfirmationSuccessContent({ id, serviceId }: { id: string, serviceId: 
     const onSiteMethods = acceptedPaymentMethods.filter((m: string) => m.toLowerCase() !== 'stripe');
 
     if (onSiteMethods.length === 0) {
-      return 'Paiement sur place';
+      return isEnglish ? 'Pay on-site' : 'Paiement sur place';
     }
     
     const labels = onSiteMethods.map((method: string) => getPaymentMethodLabel(method));
+    const prefix = isEnglish ? 'Pay on-site' : 'Paiement sur place';
+    const conjunction = isEnglish ? 'or' : 'ou';
     
     if (labels.length === 1) {
-      return `Paiement sur place (${labels[0].toLowerCase()})`;
+      return `${prefix} (${labels[0].toLowerCase()})`;
     } else if (labels.length === 2) {
-      return `Paiement sur place (${labels.join(', ').toLowerCase()})`;
+      return `${prefix} (${labels.join(', ').toLowerCase()})`;
     } else {
       const lastLabel = labels.pop();
-      return `Paiement sur place (${labels.join(', ').toLowerCase()} ou ${lastLabel?.toLowerCase()})`;
+      return `${prefix} (${labels.join(', ').toLowerCase()} ${conjunction} ${lastLabel?.toLowerCase()})`;
     }
   };
 
   const getLanguageInFrench = (language: string) => {
     const lang = language.toLowerCase();
+    if (isEnglish) {
+      if (lang === 'français' || lang === 'french') return 'French';
+      if (lang === 'anglais' || lang === 'english') return 'English';
+      if (lang === 'español' || lang === 'spanish') return 'Spanish';
+      if (lang === 'deutsch' || lang === 'german') return 'German';
+      if (lang === 'italien' || lang === 'italian') return 'Italian';
+      if (lang === 'russe' || lang === 'russian') return 'Russian';
+      return language;
+    }
     if (lang === 'français' || lang === 'french') return 'Français';
     if (lang === 'anglais' || lang === 'english') return 'Anglais';
     if (lang === 'español' || lang === 'spanish') return 'Espagnol';
@@ -107,6 +144,16 @@ function ConfirmationSuccessContent({ id, serviceId }: { id: string, serviceId: 
   };
 
   const getCancellationPolicyLabel = (policy: string) => {
+    if (isEnglish) {
+      switch (policy) {
+        case 'none': return 'No refund possible';
+        case '24h': return "Full refund possible if cancelled 24h before";
+        case '48h': return "Full refund possible if cancelled 48h before";
+        case '72h': return "Full refund possible if cancelled 72h before";
+        case '1_week': return "Full refund possible if cancelled one week before";
+        default: return '';
+      }
+    }
     switch (policy) {
       case 'none': return 'Aucun remboursement possible';
       case '24h': return "Remboursement intégral possible en cas d'annulation 24h avant";
@@ -121,33 +168,33 @@ function ConfirmationSuccessContent({ id, serviceId }: { id: string, serviceId: 
     <div className="min-h-screen bg-white">
       <div className="container mx-auto px-4 py-8 max-w-2xl">
         <div className="rounded-lg p-8">
-          <h1 className="text-3xl font-bold text-center mb-8" style={{ color: colorCode }}>
-            Confirmation de réservation
-          </h1>
+          <TitleTag className="text-3xl font-bold text-center mb-8" style={{ color: colorCode }}>
+            {isEnglish ? "Booking confirmation" : "Confirmation de réservation"}
+          </TitleTag>
 
           <div className="text-center mb-8">
             <h2 className="text-2xl font-bold mb-4">
-              Merci pour votre réservation !
+              {isEnglish ? "Thank you for your booking!" : "Merci pour votre réservation !"}
             </h2>
             <p className="text-lg text-muted-foreground">
-              Un e-mail de confirmation vous a été envoyé.
+              {isEnglish ? "A confirmation email has been sent to you." : "Un e-mail de confirmation vous a été envoyé."}
             </p>
           </div>
 
           <div className="mb-8">
-            <h3 className="text-xl font-semibold mb-6">Récapitulatif de la demande</h3>
+            <h3 className="text-xl font-semibold mb-6">{isEnglish ? "Request summary" : "Récapitulatif de la demande"}</h3>
             
             <div className="space-y-4">
               <div className="flex items-center gap-3">
                 <Clock className="w-5 h-5" style={{ color: colorCode }} />
                 <span>
-                  {formatDate(bookingData?.date || new Date().toISOString())} - {bookingData?.selectedTime || "Aucun horaire"}
+                  {formatDate(bookingData?.date || new Date().toISOString())} - {bookingData?.selectedTime || (isEnglish ? "No time slot" : "Aucun horaire")}
                 </span>
               </div>
 
               <div className="flex items-center gap-3">
                 <Grape className="w-5 h-5" style={{ color: colorCode }} />
-                <span>{widgetData?.service?.name || "Service de dégustation"}</span>
+                <span>{serviceName || (isEnglish ? "Tasting service" : "Service de dégustation")}</span>
               </div>
 
               <div className="flex items-center gap-3">
@@ -167,10 +214,10 @@ function ConfirmationSuccessContent({ id, serviceId }: { id: string, serviceId: 
 
               <div className="flex items-center gap-3">
                 <CreditCard className="w-5 h-5" style={{ color: colorCode }} />
-                <span>{stripeAvailable ? 'Paiement en ligne' : formatPaymentMethods()}</span>
+                <span>{stripeAvailable ? (isEnglish ? 'Online payment' : 'Paiement en ligne') : formatPaymentMethods()}</span>
               </div>
 
-              {cancellationPolicy && getCancellationPolicyLabel(cancellationPolicy) && (
+              {stripeAvailable && cancellationPolicy && getCancellationPolicyLabel(cancellationPolicy) && (
                 <div className="flex items-start gap-3">
                   <CreditCard className="w-5 h-5 opacity-0" />
                   <span className="text-sm text-gray-500 italic">{getCancellationPolicyLabel(cancellationPolicy)}</span>
@@ -181,14 +228,14 @@ function ConfirmationSuccessContent({ id, serviceId }: { id: string, serviceId: 
 
           {/* Bouton retour à l'accueil */}
           <div className="flex justify-center mt-8">
-            <Link href={`/if/booking-widget/${id}/${serviceId}/reservation${withLayout ? '?withLayout=true' : ''}`}>
+            <Link href={stepHref('reservation')}>
               <Button 
                 className="hover:opacity-90 text-white px-8 py-3 flex items-center gap-2"
                 style={{ backgroundColor: colorCode }}
                 size="lg"
               >
                 <Home className="w-5 h-5" />
-                Retour
+                {isEnglish ? "Back" : "Retour"}
               </Button>
             </Link>
           </div>
@@ -198,12 +245,8 @@ function ConfirmationSuccessContent({ id, serviceId }: { id: string, serviceId: 
   );
 }
 
-const ConfirmationSuccess = ({ params }: { params: Promise<{ id: string, service_id: string }> }) => {
-  const [resolvedParams, setResolvedParams] = useState<{ id: string, service_id: string } | null>(null);
-
-  useEffect(() => {
-    params.then(setResolvedParams);
-  }, [params]);
+const ConfirmationSuccess = ({ params }: { params?: Promise<{ id: string, service_id: string }> }) => {
+  const resolvedParams = useResolvedBookingIds(params);
 
   if (!resolvedParams) {
     return (

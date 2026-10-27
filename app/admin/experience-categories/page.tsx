@@ -30,7 +30,9 @@ import {
   ChevronLeft,
   ChevronRight,
   ToggleLeft,
-  ToggleRight
+  ToggleRight,
+  ImageIcon,
+  X
 } from "lucide-react"
 import { Switch } from "@/components/ui/switch"
 import DashboardLayout from "@/components/admin/DashboardLayout"
@@ -64,6 +66,11 @@ export default function AdminExperienceCategoriesPage() {
     category_name: '',
     isActive: true
   });
+
+  // Image upload state
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [deletingImage, setDeletingImage] = useState(false);
 
   // Loading states
   const [creating, setCreating] = useState(false);
@@ -120,10 +127,63 @@ export default function AdminExperienceCategoriesPage() {
     }
   }, [searchTerm]);
 
+  const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
+  const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+
+  const clearSelectedFile = () => {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setSelectedFile(null);
+    setPreviewUrl(null);
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+      toast.error('Format non supporté (JPG, PNG ou WebP uniquement)');
+      return;
+    }
+    if (file.size > MAX_IMAGE_SIZE) {
+      toast.error("L'image dépasse 5 Mo");
+      return;
+    }
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setSelectedFile(file);
+    setPreviewUrl(URL.createObjectURL(file));
+  };
+
+  // Uploads the selected image (if any). Never throws: the category itself is already saved.
+  const uploadSelectedImage = async (categoryId: string) => {
+    if (!selectedFile) return;
+    try {
+      await adminExperienceCategoriesService.uploadImage(categoryId, selectedFile);
+    } catch (error: any) {
+      toast.error("La catégorie a été enregistrée mais l'image n'a pas pu être téléchargée");
+    }
+  };
+
+  const handleDeleteImage = async () => {
+    if (!selectedCategory?.imageUrl) return;
+    if (!window.confirm("Supprimer l'image de cette catégorie ?")) return;
+    try {
+      setDeletingImage(true);
+      await adminExperienceCategoriesService.deleteImage(selectedCategory._id);
+      setSelectedCategory({ ...selectedCategory, imageUrl: '' });
+      toast.success('Image supprimée');
+      fetchCategories();
+    } catch (error: any) {
+      toast.error("Erreur lors de la suppression de l'image");
+    } finally {
+      setDeletingImage(false);
+    }
+  };
+
   const handleCreate = async () => {
     try {
       setCreating(true);
-      await adminExperienceCategoriesService.create(formData as CreateExperienceCategoryDto);
+      const created = await adminExperienceCategoriesService.create(formData as CreateExperienceCategoryDto);
+      await uploadSelectedImage(created._id);
       toast.success('Catégorie créée avec succès');
       setIsCreateModalOpen(false);
       resetForm();
@@ -144,6 +204,7 @@ export default function AdminExperienceCategoriesPage() {
     try {
       setUpdating(true);
       await adminExperienceCategoriesService.update(selectedCategory._id, formData as UpdateExperienceCategoryDto);
+      await uploadSelectedImage(selectedCategory._id);
       toast.success('Catégorie mise à jour avec succès');
       setIsEditModalOpen(false);
       resetForm();
@@ -188,6 +249,7 @@ export default function AdminExperienceCategoriesPage() {
   };
 
   const openEditModal = (category: ExperienceCategory) => {
+    clearSelectedFile();
     setSelectedCategory(category);
     setFormData({
       category_name: category.category_name,
@@ -207,6 +269,7 @@ export default function AdminExperienceCategoriesPage() {
       isActive: true
     });
     setSelectedCategory(null);
+    clearSelectedFile();
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -355,6 +418,7 @@ export default function AdminExperienceCategoriesPage() {
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        <TableHead className="w-24">Image</TableHead>
                         <TableHead>Nom de la Catégorie</TableHead>
                         <TableHead>Statut</TableHead>
                         <TableHead>Date de Création</TableHead>
@@ -364,13 +428,26 @@ export default function AdminExperienceCategoriesPage() {
                     <TableBody>
                       {categories.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={4} className="text-center py-8 text-gray-500">
+                          <TableCell colSpan={5} className="text-center py-8 text-gray-500">
                             Aucune catégorie trouvée
                           </TableCell>
                         </TableRow>
                       ) : (
                         categories.map((cat) => (
                           <TableRow key={cat._id}>
+                            <TableCell>
+                              {cat.imageUrl ? (
+                                <img
+                                  src={cat.imageUrl}
+                                  alt={cat.category_name}
+                                  className="w-16 h-16 object-cover rounded-md border"
+                                />
+                              ) : (
+                                <div className="w-16 h-16 rounded-md border bg-gray-100 flex items-center justify-center text-gray-400">
+                                  <ImageIcon className="w-5 h-5" />
+                                </div>
+                              )}
+                            </TableCell>
                             <TableCell className="font-medium">{cat.category_name}</TableCell>
                             <TableCell>
                               <div className="flex items-center gap-2">
@@ -473,6 +550,37 @@ export default function AdminExperienceCategoriesPage() {
                 required
               />
             </div>
+            <div className="grid gap-2">
+              <Label htmlFor="category_image">Image de la catégorie</Label>
+              {previewUrl && (
+                <div className="relative inline-block">
+                  <img
+                    src={previewUrl}
+                    alt="Aperçu"
+                    className="w-40 h-40 object-cover rounded-md border"
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="destructive"
+                    className="absolute top-1 right-1"
+                    onClick={clearSelectedFile}
+                    title="Annuler la sélection"
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+              )}
+              <Input
+                id="category_image"
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                onChange={handleFileSelect}
+              />
+              <p className="text-xs text-gray-500">
+                JPG, PNG ou WebP, 5 Mo max. L&apos;image est convertie en WebP automatiquement.
+              </p>
+            </div>
             <div className="flex items-center space-x-2">
               <Switch
                 id="isActive"
@@ -519,6 +627,57 @@ export default function AdminExperienceCategoriesPage() {
                 onChange={handleInputChange}
                 required
               />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="edit-category_image">Image de la catégorie</Label>
+              {selectedCategory?.imageUrl && !previewUrl && (
+                <div className="relative inline-block">
+                  <img
+                    src={selectedCategory.imageUrl}
+                    alt={selectedCategory.category_name}
+                    className="w-40 h-40 object-cover rounded-md border"
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="destructive"
+                    className="absolute top-1 right-1"
+                    onClick={handleDeleteImage}
+                    disabled={deletingImage}
+                    title="Supprimer l'image"
+                  >
+                    {deletingImage ? <Loader2 className="w-4 h-4 animate-spin" /> : <X className="w-4 h-4" />}
+                  </Button>
+                </div>
+              )}
+              {previewUrl && (
+                <div className="relative inline-block">
+                  <img
+                    src={previewUrl}
+                    alt="Aperçu"
+                    className="w-40 h-40 object-cover rounded-md border"
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="destructive"
+                    className="absolute top-1 right-1"
+                    onClick={clearSelectedFile}
+                    title="Annuler la sélection"
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+              )}
+              <Input
+                id="edit-category_image"
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                onChange={handleFileSelect}
+              />
+              <p className="text-xs text-gray-500">
+                JPG, PNG ou WebP, 5 Mo max. L&apos;image est convertie en WebP automatiquement.
+              </p>
             </div>
             <div className="flex items-center space-x-2">
               <Switch

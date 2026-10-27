@@ -36,6 +36,7 @@ import { useAdmin } from '@/contexts/AdminContext'
 import { adminRegionsService, Region, CreateRegionData, UpdateRegionData } from '@/services/admin-regions.service'
 import toast from 'react-hot-toast'
 import { Checkbox } from "@/components/ui/checkbox"
+import { Textarea } from "@/components/ui/textarea"
 
 export default function AdminRegionsPage() {
   const { admin, isLoading } = useAdmin();
@@ -61,7 +62,9 @@ export default function AdminRegionsPage() {
     max_lat: 0,
     max_lon: 0,
     isParent: false,
-    parent: ''
+    parent: '',
+    subtitle: '',
+    description: '',
   });
 
   // File upload
@@ -228,7 +231,9 @@ export default function AdminRegionsPage() {
       max_lat: region.max_lat,
       max_lon: region.max_lon,
       isParent: region.isParent,
-      parent: region.parent || ''
+      parent: region.parent || '',
+      subtitle: region.subtitle || '',
+      description: region.description || '',
     });
     setIsEditModalOpen(true);
   };
@@ -246,7 +251,9 @@ export default function AdminRegionsPage() {
       max_lat: 0,
       max_lon: 0,
       isParent: false,
-      parent: ''
+      parent: '',
+      subtitle: '',
+      description: '',
     });
     setSelectedRegion(null);
     setSelectedFile(null);
@@ -548,6 +555,28 @@ export default function AdminRegionsPage() {
                 placeholder="Ex: Val de Loire"
               />
             </div>
+            <div>
+              <Label htmlFor="subtitle">Sous-titre (page région)</Label>
+              <Input
+                id="subtitle"
+                value={formData.subtitle || ''}
+                onChange={(e) => setFormData({ ...formData, subtitle: e.target.value })}
+                placeholder="Ex: sur la route des vins et des châteaux"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Affiché sur la bannière après le nom de la région
+              </p>
+            </div>
+            <div>
+              <Label htmlFor="description">Description (page région)</Label>
+              <Textarea
+                id="description"
+                value={formData.description || ''}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                placeholder="Texte descriptif affiché sur la bannière de la page région"
+                rows={4}
+              />
+            </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="min_lat">Latitude Min *</Label>
@@ -696,6 +725,28 @@ export default function AdminRegionsPage() {
                 id="edit_denom"
                 value={formData.denom}
                 onChange={(e) => setFormData({ ...formData, denom: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit_subtitle">Sous-titre (page région)</Label>
+              <Input
+                id="edit_subtitle"
+                value={formData.subtitle || ''}
+                onChange={(e) => setFormData({ ...formData, subtitle: e.target.value })}
+                placeholder="Ex: sur la route des vins et des châteaux"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Affiché sur la bannière après le nom de la région
+              </p>
+            </div>
+            <div>
+              <Label htmlFor="edit_description">Description (page région)</Label>
+              <Textarea
+                id="edit_description"
+                value={formData.description || ''}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                placeholder="Texte descriptif affiché sur la bannière de la page région"
+                rows={4}
               />
             </div>
             <div className="grid grid-cols-2 gap-4">

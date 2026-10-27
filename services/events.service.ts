@@ -25,6 +25,7 @@ export interface EventData {
       chequeDetails?: any;
     };
     bookingStatus: string;
+    bookingSource?: 'manual' | 'widget' | 'platform';
     createdAt: string;
     updatedAt: string;
   } | null;

@@ -6,16 +6,39 @@ import { DatePicker } from "@/components/DatePicker";
 import { ChevronLeft, ChevronRight, Plus, Minus, Clock, Euro, Wine, Users, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
+import { useBookingRoute, useResolvedBookingIds } from "@/contexts/BookingRouteContext";
 import { WidgetProvider, useWidget } from "@/contexts/WidgetContext";
 import { eventsService, PublicScheduleData } from "@/services/events.service";
 import { getHolidays } from "@/services/availability.service";
+import { useIsTranslatedToEnglish } from "@/app/if/google-translate/AutoGoogleTranslate";
+import { useTranslatedText } from "@/app/if/google-translate/useTranslatedText";
+import {
+  pickerDateLocal,
+  parseTimeToMinutes,
+  isHardBusyEventType,
+  isAllDayBusy,
+  eventEndMinutes,
+  intervalsOverlap,
+  isSameCalendarDay,
+  isSameSlotStart,
+} from "@/lib/booking-overlap";
+
+const WIDGET_WEEK_DAYS_FR = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
+const WIDGET_WEEK_DAYS_EN = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const WIDGET_MONTHS_FR = [
+  "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
+  "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"
+];
+const WIDGET_MONTHS_EN = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December"
+];
 
 function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
     const { widgetData, loading, error, colorCode } = useWidget();
     const router = useRouter();
-    const searchParams = useSearchParams();
-    const withLayout = searchParams.get('withLayout') === 'true';
+    const { withLayout, platform, href: stepHref } = useBookingRoute(id, serviceId);
     
     // State declarations - must come before any useEffect hooks
     const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -27,13 +50,24 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
     const [morningStartIndex, setMorningStartIndex] = useState(0);
     const [afternoonStartIndex, setAfternoonStartIndex] = useState(0);
     const [bookedSlots, setBookedSlots] = useState<PublicScheduleData[]>([]);
-    const [loadingSchedule, setLoadingSchedule] = useState(false);
+    const [loadingSchedule, setLoadingSchedule] = useState(true);
+    const isEnglish = useIsTranslatedToEnglish();
+    const serviceName = useTranslatedText(widgetData?.service?.name);
     const [validationErrors, setValidationErrors] = useState<string[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     // Function to convert language to French display name
     const getLanguageInFrench = (language: string) => {
       const lang = language.toLowerCase();
+      if (isEnglish) {
+        if (lang === 'français' || lang === 'french') return 'French';
+        if (lang === 'anglais' || lang === 'english') return 'English';
+        if (lang === 'español' || lang === 'spanish') return 'Spanish';
+        if (lang === 'deutsch' || lang === 'german') return 'German';
+        if (lang === 'italien' || lang === 'italian') return 'Italian';
+        if (lang === 'russe' || lang === 'russian') return 'Russian';
+        return language;
+      }
       if (lang === 'français' || lang === 'french') return 'Français';
       if (lang === 'anglais' || lang === 'english') return 'Anglais';
       if (lang === 'español' || lang === 'spanish') return 'Espagnol';
@@ -56,25 +90,17 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
     // Derive the required language for the selected slot (always fresh – no stale closure)
     const slotRequiredLanguage = useMemo(() => {
       if (!selectedDate || !selectedTime || !widgetData?.availability?.multipleBookingsSameSlot || !bookedSlots.length) return null;
-      const dateString = `${selectedDate.getFullYear()}-${(selectedDate.getMonth() + 1).toString().padStart(2, '0')}-${selectedDate.getDate().toString().padStart(2, '0')}`;
       const serviceDuration = widgetData?.service?.timeOfServiceInMinutes || 60;
-      const [slotHours, slotMinutes] = selectedTime.split(':').map(Number);
-      const slotStartMinutes = slotHours * 60 + slotMinutes;
+      const slotStartMinutes = parseTimeToMinutes(selectedTime);
       const slotEndMinutes = slotStartMinutes + serviceDuration;
       const overlapping = bookedSlots.filter(slot => {
-        const sd = new Date(slot.eventDate);
-        const sds = `${sd.getFullYear()}-${(sd.getMonth() + 1).toString().padStart(2, '0')}-${sd.getDate().toString().padStart(2, '0')}`;
-        if (sds !== dateString) return false;
-        if (slot.eventType === 'external' || slot.eventType === 'personal' || slot.eventType === 'blocked') return false;
+        if (!isSameCalendarDay(slot.eventDate, selectedDate)) return false;
+        if (isHardBusyEventType(slot.eventType)) return false;
         if (slot.serviceId && slot.serviceId !== serviceId) return false;
-        const [eH, eM] = slot.eventTime.split(':').map(Number);
-        const eventStart = eH * 60 + eM;
-        let eventEnd = eventStart + serviceDuration;
-        if (slot.eventEndTime) {
-          const [endH, endM] = slot.eventEndTime.split(':').map(Number);
-          eventEnd = endH * 60 + endM;
-        }
-        return slotStartMinutes < eventEnd && slotEndMinutes > eventStart;
+        if (!isSameSlotStart(slot.eventTime, selectedTime)) return false;
+        const eventStart = parseTimeToMinutes(slot.eventTime);
+        const eventEnd = eventEndMinutes(slot, serviceDuration);
+        return intervalsOverlap(slotStartMinutes, slotEndMinutes, eventStart, eventEnd);
       });
       const bookingWithLanguage = overlapping.find(b => b.selectedLanguage && b.selectedLanguage.trim() !== '');
       return bookingWithLanguage?.selectedLanguage ?? null;
@@ -144,88 +170,90 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
     const totalParticipants = adults + children;
     
     if (!selectedDate) {
-      errors.push("Veuillez sélectionner une date");
+      errors.push(isEnglish ? "Please select a date" : "Veuillez sélectionner une date");
     }
     
     if (!selectedTime) {
-      errors.push("Veuillez sélectionner un horaire");
+      errors.push(isEnglish ? "Please select a time slot" : "Veuillez sélectionner un horaire");
     }
     
     if (adults <= 0) {
-      errors.push("Le nombre d'adultes doit être d'au moins 1");
+      errors.push(isEnglish ? "The number of adults must be at least 1" : "Le nombre d'adultes doit être d'au moins 1");
     }
     
     if (totalParticipants < minParticipants) {
-      errors.push(`Le nombre total de participants doit être d'au moins ${minParticipants} personnes`);
+      errors.push(isEnglish ? `The total number of participants must be at least ${minParticipants}` : `Le nombre total de participants doit être d'au moins ${minParticipants} personnes`);
     }
 
     if (totalParticipants > maxParticipants) {
-      errors.push(`Le nombre total de participants ne peut pas dépasser ${maxParticipants} personnes`);
+      errors.push(isEnglish ? `The total number of participants cannot exceed ${maxParticipants}` : `Le nombre total de participants ne peut pas dépasser ${maxParticipants} personnes`);
     }
     
     if (!selectedLanguage || selectedLanguage.trim() === "") {
-      errors.push("Veuillez sélectionner une langue");
+      errors.push(isEnglish ? "Please select a language" : "Veuillez sélectionner une langue");
+    }
+
+    if (selectedDate && selectedTime) {
+      const serviceDuration = widgetData?.service?.timeOfServiceInMinutes || 60;
+      const slotStartMinutes = parseTimeToMinutes(selectedTime);
+      const slotEndMinutes = slotStartMinutes + serviceDuration;
+      const overlappingForBusy = bookedSlots.filter(slot => {
+        if (!isSameCalendarDay(slot.eventDate, selectedDate)) return false;
+        if (isHardBusyEventType(slot.eventType) && isAllDayBusy(slot)) return true;
+        const eventStartMinutes = parseTimeToMinutes(slot.eventTime);
+        const eventStopMinutes = eventEndMinutes(slot, serviceDuration);
+        return intervalsOverlap(slotStartMinutes, slotEndMinutes, eventStartMinutes, eventStopMinutes);
+      });
+      if (overlappingForBusy.some(slot => isHardBusyEventType(slot.eventType))) {
+        errors.push(isEnglish ? `This time slot is unavailable due to an external calendar event. Please choose another time.` : `Ce créneau horaire n'est pas disponible en raison d'un événement externe dans le calendrier. Veuillez choisir un autre horaire.`);
+      }
     }
 
     // ✅ NEW: Check capacity for multiple bookings
     if (selectedDate && selectedTime && widgetData?.availability?.multipleBookingsSameSlot) {
-      const dateString = `${selectedDate.getFullYear()}-${(selectedDate.getMonth() + 1).toString().padStart(2, '0')}-${selectedDate.getDate().toString().padStart(2, '0')}`;
       const serviceDuration = widgetData?.service?.timeOfServiceInMinutes || 60;
-      
-      // Parse the selected time slot
-      const [slotHours, slotMinutes] = selectedTime.split(':').map(Number);
-      const slotStartMinutes = slotHours * 60 + slotMinutes;
+      const slotStartMinutes = parseTimeToMinutes(selectedTime);
       const slotEndMinutes = slotStartMinutes + serviceDuration;
       
-      // Find overlapping bookings
       const overlappingBookings = bookedSlots.filter(slot => {
-        const slotDate = new Date(slot.eventDate);
-        const slotDateString = `${slotDate.getFullYear()}-${(slotDate.getMonth() + 1).toString().padStart(2, '0')}-${slotDate.getDate().toString().padStart(2, '0')}`;
-        
-        if (slotDateString !== dateString) return false;
-        
-        const [eventHours, eventMinutes] = slot.eventTime.split(':').map(Number);
-        const eventStartMinutes = eventHours * 60 + eventMinutes;
-        
-        let eventEndMinutes = eventStartMinutes + serviceDuration;
-        if (slot.eventEndTime) {
-          const [endHours, endMinutes] = slot.eventEndTime.split(':').map(Number);
-          eventEndMinutes = endHours * 60 + endMinutes;
-        }
-        
-        return slotStartMinutes < eventEndMinutes && slotEndMinutes > eventStartMinutes;
+        if (!isSameCalendarDay(slot.eventDate, selectedDate)) return false;
+        if (isHardBusyEventType(slot.eventType)) return false;
+        const eventStartMinutes = parseTimeToMinutes(slot.eventTime);
+        const eventStopMinutes = eventEndMinutes(slot, serviceDuration);
+        return intervalsOverlap(slotStartMinutes, slotEndMinutes, eventStartMinutes, eventStopMinutes);
       });
       
-      // 🔒 CRITICAL FIX: Check if any overlapping event is external
-      // External events should block the slot completely, even with multi-slot enabled
-      const hasExternalEvent = overlappingBookings.some(booking => booking.eventType === 'external');
-      
-      if (hasExternalEvent) {
-        errors.push(`Ce créneau horaire n'est pas disponible en raison d'un événement externe dans le calendrier. Veuillez choisir un autre horaire.`);
-      } else {
-        // 🔒 NEW FIX: Check if any overlapping booking is for a DIFFERENT service
+      if (overlappingBookings.length > 0) {
         const hasDifferentService = overlappingBookings.some(booking => {
-          if (!booking.serviceId) return true; // No serviceId means different service (personal/blocked)
+          if (!booking.serviceId) return true;
           return booking.serviceId !== serviceId;
         });
 
+        const hasDifferentStart = overlappingBookings.some(booking => {
+          if (!booking.serviceId || booking.serviceId !== serviceId) return false;
+          return !isSameSlotStart(booking.eventTime, selectedTime);
+        });
+
         if (hasDifferentService) {
-          errors.push(`Ce créneau horaire n'est pas disponible car une autre expérience est déjà réservée. Veuillez choisir un autre horaire.`);
+          errors.push(isEnglish ? `This time slot is unavailable because another experience is already booked. Please choose another time.` : `Ce créneau horaire n'est pas disponible car une autre expérience est déjà réservée. Veuillez choisir un autre horaire.`);
+        } else if (hasDifferentStart) {
+          errors.push(isEnglish ? `This time slot overlaps another booking for the same experience. Please choose another time.` : `Ce créneau chevauche une autre réservation pour la même expérience. Veuillez choisir un autre horaire.`);
         } else {
-          // 🔒 LANGUAGE CONSTRAINT: all bookings for the same slot must share the same language
-          const bookingWithLanguage = overlappingBookings.find(b => b.selectedLanguage && b.selectedLanguage.trim() !== '');
+          const sameSlotBookings = overlappingBookings.filter(booking =>
+            isSameSlotStart(booking.eventTime, selectedTime)
+          );
+          const bookingWithLanguage = sameSlotBookings.find(b => b.selectedLanguage && b.selectedLanguage.trim() !== '');
           if (bookingWithLanguage && selectedLanguage && selectedLanguage !== bookingWithLanguage.selectedLanguage) {
-            errors.push(`Veuillez sélectionner la langue ${getLanguageInFrench(bookingWithLanguage.selectedLanguage!)} ou choisir un autre horaire.`);
+            errors.push(isEnglish ? `Please select the ${getLanguageInFrench(bookingWithLanguage.selectedLanguage!)} language or choose another time.` : `Veuillez sélectionner la langue ${getLanguageInFrench(bookingWithLanguage.selectedLanguage!)} ou choisir un autre horaire.`);
           } else {
-            // Calculate total existing participants (only for same service)
-            const totalExistingParticipants = overlappingBookings.reduce((sum, booking) => {
+            const totalExistingParticipants = sameSlotBookings.reduce((sum, booking) => {
               return sum + (booking.totalParticipants || 0);
             }, 0);
             
             const totalWithNewBooking = totalExistingParticipants + totalParticipants;
             
             if (totalWithNewBooking > maxParticipants) {
-              errors.push(`Ce créneau horaire a atteint sa capacité maximale. Participants actuels: ${totalExistingParticipants}/${maxParticipants}. Veuillez choisir un autre horaire.`);
+              errors.push(isEnglish ? `This time slot has reached its maximum capacity. Current participants: ${totalExistingParticipants}/${maxParticipants}. Please choose another time.` : `Ce créneau horaire a atteint sa capacité maximale. Participants actuels: ${totalExistingParticipants}/${maxParticipants}. Veuillez choisir un autre horaire.`);
             }
           }
         }
@@ -337,7 +365,7 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
 
           // Check if booking is made with sufficient advance time
           if (timeDifferenceHours < minimumAdvanceHours) {
-            errors.push(`La réservation doit être effectuée au moins ${limitLabel} à l'avance. Veuillez choisir une date et heure ultérieures.`);
+            errors.push(isEnglish ? `The booking must be made at least ${limitLabel} in advance. Please choose a later date and time.` : `La réservation doit être effectuée au moins ${limitLabel} à l'avance. Veuillez choisir une date et heure ultérieures.`);
           }
 
           console.log('📅 Frontend booking advance validation:', {
@@ -392,11 +420,7 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
         widgetId: id,
       });
       
-      if (withLayout) {
-        query.append('withLayout', 'true');
-      }
-      
-      router.push(`/if/booking-widget/${id}/${serviceId}/booking-confirmation?${query.toString()}`);
+      router.push(stepHref('booking-confirmation', query));
     } catch (error) {
       // Reset loading state if something goes wrong
       setIsSubmitting(false);
@@ -482,7 +506,7 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 mx-auto mb-4" style={{ borderColor: colorCode }}></div>
-          <p className="text-lg">Chargement...</p>
+          <p className="text-lg">{isEnglish ? "Loading..." : "Chargement..."}</p>
         </div>
       </div>
     );
@@ -492,7 +516,7 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
-          <h1 className="mb-4 text-2xl font-bold text-red-600">Erreur</h1>
+          <h1 className="mb-4 text-2xl font-bold text-red-600">{isEnglish ? "Error" : "Erreur"}</h1>
           <p className="text-lg text-gray-600 mb-8">{error}</p>
         </div>
       </div>
@@ -612,6 +636,9 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
 
   // Get time slots from special date overrides for a specific date
   const getOverrideTimeSlotsForDate = (date: Date): { morning: string[], afternoon: string[] } => {
+    if (loadingSchedule) {
+      return { morning: [], afternoon: [] };
+    }
     if (!widgetData?.availability?.specialDateOverrides?.length) {
       return { morning: [], afternoon: [] };
     }
@@ -711,26 +738,18 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
     if (!bookedSlots.length) return null;
     if (!widgetData?.availability?.multipleBookingsSameSlot) return null;
 
-    const dateString = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
     const serviceDuration = widgetData?.service?.timeOfServiceInMinutes || 60;
-    const [slotHours, slotMinutes] = time.split(':').map(Number);
-    const slotStartMinutes = slotHours * 60 + slotMinutes;
+    const slotStartMinutes = parseTimeToMinutes(time);
     const slotEndMinutes = slotStartMinutes + serviceDuration;
 
     const overlapping = bookedSlots.filter(slot => {
-      const slotDate = new Date(slot.eventDate);
-      const slotDateString = `${slotDate.getFullYear()}-${(slotDate.getMonth() + 1).toString().padStart(2, '0')}-${slotDate.getDate().toString().padStart(2, '0')}`;
-      if (slotDateString !== dateString) return false;
-      if (slot.eventType === 'external' || slot.eventType === 'personal' || slot.eventType === 'blocked') return false;
+      if (!isSameCalendarDay(slot.eventDate, date)) return false;
+      if (isHardBusyEventType(slot.eventType)) return false;
       if (slot.serviceId && slot.serviceId !== serviceId) return false;
-      const [eH, eM] = slot.eventTime.split(':').map(Number);
-      const eventStart = eH * 60 + eM;
-      let eventEnd = eventStart + serviceDuration;
-      if (slot.eventEndTime) {
-        const [endH, endM] = slot.eventEndTime.split(':').map(Number);
-        eventEnd = endH * 60 + endM;
-      }
-      return slotStartMinutes < eventEnd && slotEndMinutes > eventStart;
+      if (!isSameSlotStart(slot.eventTime, time)) return false;
+      const eventStart = parseTimeToMinutes(slot.eventTime);
+      const eventStop = eventEndMinutes(slot, serviceDuration);
+      return intervalsOverlap(slotStartMinutes, slotEndMinutes, eventStart, eventStop);
     });
 
     // Find the first booking that has a language assigned
@@ -741,9 +760,10 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
   // Check if a time slot is already booked by another user
   // Now handles multiple bookings with participant limits
   const isTimeSlotBooked = (date: Date, time: string): boolean => {
+    if (loadingSchedule) return true;
     if (!bookedSlots.length) return false;
     
-    const dateString = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
+    const dateString = pickerDateLocal(date);
     
     // Get service duration to calculate slot end time
     const serviceDuration = widgetData?.service?.timeOfServiceInMinutes || 60;
@@ -761,15 +781,9 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
 
     // Full-day external/blocked/personal busy (synced holidays, etc.) → block every slot
     const hasAllDayBlock = bookedSlots.some((slot) => {
-      const slotDate = new Date(slot.eventDate);
-      const slotDateString = `${slotDate.getFullYear()}-${(slotDate.getMonth() + 1).toString().padStart(2, '0')}-${slotDate.getDate().toString().padStart(2, '0')}`;
-      if (slotDateString !== dateString) return false;
-      if (slot.eventType !== 'external' && slot.eventType !== 'personal' && slot.eventType !== 'blocked') {
-        return false;
-      }
-      if (slot.isAllDay === true) return true;
-      // Fallback: day-spanning times used by sync expansion (00:00–23:59)
-      return slot.eventTime === '00:00' && (slot.eventEndTime === '23:59' || slot.eventEndTime === '23:59:59');
+      if (!isSameCalendarDay(slot.eventDate, date)) return false;
+      if (!isHardBusyEventType(slot.eventType)) return false;
+      return isAllDayBusy(slot);
     });
 
     if (hasAllDayBlock) {
@@ -777,40 +791,17 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
       return true;
     }
     
-    // Parse the time slot start time
-    const [slotHours, slotMinutes] = time.split(':').map(Number);
-    const slotStartMinutes = slotHours * 60 + slotMinutes;
+    const slotStartMinutes = parseTimeToMinutes(time);
     const slotEndMinutes = slotStartMinutes + serviceDuration;
     
     // Find all overlapping bookings for this date/time
     const overlappingBookings = bookedSlots.filter(slot => {
-      const slotDate = new Date(slot.eventDate);
-      const slotDateString = `${slotDate.getFullYear()}-${(slotDate.getMonth() + 1).toString().padStart(2, '0')}-${slotDate.getDate().toString().padStart(2, '0')}`;
+      if (!isSameCalendarDay(slot.eventDate, date)) return false;
       
-      // Check if it's the same date
-      if (slotDateString !== dateString) return false;
+      const eventStartMinutes = parseTimeToMinutes(slot.eventTime);
+      const eventStopMinutes = eventEndMinutes(slot, serviceDuration);
       
-      // Parse existing event start time
-      const [eventHours, eventMinutes] = slot.eventTime.split(':').map(Number);
-      const eventStartMinutes = eventHours * 60 + eventMinutes;
-      
-      // Parse existing event end time (if available)
-      let eventEndMinutes = eventStartMinutes + serviceDuration; // Default: assume same duration
-      if (slot.eventEndTime) {
-        const [endHours, endMinutes] = slot.eventEndTime.split(':').map(Number);
-        eventEndMinutes = endHours * 60 + endMinutes;
-      }
-      
-      // Check for overlap:
-      // New slot overlaps if:
-      // - New slot starts before existing event ends AND
-      // - New slot ends after existing event starts
-      const overlaps = (
-        slotStartMinutes < eventEndMinutes && 
-        slotEndMinutes > eventStartMinutes
-      );
-      
-      return overlaps;
+      return intervalsOverlap(slotStartMinutes, slotEndMinutes, eventStartMinutes, eventStopMinutes);
     });
     
     // If no overlapping bookings, slot is available
@@ -819,13 +810,13 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
     // 🔒 CRITICAL FIX: Check if any overlapping event is external
     // External events (from Google Calendar, Outlook, etc.) should ALWAYS block the slot
     // even if multi-slot bookings are enabled
-    const hasExternalEvent = overlappingBookings.some(booking => booking.eventType === 'external');
+    const hasHardBusy = overlappingBookings.some(booking => isHardBusyEventType(booking.eventType));
     
-    if (hasExternalEvent) {
+    if (hasHardBusy) {
       console.log('🚫 Slot blocked due to external calendar event (multi-slot disabled for external events):', {
         date: dateString,
         time,
-        externalEvents: overlappingBookings.filter(b => b.eventType === 'external').length
+        externalEvents: overlappingBookings.filter(b => isHardBusyEventType(b.eventType)).length
       });
       return true; // Block the slot completely
     }
@@ -849,15 +840,23 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
           .filter(b => !b.serviceId || b.serviceId !== serviceId)
           .map(b => ({ serviceId: b.serviceId, eventType: b.eventType, participants: b.totalParticipants }))
       });
-      return true; // Block the slot completely - different service booked
+      return true;
+    }
+
+    const hasDifferentStart = overlappingBookings.some(booking => {
+      if (!booking.serviceId || booking.serviceId !== serviceId) return false;
+      return !isSameSlotStart(booking.eventTime, time);
+    });
+    if (hasDifferentStart) {
+      return true;
     }
     
-    // If multiple bookings not allowed, slot is blocked if any booking exists
     if (!multipleBookingsAllowed) return true;
     
-    // If multiple bookings are allowed, check participant capacity
-    // Calculate total existing participants in overlapping bookings
-    const totalExistingParticipants = overlappingBookings.reduce((sum, booking) => {
+    const sameSlotBookings = overlappingBookings.filter(booking =>
+      isSameSlotStart(booking.eventTime, time)
+    );
+    const totalExistingParticipants = sameSlotBookings.reduce((sum, booking) => {
       return sum + (booking.totalParticipants || 0);
     }, 0);
     
@@ -898,6 +897,10 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
 
   // Get available time slots for the selected date
   const getAvailableTimeSlots = (date: Date | null) => {
+    if (loadingSchedule) {
+      return { morning: [], afternoon: [] };
+    }
+
     // Check if service is active
     if (widgetData?.service?.isActive === false) {
       return { morning: [], afternoon: [] };
@@ -1114,20 +1117,26 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
       <div className="container mx-auto px-3 md:px-4 py-4 md:py-8 max-w-2xl">
       {/* Header */}
       <div className="flex items-center mb-4 md:mb-6 lg:mb-8">
-          <Link href={`/if/booking-widget/${id}/${serviceId}/reservation${withLayout ? '?withLayout=true' : ''}`} className="flex items-center text-muted-foreground hover:opacity-75" style={{ color: colorCode }}>
+          <Link href={stepHref('reservation')} className="flex items-center text-muted-foreground hover:opacity-75" style={{ color: colorCode }}>
             <ChevronLeft className="w-5 h-5 mr-1" />
-            <span className="text-sm md:text-base">Retour</span>
+            <span className="text-sm md:text-base">{isEnglish ? "Back" : "Retour"}</span>
           </Link>
         </div>
 
-        <h1 className="text-xl md:text-2xl lg:text-3xl font-bold mb-6 md:mb-8 lg:mb-12 text-center px-2" style={{ color: colorCode }}>
-          {widgetData?.service?.name || 'Visite libre & dégustation des cuvées Tradition'}
-        </h1>
+        {/* In platform mode the /reservation layout already renders the page <h1> (producer + experience) */}
+        {(() => {
+          const TitleTag = platform ? 'h2' : 'h1';
+          return (
+            <TitleTag className="text-xl md:text-2xl lg:text-3xl font-bold mb-6 md:mb-8 lg:mb-12 text-center px-2" style={{ color: colorCode }}>
+              {serviceName || 'Visite libre & dégustation des cuvées Tradition'}
+            </TitleTag>
+          );
+        })()}
 
         {/* Validation Errors */}
         {validationErrors.length > 0 && (
           <div className="mb-4 md:mb-6 p-3 md:p-4 bg-red-50 border border-red-200 rounded-lg">
-            <h3 className="text-red-800 font-medium mb-2 text-base md:text-lg">Veuillez corriger les erreurs suivantes :</h3>
+            <h3 className="text-red-800 font-medium mb-2 text-base md:text-lg">{isEnglish ? "Please correct the following errors:" : "Veuillez corriger les erreurs suivantes :"}</h3>
             <ul className="text-red-700 space-y-1 text-base md:text-lg">
               {validationErrors.map((error, index) => (
                 <li key={index} className="flex items-start">
@@ -1145,7 +1154,7 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
             <div className="flex justify-center items-center py-6 md:py-8">
               <div className="text-center">
                 <div className="bg-red-50 border border-red-200 rounded-lg p-4 md:p-6">
-                  <p className="text-red-600 mb-2 font-medium text-sm md:text-base">Calendrier indisponible</p>
+                  <p className="text-red-600 mb-2 font-medium text-sm md:text-base">{isEnglish ? "Calendar unavailable" : "Calendrier indisponible"}</p>
                   <p className="text-xs md:text-sm text-red-500">{error}</p>
                 </div>
               </div>
@@ -1154,7 +1163,7 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
             <div className="flex justify-center items-center py-6 md:py-8">
               <div className="text-center">
                 <div className="animate-spin rounded-full h-6 w-6 border-b-2 mx-auto mb-2" style={{ borderColor: colorCode }}></div>
-                <p className="text-xs md:text-sm text-gray-600">Chargement des créneaux disponibles...</p>
+                <p className="text-xs md:text-sm text-gray-600">{isEnglish ? "Loading available time slots..." : "Chargement des créneaux disponibles..."}</p>
               </div>
             </div>
           ) : (
@@ -1163,43 +1172,45 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
               onDateSelect={setSelectedDate}
               isDateAvailable={isDateAvailable}
               colorCode={colorCode}
+              weekDays={isEnglish ? WIDGET_WEEK_DAYS_EN : WIDGET_WEEK_DAYS_FR}
+              months={isEnglish ? WIDGET_MONTHS_EN : WIDGET_MONTHS_FR}
             />
           )}
         </div>
 
         {/* Horaires */}
         <div className="mb-6 md:mb-8 mt-4">
-          <h2 className="text-xl md:text-2xl font-semibold mb-4 md:mb-6 text-center" style={{ color: colorCode }}>Horaires</h2>
+          <h2 className="text-xl md:text-2xl font-semibold mb-4 md:mb-6 text-center" style={{ color: colorCode }}>{isEnglish ? "Time slots" : "Horaires"}</h2>
           
           {error ? (
             <div className="text-center text-gray-500 py-6 md:py-8">
               <div className="bg-red-50 border border-red-200 rounded-lg p-4 md:p-6 max-w-md mx-auto">
-                <p className="text-red-600 mb-2 font-medium text-sm md:text-base">Horaires indisponibles</p>
-                <p className="text-xs md:text-sm text-red-500">Impossible de charger les créneaux horaires en raison d'une erreur.</p>
+                <p className="text-red-600 mb-2 font-medium text-sm md:text-base">{isEnglish ? "Time slots unavailable" : "Horaires indisponibles"}</p>
+                <p className="text-xs md:text-sm text-red-500">{isEnglish ? "Unable to load time slots due to an error." : "Impossible de charger les créneaux horaires en raison d'une erreur."}</p>
               </div>
             </div>
           ) : !selectedDate ? (
             <div className="text-center text-gray-500 py-6 md:py-8 text-sm md:text-base">
-              Veuillez sélectionner une date pour voir les créneaux disponibles
+              {isEnglish ? "Please select a date to see the available time slots" : "Veuillez sélectionner une date pour voir les créneaux disponibles"}
             </div>
           ) : allMorningTimes.length === 0 && allAfternoonTimes.length === 0 ? (
             <div className="text-center text-gray-500 py-6 md:py-8">
-              <p className="mb-2 text-sm md:text-base">Aucun créneau disponible pour cette date.</p>
+              <p className="mb-2 text-sm md:text-base">{isEnglish ? "No time slots available for this date." : "Aucun créneau disponible pour cette date."}</p>
               <p className="text-xs md:text-sm">
                 {selectedDate && selectedDate.toDateString() === new Date().toDateString() 
-                  ? "Les créneaux passés ne sont plus disponibles aujourd'hui."
-                  : "Tous les créneaux sont déjà réservés."}
+                  ? (isEnglish ? "Past time slots are no longer available today." : "Les créneaux passés ne sont plus disponibles aujourd'hui.")
+                  : (isEnglish ? "All time slots are already booked." : "Tous les créneaux sont déjà réservés.")}
               </p>
-              <p className="text-xs md:text-sm mt-1">Veuillez choisir une autre date.</p>
+              <p className="text-xs md:text-sm mt-1">{isEnglish ? "Please choose another date." : "Veuillez choisir une autre date."}</p>
             </div>
           ) : (
             <>
               {/* Matin */}
           <div className="mb-6 md:mb-8">
-            <h3 className="text-base md:text-lg font-medium mb-3 md:mb-4 text-center">Matin</h3>
+            <h3 className="text-base md:text-lg font-medium mb-3 md:mb-4 text-center">{isEnglish ? "Morning" : "Matin"}</h3>
             {allMorningTimes.length === 0 ? (
               <div className="text-center text-gray-500 py-4 text-sm md:text-base">
-                Aucun créneau disponible le matin
+                {isEnglish ? "No time slots available in the morning" : "Aucun créneau disponible le matin"}
               </div>
             ) : (
               <div className="flex justify-center gap-2 md:gap-3 mb-6 overflow-x-auto px-2">
@@ -1251,10 +1262,10 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
 
           {/* Après-midi */}
           <div className="mb-6 md:mb-8">
-            <h3 className="text-base md:text-lg font-medium mb-3 md:mb-4 text-center">Après-midi</h3>
+            <h3 className="text-base md:text-lg font-medium mb-3 md:mb-4 text-center">{isEnglish ? "Afternoon" : "Après-midi"}</h3>
             {allAfternoonTimes.length === 0 ? (
               <div className="text-center text-gray-500 py-4 text-sm md:text-base">
-                Aucun créneau disponible l'après-midi
+                {isEnglish ? "No time slots available in the afternoon" : "Aucun créneau disponible l'après-midi"}
               </div>
             ) : (
               <div className="flex justify-center gap-2 md:gap-3 overflow-x-auto px-2">
@@ -1314,34 +1325,36 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
             </div>
             <div className="flex items-center gap-2 justify-center">
               <Euro className="w-4 h-4 md:w-5 md:h-5 flex-shrink-0" style={{ color: colorCode }} />
-              <span className="text-xs md:text-base">{widgetData?.service?.pricePerPerson ?? 5} € / pers.</span>
+              <span className="text-xs md:text-base">{widgetData?.service?.pricePerPerson ?? 5} € / {isEnglish ? "pers." : "pers."}</span>
             </div>
             <div className="flex items-center gap-2 justify-center">
               <Wine className="w-4 h-4 md:w-5 md:h-5 flex-shrink-0" style={{ color: colorCode }} />
-              <span className="text-xs md:text-base">{widgetData?.service?.numberOfWinesTasted ?? 5} {(widgetData?.service?.numberOfWinesTasted ?? 5) === 1 ? 'vin' : 'vins'}</span>
+              <span className="text-xs md:text-base">{widgetData?.service?.numberOfWinesTasted ?? 5} {isEnglish ? ((widgetData?.service?.numberOfWinesTasted ?? 5) === 1 ? 'wine' : 'wines') : ((widgetData?.service?.numberOfWinesTasted ?? 5) === 1 ? 'vin' : 'vins')}</span>
             </div>
             <div className="flex items-center gap-2 justify-center">
               <Users className="w-4 h-4 md:w-5 md:h-5 flex-shrink-0" style={{ color: colorCode }} />
-              <span className="text-xs md:text-base">{widgetData?.service?.numberOfPeople ?? '1-10'} pers.</span>
+              <span className="text-xs md:text-base">{widgetData?.service?.numberOfPeople ?? '1-10'} {isEnglish ? "pers." : "pers."}</span>
             </div>
           </div>
         </div>
 
         {/* Participants */}
         <div className="mb-6 md:mb-8">
-          <h2 className="text-xl md:text-2xl font-semibold mb-4 md:mb-6 text-center" style={{ color: colorCode }}>Participants</h2>
+          <h2 className="text-xl md:text-2xl font-semibold mb-4 md:mb-6 text-center" style={{ color: colorCode }}>{isEnglish ? "Participants" : "Participants"}</h2>
           
           {/* Show max participants info */}
           <div className="text-center mb-3 md:mb-4">
             <span className="text-xs md:text-sm text-muted-foreground">
-              Minimum {getMinParticipants()} - Maximum {getMaxParticipants()} personnes • Total actuel: {adults + children}
+              {isEnglish
+                ? `Minimum ${getMinParticipants()} - Maximum ${getMaxParticipants()} people • Current total: ${adults + children}`
+                : `Minimum ${getMinParticipants()} - Maximum ${getMaxParticipants()} personnes • Total actuel: ${adults + children}`}
             </span>
           </div>
           
           <div className="space-y-4 md:space-y-6 max-w-md mx-auto px-2">
             {/* Adultes */}
             <div className="flex items-center justify-between">
-              <span className="font-medium text-base md:text-lg">Adultes</span>
+              <span className="font-medium text-base md:text-lg">{isEnglish ? "Adults" : "Adultes"}</span>
               <div className="flex items-center gap-3 md:gap-4">
                 <Button
                   variant="outline"
@@ -1368,8 +1381,8 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
             {/* Enfants */}
             <div className="flex items-center justify-between">
               <div>
-                <span className="font-medium text-base md:text-lg">Enfants</span>
-                <div className="text-sm md:text-base text-muted-foreground">-18 ans</div>
+                <span className="font-medium text-base md:text-lg">{isEnglish ? "Children" : "Enfants"}</span>
+                <div className="text-sm md:text-base text-muted-foreground">{isEnglish ? "Under 18" : "-18 ans"}</div>
               </div>
               <div className="flex items-center gap-3 md:gap-4">
                 <Button
@@ -1398,11 +1411,19 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
 
         {/* Langues */}
         <div className="mb-8 md:mb-12">
-          <h2 className="text-xl md:text-2xl font-semibold mb-4 md:mb-6 text-center" style={{ color: colorCode }}>Langues</h2>
+          <h2
+            className="notranslate text-xl md:text-2xl font-semibold mb-4 md:mb-6 text-center"
+            style={{ color: colorCode }}
+            translate="no"
+          >
+            {isEnglish ? "Languages" : "Langues"}
+          </h2>
           {/* When a slot already has bookings, inform the user that only one language is available */}
           {slotRequiredLanguage && (
             <p className="text-center text-sm md:text-base text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-4 py-2 mb-4 max-w-md mx-auto">
-              Vous ne pouvez réserver ce créneau qu'en <strong>{getLanguageInFrench(slotRequiredLanguage)}</strong>.
+              {isEnglish
+                ? <>You can only book this time slot in <strong>{getLanguageInFrench(slotRequiredLanguage)}</strong>.</>
+                : <>Vous ne pouvez réserver ce créneau qu'en <strong>{getLanguageInFrench(slotRequiredLanguage)}</strong>.</>}
             </p>
           )}
           <div className="flex flex-wrap justify-center gap-3 md:gap-4 px-2">
@@ -1448,12 +1469,12 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
             {isSubmitting ? (
               <>
                 <Loader2 className="w-4 h-4 md:w-5 md:h-5 animate-spin mr-2" />
-                Traitement...
+                {isEnglish ? "Processing..." : "Traitement..."}
               </>
             ) : error ? (
-              "Service indisponible"
+              isEnglish ? "Service unavailable" : "Service indisponible"
             ) : (
-              "Sélectionner"
+              isEnglish ? "Select" : "Sélectionner"
             )}
           </Button>
         </div>
@@ -1462,12 +1483,8 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
   );
 }
 
-export default function BookingPage({ params }: { params: Promise<{ id: string, service_id: string }> }) {
-  const [resolvedParams, setResolvedParams] = useState<{ id: string, service_id: string } | null>(null);
-
-  useEffect(() => {
-    params.then(setResolvedParams);
-  }, [params]);
+export default function BookingPage({ params }: { params?: Promise<{ id: string, service_id: string }> }) {
+  const resolvedParams = useResolvedBookingIds(params);
 
   if (!resolvedParams) {
     return (

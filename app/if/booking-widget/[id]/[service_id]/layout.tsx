@@ -2,6 +2,7 @@
 
 import { useSearchParams } from 'next/navigation';
 import LandingPageLayout from '@/components/LandingPageLayout';
+import { AutoGoogleTranslate } from '@/app/if/google-translate/AutoGoogleTranslate';
 
 export default function BookingWidgetLayout({
   children,
@@ -15,13 +16,16 @@ export default function BookingWidgetLayout({
   // If accessed directly or in iframe, don't show layout
   const showLayout = searchParams.get('withLayout') === 'true';
 
-  if (showLayout) {
-    return (
-      <LandingPageLayout>
-        {children}
-      </LandingPageLayout>
-    );
-  }
-
-  return <>{children}</>;
+  return (
+    <>
+      <AutoGoogleTranslate />
+      {showLayout ? (
+        <LandingPageLayout>
+          {children}
+        </LandingPageLayout>
+      ) : (
+        children
+      )}
+    </>
+  );
 }

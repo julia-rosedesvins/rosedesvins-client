@@ -8,6 +8,8 @@ export interface Region {
   max_lat: number;
   max_lon: number;
   thumbnailUrl?: string;
+  subtitle?: string;
+  description?: string;
   isParent: boolean;
   parent: string | null;
   createdAt?: string;
@@ -22,6 +24,8 @@ export interface CreateRegionData {
   max_lon: number;
   isParent?: boolean;
   parent?: string;
+  subtitle?: string;
+  description?: string;
 }
 
 export interface UpdateRegionData {
@@ -33,6 +37,8 @@ export interface UpdateRegionData {
   thumbnailUrl?: string;
   isParent?: boolean;
   parent?: string;
+  subtitle?: string;
+  description?: string;
 }
 
 export interface PaginatedRegionsResponse {

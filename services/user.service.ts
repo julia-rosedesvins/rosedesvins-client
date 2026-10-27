@@ -219,11 +219,26 @@ export interface NextReservation {
   phoneNo: string;
 }
 
+export interface BookingChartPoint {
+  label: string;
+  count: number;
+}
+
+/** @deprecated Use BookingChartPoint */
+export type MonthlyBookingCount = BookingChartPoint;
+
+export type DashboardPeriod = 'week' | 'month' | 'year';
+
 export interface DashboardAnalytics {
-  reservationsThisMonth: number;
+  period?: DashboardPeriod;
+  reservations: number;
+  reservationsThisMonth?: number;
   visitors: number;
   conversionRate: number;
   turnover: number;
+  bookingChart: BookingChartPoint[];
+  /** @deprecated Use bookingChart */
+  bookingsByMonth?: BookingChartPoint[];
   nextReservations: NextReservation[];
 }
 
@@ -646,9 +661,16 @@ class UserService {
    * Get user dashboard analytics
    * @returns Promise with dashboard analytics data
    */
-  async getDashboardAnalytics(): Promise<DashboardAnalyticsResponse> {
+  async getDashboardAnalytics(
+    period: DashboardPeriod = 'year',
+    bookingSources?: string[],
+  ): Promise<DashboardAnalyticsResponse> {
     try {
-      const response = await apiClient.get<DashboardAnalyticsResponse>('/dashboard-analytics/user');
+      let url = `/dashboard-analytics/user?period=${encodeURIComponent(period)}`;
+      if (bookingSources) {
+        url += `&bookingSources=${encodeURIComponent(bookingSources.join(','))}`;
+      }
+      const response = await apiClient.get<DashboardAnalyticsResponse>(url);
       return response.data;
     } catch (error) {
       console.error('UserService: Get dashboard analytics error:', error);

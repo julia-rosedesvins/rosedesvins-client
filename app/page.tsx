@@ -1,26 +1,25 @@
-"use client"
+import { buildPageMetadata } from '@/lib/seo/site';
+import { JsonLdScript, organizationJsonLd, websiteJsonLd } from '@/lib/seo/json-ld';
+import { fetchLatestPosts } from '@/lib/wordpress/fetch-posts';
+import HomePageClient from '@/components/HomePageClient';
 
-import BlogSection from "@/components/BlogSection"
-import ExperiencesSection from "@/components/ExperiencesSection"
-import GiftCardSection from "@/components/GiftCardSection"
-import HeroSection from "@/components/HeroSection"
-import LandingPageLayout from "@/components/LandingPageLayout"
-import NewsletterSection from "@/components/NewsletterSection"
-import RegionSection from "@/components/RegionSection"
+export const revalidate = 60;
 
+export const metadata = buildPageMetadata({
+  title: 'Rose des Vins : Dégustation et visite de domaines',
+  description:
+    'Découvrez les domaines viticoles avec Rose des Vins : réservez dégustations de vin, visites de caves et autres expériences oenotouristiques.',
+  path: '/',
+  absolute: true,
+});
 
-
-export default function HomePage() {
-
+export default async function HomePage() {
+  const blogPosts = await fetchLatestPosts(6);
 
   return (
-    <LandingPageLayout>
-      <HeroSection />
-      <RegionSection />
-      <ExperiencesSection />
-      {/* <GiftCardSection /> */}
-      {/* <BlogSection /> */}
-      <NewsletterSection />
-    </LandingPageLayout>
-  )
+    <>
+      <JsonLdScript data={[organizationJsonLd(), websiteJsonLd()]} />
+      <HomePageClient blogPosts={blogPosts} />
+    </>
+  );
 }

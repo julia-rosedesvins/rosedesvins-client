@@ -12,6 +12,7 @@ export interface ContactDetails {
   codePostal: string | null;
   city: string | null;
   siteWeb: string | null;
+  googleReviewUrl: string | null;
   domainLatitude: number | null;
   domainLongitude: number | null;
 }
@@ -31,6 +32,7 @@ export interface UpdateContactDetailsRequest {
   codePostal?: string;
   city?: string;
   siteWeb?: string;
+  googleReviewUrl?: string | null;
   domainLatitude?: number | null;
   domainLongitude?: number | null;
 }
