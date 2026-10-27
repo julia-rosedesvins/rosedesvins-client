@@ -3,7 +3,7 @@ import { Suspense } from 'react';
 import { permanentRedirect } from 'next/navigation';
 import RegionPageClient from './RegionPageClient';
 import { fetchRegionByName } from '@/lib/seo/fetch-public';
-import { getRegionDescription, getRegionDisplayName, getRegionPageMetadata } from '@/lib/seo/region-metadata';
+import { getRegionDescription, getRegionDisplayName, getRegionPageMetadata, getRegionTitle } from '@/lib/seo/region-metadata';
 import { buildPageMetadata, decodeRouteParam, slugify } from '@/lib/seo/site';
 import { JsonLdScript, breadcrumbJsonLd, regionItemListJsonLd } from '@/lib/seo/json-ld';
 import type { Domain, Region } from '@/services/region.service';
@@ -42,23 +42,19 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
     displayName,
     description: data?.region?.description,
   });
-
-  if (customMetadata) {
-    return buildPageMetadata({
-      title: customMetadata.title,
-      description: metaDescription,
-      path: `/region/${canonicalSlug}`,
-      absolute: true,
-    });
-  }
-
-  const subtitle =
-    data?.region?.subtitle?.trim() || 'sur la route des vins';
+  // Same resolver as the page's <h1>, so the visible title always matches the meta title.
+  const title = getRegionTitle({
+    candidates: descriptionCandidates,
+    displayName,
+    subtitle: data?.region?.subtitle,
+  });
 
   return buildPageMetadata({
-    title: `${displayName} : ${subtitle}`.slice(0, 70),
+    title,
     description: metaDescription,
     path: `/region/${canonicalSlug}`,
+    // Curated titles are used as-is (no "| Rose des Vins" suffix)
+    absolute: Boolean(customMetadata),
   });
 }
 

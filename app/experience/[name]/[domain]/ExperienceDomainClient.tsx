@@ -271,7 +271,7 @@ export default function ExperienceDomainClient({
                     </h1>
 
                     {/* Description */}
-                    {domainProfile.domainDescription ? (
+                    {domainProfile.domainDescription && (
                         <ExpandableText
                             text={domainProfile.domainDescription}
                             wrapperClassName="max-w-[71.4rem]"
@@ -279,10 +279,6 @@ export default function ExperienceDomainClient({
                             collapsedClassName="line-clamp-2 md:line-clamp-5"
                             buttonClassName="mt-2 inline-flex items-center gap-1 text-white/90 hover:text-white font-medium text-sm"
                         />
-                    ) : (
-                        <p className="text-white/80 text-base md:text-lg italic max-w-[71.4rem]">
-                            Aucune description disponible pour ce domaine.
-                        </p>
                     )}
                 </div>
             </section>

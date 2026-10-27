@@ -187,6 +187,27 @@ export function getRegionPageMetadata(
   return undefined;
 }
 
+export const DEFAULT_REGION_SUBTITLE = 'sur la route des vins';
+
+export interface RegionTitleInput {
+  /** Raw route param / region name candidates used to look up curated metadata. */
+  candidates: Array<string | null | undefined>;
+  displayName: string;
+  /** Admin-managed subtitle stored on the region, if any. */
+  subtitle?: string | null;
+}
+
+/**
+ * Single source of truth for a region's title, shared by the page <title>
+ * and the visible <h1> so both always match.
+ * Priority: curated title > "{region} : {subtitle}".
+ */
+export function getRegionTitle({ candidates, displayName, subtitle }: RegionTitleInput): string {
+  const curated = getRegionPageMetadata(...candidates);
+  if (curated) return curated.title;
+  return `${displayName} : ${subtitle?.trim() || DEFAULT_REGION_SUBTITLE}`;
+}
+
 export interface RegionDescriptionInput {
   /** Raw route param / region name candidates used to look up curated metadata. */
   candidates: Array<string | null | undefined>;

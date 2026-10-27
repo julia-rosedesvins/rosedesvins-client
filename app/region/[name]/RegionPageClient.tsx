@@ -18,7 +18,7 @@ import { DatePicker } from "@/components/DatePicker";
 import type { RegionMapRef } from "@/components/RegionMap";
 import { decodeRouteParam, slugify } from "@/lib/seo/site";
 import { canOptimizeImage, resolveImageUrl } from "@/lib/media-url";
-import { getRegionDescription, getRegionDisplayName } from "@/lib/seo/region-metadata";
+import { getRegionDescription, getRegionDisplayName, getRegionTitle } from "@/lib/seo/region-metadata";
 
 // Dynamically import the map component to avoid SSR issues
 const RegionMap = dynamic(() => import('@/components/RegionMap'), {
@@ -405,18 +405,22 @@ export default function RegionPageClient({
     const titleName = region
         ? getRegionDisplayName(region.slug || regionName, region.denom)
         : getRegionDisplayName(regionName, regionName);
-    const bannerSubtitle =
-        region?.subtitle?.trim() ||
-        'sur la route des vins et des châteaux';
+    const metadataCandidates = [
+        regionName,
+        region?.slug || slugify(titleName),
+        region?.slug,
+        region?.denom,
+        titleName,
+    ];
+    // Same resolver as the page's <title> so the visible heading and the meta title always match.
+    const bannerTitle = getRegionTitle({
+        candidates: metadataCandidates,
+        displayName: titleName,
+        subtitle: region?.subtitle,
+    });
     // Same resolver as the page's <meta name="description"> so both always match.
     const { text: bannerDescription } = getRegionDescription({
-        candidates: [
-            regionName,
-            region?.slug || slugify(titleName),
-            region?.slug,
-            region?.denom,
-            titleName,
-        ],
+        candidates: metadataCandidates,
         displayName: titleName,
         description: region?.description,
     });
@@ -480,7 +484,7 @@ export default function RegionPageClient({
                     )}
                     
                     <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-3 md:mb-6">
-                        {titleName} : {bannerSubtitle}
+                        {bannerTitle}
                     </h1>
                     <ExpandableText
                         text={bannerDescription}
