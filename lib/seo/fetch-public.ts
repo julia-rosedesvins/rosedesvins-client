@@ -3,6 +3,9 @@ const API_V1 = `${API_BASE_URL}/v1`;
 
 const REVALIDATE_SECONDS = 3600;
 const SITEMAP_REVALIDATE_SECONDS = 86400;
+// Experience profile images/fields change via admin JSON updates; keep this short
+// so a new main_image is visible within a minute instead of the default hour.
+const EXPERIENCE_PROFILE_REVALIDATE_SECONDS = 60;
 
 type FetchOptions = { revalidate?: number };
 
@@ -181,6 +184,7 @@ export async function fetchPublicDomainProfile(
 ): Promise<PublicDomainProfileResponse | null> {
   return publicFetch<PublicDomainProfileResponse>(
     `/domain-profile/public/${encodeURIComponent(domainId)}`,
+    { revalidate: EXPERIENCE_PROFILE_REVALIDATE_SECONDS },
   );
 }
 
@@ -190,7 +194,10 @@ export async function fetchPublicStaticExperience(
   const data = await publicFetch<{
     success: boolean;
     data: PublicDomainProfileResponse['data'];
-  }>(`/static-experiences/public/${encodeURIComponent(domainId)}`);
+  }>(
+    `/static-experiences/public/${encodeURIComponent(domainId)}`,
+    { revalidate: EXPERIENCE_PROFILE_REVALIDATE_SECONDS },
+  );
   if (!data?.data) return null;
   return { success: true, data: data.data };
 }
@@ -209,6 +216,7 @@ export async function fetchExperienceProfileBySlug(
 ): Promise<PublicDomainProfileResponse | null> {
   return publicFetch<PublicDomainProfileResponse>(
     `/domain-profile/public/by-slug/${encodeURIComponent(slug)}`,
+    { revalidate: EXPERIENCE_PROFILE_REVALIDATE_SECONDS },
   );
 }
 

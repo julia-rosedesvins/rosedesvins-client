@@ -13,6 +13,8 @@ type PageProps = {
 
 const OBJECT_ID_PATTERN = /^[0-9a-fA-F]{24}$/;
 
+export const revalidate = 60;
+
 /** Title-case a hyphenated slug as a last-resort display fallback (e.g. "val-de-loire" -> "Val De Loire"). */
 function titleCaseSlug(value: string): string {
   return value

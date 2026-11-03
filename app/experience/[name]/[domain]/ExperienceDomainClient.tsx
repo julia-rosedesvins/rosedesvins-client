@@ -169,11 +169,9 @@ export default function ExperienceDomainClient({
     const isLegacyObjectId = /^[0-9a-fA-F]{24}$/.test(domainId);
 
     useEffect(() => {
-        if (initialDomainProfile) return;
-
         const fetchDomainProfile = async () => {
             try {
-                setLoading(true);
+                if (!initialDomainProfile) setLoading(true);
                 try {
                     if (isLegacyObjectId) throw new Error('legacy id, skip slug lookup');
                     const response = await domainProfileService.getPublicDomainProfileBySlug(domainId);
