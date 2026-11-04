@@ -15,6 +15,7 @@ import { useIsTranslatedToEnglish } from "@/app/if/google-translate/AutoGoogleTr
 import { useTranslatedText } from "@/app/if/google-translate/useTranslatedText";
 import {
   pickerDateLocal,
+  eventCalendarDateUtc,
   parseTimeToMinutes,
   isHardBusyEventType,
   isAllDayBusy,
@@ -643,15 +644,13 @@ function BookingContent({ id, serviceId }: { id: string, serviceId: string }) {
       return { morning: [], afternoon: [] };
     }
     
-    const dateString = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
-    
-    // Find override for this date
+    const dateString = pickerDateLocal(date);
+
+    // Dates are stored as UTC midnight. Compare that UTC calendar day to the
+    // picker day — never override.date in the guest's local timezone.
     const override = widgetData.availability.specialDateOverrides.find(override => {
       if (!override.enabled) return false;
-      
-      const overrideDate = new Date(override.date);
-      const overrideDateString = `${overrideDate.getFullYear()}-${(overrideDate.getMonth() + 1).toString().padStart(2, '0')}-${overrideDate.getDate().toString().padStart(2, '0')}`;
-      return overrideDateString === dateString;
+      return eventCalendarDateUtc(override.date) === dateString;
     });
     
     if (!override) return { morning: [], afternoon: [] };
